@@ -1,0 +1,5 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    // AGP 9 provides Kotlin; a separate Kotlin Android plugin would conflict with it.
+    id 'com.android.application' version '9.4.1' apply false
+}
