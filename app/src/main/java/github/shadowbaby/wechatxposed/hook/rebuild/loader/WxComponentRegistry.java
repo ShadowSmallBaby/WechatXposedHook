@@ -12,10 +12,10 @@ import java.util.List;
  */
 public abstract class WxComponentRegistry {
 
-    /** 待挂钩的组件,COREDEX / BASEDEX / THEMESDEX / DONATIONDEX。 */
+    /** 待挂钩的组件,CORE_DEX / BASE_DEX / THEMES_DEX / DONATION_DEX。 */
     public static final ArrayList<WxComponentHooks> WX_COMPONENTS = new ArrayList<>(
-            List.of(new WxComponentHooks(WxComponentHooks.COREDEX),
-                    new WxComponentHooks(WxComponentHooks.BASEDEX),
-                    new WxComponentHooks(WxComponentHooks.THEMESDEX),
-                    new WxComponentHooks(WxComponentHooks.DONATIONDEX)));
+            List.of(new WxComponentHooks(WxComponentHooks.CORE_DEX),
+                    new WxComponentHooks(WxComponentHooks.BASE_DEX),
+                    new WxComponentHooks(WxComponentHooks.THEMES_DEX),
+                    new WxComponentHooks(WxComponentHooks.DONATION_DEX)));
 }

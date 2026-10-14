@@ -1,7 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.rebuild.support;
 
 import de.robv.android.xposed.XC_MethodReplacement;
-import github.shadowbaby.wechatxposed.hook.rebuild.XorStrings;
 import github.shadowbaby.wechatxposed.hook.rebuild.loader.ModuleLogger;
 
 /**
@@ -23,23 +22,9 @@ public final class VerifierMethodReplacement extends XC_MethodReplacement {
     /** 更新提示。 */
     public static final int UPDATED_TIPS = 2;
 
-    /** 原 c.c.<clinit> 的字符池,key=55271。 */
-    private static final short[] REPLACEMENT_POOL = {
-            5044, -10363, -10362, -10359, -10359, -10366, -10365, -10297,
-            -10345, -10360, -10357, -10357, -10354, -10359, -10368, -10297,
-            -10351, -10366, -10347, -10354, -10367, -10354, -10366, -10347,
-            -10363, -10362, -10359, -10359, -10366, -10365, -10297, -10364,
-            -10353, -10366, -10364, -10356, -10297, -10362, -10345, -10354,
-            -10297, -10347, -10366, -10346, -10350, -10366, -10348, -10349,
-            -10363, -10362, -10359, -10359, -10366, -10365, -10297, -10350,
-            -10345, -10365, -10362, -10349, -10366, -10365, -10297, -10349,
-            -10354, -10345, -10348};
-
-    private static final int POOL_KEY = 55271;
-
-    private static final String POLLING_VERIFIER_MESSAGE = decode(1, 23);
-    private static final String CHECK_API_REQUEST_MESSAGE = decode(24, 24);
-    private static final String UPDATED_TIPS_MESSAGE = decode(48, 19);
+    private static final String POLLING_VERIFIER_MESSAGE = "banned polling verifier";
+    private static final String CHECK_API_REQUEST_MESSAGE = "banned check api request";
+    private static final String UPDATED_TIPS_MESSAGE = "banned updated tips";
 
     private final int replacementMode;
 
@@ -49,20 +34,20 @@ public final class VerifierMethodReplacement extends XC_MethodReplacement {
 
     @Override
     public Object replaceHookedMethod(MethodHookParam param) {
-        switch (replacementMode) {
-            case POLLING_VERIFIER:
+        return switch (replacementMode) {
+            case POLLING_VERIFIER -> {
                 ModuleLogger.log(POLLING_VERIFIER_MESSAGE);
-                return null;
-            case CHECK_API_REQUEST:
+                yield null;
+            }
+            case CHECK_API_REQUEST -> {
                 ModuleLogger.log(CHECK_API_REQUEST_MESSAGE);
-                return null;
-            default:
+                yield null;
+            }
+            default -> {
                 ModuleLogger.log(UPDATED_TIPS_MESSAGE);
-                return Boolean.FALSE;
-        }
+                yield Boolean.FALSE;
+            }
+        };
     }
 
-    private static String decode(int offset, int length) {
-        return XorStrings.decode(REPLACEMENT_POOL, offset, length, POOL_KEY);
-    }
 }
