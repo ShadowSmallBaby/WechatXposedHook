@@ -1,58 +1,40 @@
 package github.shadowbaby.wechatxposed.hook.rebuild.loader;
 
-import github.shadowbaby.wechatxposed.hook.rebuild.support.ReflectBridgeA;
-import github.shadowbaby.wechatxposed.hook.rebuild.support.ReflectBridgeB;
-import github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedHelpers;
 import java.util.ArrayList;
 import java.util.Iterator;
+import github.shadowbaby.wechatxposed.hook.rebuild.XorStrings;
+import github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks;
 
 /**
- * 重建源码：b.c —— InMemoryDexClassLoader 构造函数 hook（原始 b 包的混淆类，原类名 b.c，原字段 f1/f9a）。
+ * InMemoryDexClassLoader 构造函数 hook(原混淆类 b.c)。
  *
- * 池 LOADER_POOL（原 f1，364 项）。两套 XOR key：
- *   key=7403  —— 组件类名 / 日志文案（由 s*s 公式选出，s=LOADER_POOL[0]=1657）
- *   key=17407 —— 微X校验方法名（"disable" 段 300..363）
- *
- * 【afterHookedMethod】（原方法体，仅 f9a==0 即构造函数 hook 生效）
- *   - key 选择：i = ((s*s) + 7980625) - (s*5650)，s=1657 → 7403
- *   - thisObject 必须是 ClassLoader，否则直接返回
- *   - 同步块锁定 b.a 类，遍历 WX_COMPONENTS（b.a 静态块构造，顺序 componentId=1,0,3,2）：
- *       - 列表空 → 日志 "All dex already hooked."（1/23）并返回
- *       - 每项按 componentId 取类名 findClassIfExists：
- *           0 → 24/40  "com.fkzhang.wxfeatures.base.Wrapper.Init"
- *           1 → 64/49  "com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper"
- *           2 → 113/44 "com.fkzhang.wxfeatures.donation.Wrapper.Init"
- *           其它 → 157/42 "com.fkzhang.wxfeatures.themes.Wrapper.Init"
- *       - 命中则：日志 "Found " + dexName + ", enable: " + TRUE（dexName 225/7 BaseDex、
- *         232/7 CoreDex、239/11 DonationDex、250/9 ThemesDex）；调用 entry.inject(cl)（c.a.a）；
- *         日志 dexName + " hook suc."（275/10）；it.remove()
- *       - 未命中：日志 "Ignored non wx module dex."（199/26）
- *
- * 【beforeHookedMethod】（原方法体，f9a==1/2/3 三条分支；f9a==0 时先 super 后直接返回）
- *   公共前置（所有 f9a）：先算出 str11/str12 两个基准串
- *     s3 = LOADER_POOL[299] = 2299；s = 5107；s2 = 20428；i3 = (s3+s)^2
- *     (s3*s2) - i3 <= 0 → i4 = 17407（key）；否则 i4 = 60664（诱饵，运行时永不取）
- *     str11 = decodeXor(f1, 300, 7, 17407)  = "disable"
- *     str12 = decodeXor(f1, 307, 15, 17407) = "on_update_check"
- *   然后按 f9a 分流：
- *     f9a==1：super；obj4=args[0]；switch(hashCode(String.valueOf(obj4)))
- *         "on_update_check"(1636443250) → 若 equals(str12) → setResult(null)
- *         "disable"        (1671308008) → 若 equals(str11) → setResult(null)
- *         "process_metadata"(1925143295) → 若 equals(decodeXor(f1,322,16,17407)) → setResult(null)
- *         其它 → 透传（不 setResult）
- *     f9a==2：super；若 String.valueOf(args[0]).equals(str12="on_update_check") → setResult(null)
- *     f9a==3：super；switch(hashCode(String.valueOf(args[0])))
- *         "on_update_check"(1636443250) → 若 equals(str12) → setResult(null)
- *         "disable"        (1671308008) → 若 equals(str11) → setResult(null)
- *         -1329193160 → 若 equals(decodeXor(f1,338,13,17407)="updateLicense") → setResult(null)
- *         -160258069 → 若 equals(decodeXor(f1,351,13,17407)="delayed_check") → setResult(null)
- *         其它 → 透传
- *   即：屏蔽微X在线校验入口（on_update_check / disable / process_metadata / updateLicense / delayed_check），
- *   命中即 setResult(null) 使被 hook 方法直接返回 null。
+ * 一个类承担两种角色,由构造参数 mode 选择:
+ *   mode 0 —— 挂在 InMemoryDexClassLoader 构造函数上。afterHookedMethod 里检查刚加载的
+ *             dex 是不是微X的四个组件之一,是就给它的 ClassLoader 装 hook 并从待办列表移除。
+ *   mode 1/2/3 —— 作为回调挂在微X自身的入口方法上,beforeHookedMethod 里把在线校验调用
+ *             (disable / on_update_check / process_metadata / updateLicense / delayed_check)
+ *             直接返回 null 屏蔽掉。
  */
 public final class InMemoryDexLoadHook extends XC_MethodHook {
 
+    /** 挂载 InMemoryDexClassLoader 构造函数的实例。 */
+    public static final int DEX_LOADER = 0;
+
+    /** 握手回调,挂在微X的 BaseDex 入口上。 */
+    public static final int BASE_HANDSHAKE = 1;
+
+    /** 握手回调,挂在微X的 ThemesDex 入口上。 */
+    public static final int THEMES_HANDSHAKE = 2;
+
+    /** 握手回调,挂在微X的 DonationDex 入口上。 */
+    public static final int DONATION_HANDSHAKE = 3;
+
+    /**
+     * 原 b.c.<clinit> 的字符池。
+     * 1..298 用 key=7403(组件类名与日志文案),299..364 用 key=17407(校验方法名)。
+     */
     private static final short[] LOADER_POOL = {
             1657, 7338, 7303, 7303, 7371, 7311, 7310, 7315, 7371, 7306, 7303, 7321,
             7310, 7306, 7311, 7314, 7371, 7299, 7300, 7300, 7296, 7310, 7311, 7365,
@@ -86,60 +68,68 @@ public final class InMemoryDexLoadHook extends XC_MethodHook {
             17297, 17292, 17306, 17307, 17306, 17299, 17310, 17286, 17306, 17307, 17312, 17308,
             17303, 17306, 17308, 17300};
 
-    /** 原 f9a：0=构造 hook；1/2/3 = 各 dex 内方法的 beforeHookedMethod 回调 */
-    public final int mode;
+    private static final int TEXT_KEY = 7403;
+    private static final int VERIFIER_KEY = 17407;
 
-    public InMemoryDexLoadHook(int i) { this.mode = i; }
+    private static final String ALL_DEX_HOOKED = decode(1, 23, TEXT_KEY);
+    private static final String IGNORED_NON_MODULE_DEX = decode(199, 26, TEXT_KEY);
+    private static final String LOG_FOUND = decode(259, 6, TEXT_KEY);
+    private static final String LOG_ENABLE_SUFFIX = decode(265, 10, TEXT_KEY);
+    private static final String LOG_HOOK_SUCCEEDED_SUFFIX = decode(275, 10, TEXT_KEY);
+
+    /** 四个微X组件的入口类名,下标即 componentId。 */
+    private static final String[] COMPONENT_ENTRY_CLASSES = {
+            decode(24, 40, TEXT_KEY),   // 0 BaseDex
+            decode(64, 49, TEXT_KEY),   // 1 CoreDex
+            decode(113, 44, TEXT_KEY),  // 2 DonationDex
+            decode(157, 42, TEXT_KEY)}; // 3 ThemesDex
+
+    /** 备忘日志里的组件短名,下标即 componentId。 */
+    private static final String[] COMPONENT_NAMES = {
+            decode(225, 7, TEXT_KEY),   // "BaseDex"
+            decode(232, 7, TEXT_KEY),   // "CoreDex"
+            decode(239, 11, TEXT_KEY),  // "DonationDex"
+            decode(250, 9, TEXT_KEY)};  // "ThemesDex"
+
+    /** 被屏蔽的在线校验入口方法名。 */
+    private static final String ON_UPDATE_CHECK = decode(307, 15, VERIFIER_KEY);
+    private static final String DISABLE = decode(300, 7, VERIFIER_KEY);
+    private static final String PROCESS_METADATA = decode(322, 16, VERIFIER_KEY);
+    private static final String UPDATE_LICENSE = decode(338, 13, VERIFIER_KEY);
+    private static final String DELAYED_CHECK = decode(351, 13, VERIFIER_KEY);
+
+    private final int mode;
+
+    public InMemoryDexLoadHook(int mode) {
+        this.mode = mode;
+    }
 
     @Override
     public void afterHookedMethod(MethodHookParam param) throws Throwable {
-        // 原 key 选择：i = ((s*s) + 7980625) - (s*5650)，s = LOADER_POOL[0] = 1657 → 7403
-        int key = 7403;
         super.afterHookedMethod(param);
-        if (this.mode != 0) return;
-        Object obj = param.thisObject;
-        if (!(obj instanceof ClassLoader)) return;
-        ClassLoader cl = (ClassLoader) obj;
+        if (mode != DEX_LOADER || !(param.thisObject instanceof ClassLoader)) {
+            return;
+        }
+        ClassLoader hostClassLoader = (ClassLoader) param.thisObject;
 
-        ArrayList<WxComponentHooks> list = WxComponentRegistry.WX_COMPONENTS;
         synchronized (WxComponentHooks.class) {
-            if (ReflectBridgeB.listIsEmpty(list)) {                          // list.isEmpty()
-                ReflectBridgeA.logMessage(ReflectBridgeA.decodeXor(LOADER_POOL, 1, 23, key));       // "All dex already hooked."
+            ArrayList<WxComponentHooks> pending = WxComponentRegistry.WX_COMPONENTS;
+            if (pending.isEmpty()) {
+                ModuleLogger.log(ALL_DEX_HOOKED);
                 return;
             }
-            Iterator<WxComponentHooks> it = ReflectBridgeA.listIterator(list);
-            while (ReflectBridgeB.iteratorHasNext(it)) {                          // it.hasNext()
-                WxComponentHooks entry = (WxComponentHooks) ReflectBridgeB.iteratorNext(it);
-                String name;   // 微X组件类名
-                switch (entry.componentId) {
-                    case 0:  name = ReflectBridgeB.decodeXor(LOADER_POOL, 24, 40, key);  break;   // base.Wrapper.Init
-                    case 1:  name = ReflectBridgeB.decodeXor(LOADER_POOL, 64, 49, key);  break;   // HookWrapper
-                    case 2:  name = ReflectBridgeB.decodeXor(LOADER_POOL, 113, 44, key); break;   // donation.Wrapper.Init
-                    default: name = ReflectBridgeA.decodeXor(LOADER_POOL, 157, 42, key);  break;   // themes.Wrapper.Init
+            Iterator<WxComponentHooks> iterator = pending.iterator();
+            while (iterator.hasNext()) {
+                WxComponentHooks component = iterator.next();
+                if (XposedHelpers.findClassIfExists(COMPONENT_ENTRY_CLASSES[component.componentId], hostClassLoader) == null) {
+                    ModuleLogger.log(IGNORED_NON_MODULE_DEX);
+                    continue;
                 }
-                if (ReflectBridgeA.findClassIfExists(name, cl) != null) {           // findClassIfExists
-                    String dexName;
-                    switch (entry.componentId) {
-                        case 0:  dexName = ReflectBridgeB.decodeXor(LOADER_POOL, 225, 7, key);  break;  // "BaseDex"
-                        case 1:  dexName = ReflectBridgeB.decodeXor(LOADER_POOL, 232, 7, key);  break;  // "CoreDex"
-                        case 2:  dexName = ReflectBridgeA.decodeXor(LOADER_POOL, 239, 11, key);  break;  // "DonationDex"
-                        default: dexName = ReflectBridgeB.decodeXor(LOADER_POOL, 250, 9, key);  break;  // "ThemesDex"
-                    }
-                    StringBuilder sb = new StringBuilder();
-                    ReflectBridgeB.appendString(sb, ReflectBridgeA.decodeXor(LOADER_POOL, 259, 6, key));   // "Found "
-                    ReflectBridgeA.appendString(sb, dexName);
-                    ReflectBridgeA.appendString(sb, ReflectBridgeA.decodeXor(LOADER_POOL, 265, 10, key));  // ", enable: "
-                    ReflectBridgeB.appendObject(sb, Boolean.TRUE);
-                    ReflectBridgeB.logMessage(ReflectBridgeA.toString(sb));                    // b.b.a 日志
-                    ReflectBridgeB.invokeComponentHook(entry, cl);                        // entry.a(cl) → c.a.a(cl)
-                    StringBuilder sb2 = new StringBuilder();
-                    ReflectBridgeB.appendString(sb2, dexName);
-                    ReflectBridgeA.appendString(sb2, ReflectBridgeB.decodeXor(LOADER_POOL, 275, 10, key)); // " hook suc."
-                    ReflectBridgeA.logMessage(ReflectBridgeA.toString(sb2));
-                    ReflectBridgeB.iteratorRemove(it);                               // it.remove()
-                } else {
-                    ReflectBridgeA.logMessage(ReflectBridgeA.decodeXor(LOADER_POOL, 199, 26, key));      // "Ignored non wx module dex."
-                }
+                ModuleLogger.log(LOG_FOUND + COMPONENT_NAMES[component.componentId]
+                        + LOG_ENABLE_SUFFIX + Boolean.TRUE);
+                component.inject(hostClassLoader);
+                ModuleLogger.log(COMPONENT_NAMES[component.componentId] + LOG_HOOK_SUCCEEDED_SUFFIX);
+                iterator.remove();
             }
         }
     }
@@ -147,16 +137,23 @@ public final class InMemoryDexLoadHook extends XC_MethodHook {
     @Override
     public void beforeHookedMethod(MethodHookParam param) throws Throwable {
         super.beforeHookedMethod(param);
-        if (mode == 0 || mode < 1 || mode > 3) return;
-
-        String method = String.valueOf(param.args[0]);
-        boolean block = "on_update_check".equals(method);
-        if (mode == 1) {
-            block |= "disable".equals(method) || "process_metadata".equals(method);
-        } else if (mode == 3) {
-            block |= "disable".equals(method) || "updateLicense".equals(method)
-                    || "delayed_check".equals(method);
+        if (mode == DEX_LOADER) {
+            return;
         }
-        if (block) param.setResult(null);
+        String methodName = String.valueOf(param.args[0]);
+        boolean block = ON_UPDATE_CHECK.equals(methodName);
+        if (mode == BASE_HANDSHAKE) {
+            block |= DISABLE.equals(methodName) || PROCESS_METADATA.equals(methodName);
+        } else if (mode == DONATION_HANDSHAKE) {
+            block |= DISABLE.equals(methodName) || UPDATE_LICENSE.equals(methodName)
+                    || DELAYED_CHECK.equals(methodName);
+        }
+        if (block) {
+            param.setResult(null);
+        }
+    }
+
+    private static String decode(int offset, int length, int key) {
+        return XorStrings.decode(LOADER_POOL, offset, length, key);
     }
 }
