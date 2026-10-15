@@ -106,29 +106,30 @@ decode(seed, pool):
 
 ### 1.5 解密字符串的提取方法与证据基础
 
-本报告关于「功能键」的结论，全部来自**离线解密 4 个功能 dex 的字符串池**，而不是运行时 hook。方法如下（脚本在 `data/tmp/`）：
+本报告关于「功能键」的结论，全部来自**离线解密 4 个功能 dex 的字符串池**，而不是运行时 hook。方法如下（脚本在 `data/tmp/tools/`）：
 
 1. **拿到明文 dex**：hook `InMemoryDexClassLoader` 构造，把微X 运行时解密出的 4 个 dex 字节落盘（`data/refs/device_dump/{BaseDex,CoreDex,DonationDex,ThemesDex}.dex`，大小见 1.4）。
 2. **解析池**：对每个 dex，用 `_dexlib.Dex.pool_of(desc)` 解析解码类的 `<clinit>` 字节码，重建「数组下标 → 字符串」映射，再按数组顺序拼出完整池（见 1.2 的「池存放顺序打乱」）。
 3. **全量解码**：扫描 dex 里所有 `const-wide` 种子（`#double nan // #<16hex>`），用 `_dexlib.decode(seed, pool)` 还原明文。
-4. **逐方法归属**：把每个方法引用的种子 → 明文归类，得到 `_bdmethods.json`（BaseDex 2421 方法）/ `_coremethods.json`（CoreDex 619）/ `_donmethods.json`（DonationDex 252）/ ThemesDex，用于「某个功能键被哪些类使用」的取证。
+4. **逐方法归属**：把每个方法引用的种子 → 明文归类，得到 `data/tmp/artifacts/decoded/_bdmethods.json`（BaseDex 2421 方法）/ `data/tmp/artifacts/decoded/_coremethods.json`（CoreDex 619）/ `data/tmp/artifacts/decoded/_donmethods.json`（DonationDex 252）/ ThemesDex，用于「某个功能键被哪些类使用」的取证。
 
-产物（`data/tmp/`，均为分析中间物，不入库）：
+产物（`data/tmp/artifacts/`，均为分析中间物，不入库）：
 
 | 文件 | 内容 |
 |---|---|
-| `_bddecoded.json` / `.txt` | BaseDex 全量明文（22675 条） |
-| `_coredecoded.json` | CoreDex 全量明文（3205 条） |
-| `_DonationDexdec.json` | DonationDex 全量明文（2066 条） |
-| `_ThemesDexdec.json` | ThemesDex 全量明文（2782 条） |
-| `_alldec.json` | 去重后按 dex 汇总（BaseDex 5721 / CoreDex 1300 / DonationDex 747 / ThemesDex 1054 / main 500） |
-| `_bdmethods.json` 等 | 逐方法的明文引用映射 |
-| `_featverify.py` | 校验 58 项是否都在池里（结果：58/58 命中） |
-| `_58where.py` | 逐项列出 58 个键命中的 dex/类 |
+| `data/tmp/artifacts/decoded/_bddecoded.json` / `.txt` | BaseDex 全量明文（22675 条） |
+| `data/tmp/artifacts/decoded/_coredecoded.json` | CoreDex 全量明文（3205 条） |
+| `data/tmp/artifacts/decoded/_DonationDexdec.json` | DonationDex 全量明文（2066 条） |
+| `data/tmp/artifacts/decoded/_ThemesDexdec.json` | ThemesDex 全量明文（2782 条） |
+| `data/tmp/artifacts/decoded/_alldec.json` | 去重后按 dex 汇总（BaseDex 5721 / CoreDex 1300 / DonationDex 747 / ThemesDex 1054 / main 500） |
+| `data/tmp/artifacts/decoded/_bdmethods.json` 等 | 逐方法的明文引用映射 |
+| `data/tmp/tools/_featverify.py` | 校验 58 项是否都在池里（结果：58/58 命中） |
+| `data/tmp/tools/_58where.py` | 逐项列出 58 个键命中的 dex/类 |
 
-> **关于本文引用的 `data/tmp/_*.py`**:那些是分析过程中随手写的一次性脚本,产物落在 `data/`
-> (已被 .gitignore 忽略),**不入库**。仓库里长期维护的工具在 `scripts/`;
-> 本文结论都可由它们与 `data/refs/` 里的原始样本复核。
+> **关于 `data/tmp/`**:`tools/` 是可以复现本文结论的分析脚本(共享库 `_dexlib.py` / `_oplen.py`
+> 同目录),`artifacts/` 是它们读写的中间产物,`archive/` 是分析过程中随手写的一次性脚本与转储。
+> 整个 `data/` 已被 .gitignore 忽略,**不入库**;仓库里长期维护的工具在 `scripts/`。
+> 从仓库根运行即可复现,例如 `python -X utf8 data/tmp/tools/_summary_count.py`。
 
 > 坑：smali 文本转储会破坏不成对代理项（显示为 `���`），**池字符串必须从 DEX 二进制按 MUTF-8 读**，不能从 smali 文本读；JSON 落盘时对含代理项的字符串用 `s.encode("utf-8","backslashreplace").decode("utf-8")` 转义。
 
@@ -141,7 +142,7 @@ decode(seed, pool):
 
 #### (1) 分层口径与实测数字
 
-对 4 个 dex 全量解码后的字符串（`_alldec.json`，去重后 BaseDex 5721 / CoreDex 1300 / DonationDex 747 / ThemesDex 1054 / main 500），按不同口径统计：
+对 4 个 dex 全量解码后的字符串（`data/tmp/artifacts/decoded/_alldec.json`，去重后 BaseDex 5721 / CoreDex 1300 / DonationDex 747 / ThemesDex 1054 / main 500），按不同口径统计：
 
 | 口径 | 定义 | 数量 |
 |---|---|---|
@@ -154,7 +155,7 @@ decode(seed, pool):
 
 > 说明：3256 这个「宽松候选」里混入了微信自身字段名（`talker`/`content`/`nickname` 等），不是模块设置项；真正稳定的口径是 **`_enable` 开关 = 209 个**，这也是「一个开关对应一个可开/关功能」的自然定义。`_enable` 前缀（去掉 `_enable`）去重后仍是 209，说明没有重复前缀。
 
-脚本：`data/tmp/_summary_count.py`（复现上表）、`_enlist.py`（列出 209 个 `_enable` 键）、`_uikeys.py` / `_bizfinal.py`（其他口径）。
+脚本：`data/tmp/tools/_summary_count.py`（复现上表）、`data/tmp/tools/_enlist.py`（列出 209 个 `_enable` 键）、`data/tmp/tools/_uikeys.py` / `data/tmp/tools/_bizfinal.py`（其他口径）。
 
 #### (2) 「需要授权的有几个」在 dex 里没有固定值
 
@@ -171,7 +172,7 @@ decode(seed, pool):
 
 本模块的 58 项(`CallMethodBypassHook.FEATURES`,`app/src/main/java/github/shadowbaby/wechatxposed/hook/rebuild/support/CallMethodBypassHook.java:100`)是**本模块自己写死的字符串**,用于在 license 校验被 hook 时 `setResult(FEATURES)` 冒充授权列表(同文件 ~307 行)。它:
 
-- 58/58 都是微X 真实存在的功能键（`_58where.py` 逐项命中 4 个 dex）；
+- 58/58 都是微X 真实存在的功能键（`data/tmp/tools/_58where.py` 逐项命中 4 个 dex）；
 - 但只有 8 项是 `_enable` 前缀（即顶层开关），其余是子项/别名；
 - 分散在 BaseDex（约 50 项）、CoreDex/DonationDex/ThemesDex（少数）。
 
@@ -184,7 +185,7 @@ decode(seed, pool):
 
 - 覆盖 dex：BaseDex（204 键）/ CoreDex（5）/ DonationDex（3）/ ThemesDex（3）/ main（1）；去重后共 209。
 - 有 UI 方法引用的：**121** 个；未被 UI 方法直接引用的：**88** 个（多为子开关，由父功能在代码里读取）。
-- 生成脚本：`data/tmp/_enable_rows.py`（产出 `_enable_rows.json`）、`_enable_table.py`（产出本表）。
+- 生成脚本：`data/tmp/tools/_enable_rows.py`（产出 `_enable_rows.json`）、`data/tmp/tools/_enable_table.py`（产出本表）。
 
 | # | 设置键 (`*_enable`) | dex | 定义类（首个） | 定义类数 | UI/分组方法数 |
 |---|---|---|---|---|---|
@@ -406,7 +407,7 @@ decode(seed, pool):
 - **118 键**能归到具体设置页（22 个页面类，见下）；
 - **91 键**不以设置页形式渲染，是父功能读取的子开关/内部开关（单列）。
 - 分组标签由各页解码出的标题串 + 键的域前缀人工归纳；页面类名是 dex 里的原始混淆名。
-- 生成脚本：`data/tmp/_enable_groups.py`（产出 `_enable_groups.json`）、`_enable_grouped.py`（产出本节）。
+- 生成脚本：`data/tmp/tools/_enable_groups.py`（产出 `_enable_groups.json`）、`data/tmp/tools/_enable_grouped.py`（产出本节）。
 
 #### 按设置页（菜单分组）归类
 
@@ -1099,12 +1100,12 @@ param.setResult(FEATURES);
 - 调用点：`sget-object v15, Lc/b;.۬ۦۗ:[S` → `const/16 v12, #int 145` → `const/16 v8, #int 1106` → `invoke-static {v15, v12, v8, v4}, Lc/ۤ۠۫;.۬ۥۧ:([SIII)Ljava/lang/String;`（pc `0x015d`）。
 - `off=145, len=1106` 解出 1106 个字符，恰好是逗号分隔的功能名列表；`split(",")` 得到 **58 项**（1106 字符、57 个逗号 + 1）。
 
-**独立复现验证**（`data/tmp/_patchdec58.py`）：直接读 `BYPASS_POOL`（payload 文件偏移 `0x3d18`，1251×int16）+ `pool[145+i] ^ 5559`，输出前 200 字符即
+**独立复现验证**（`data/tmp/tools/_patchdec58.py`）：直接读 `BYPASS_POOL`（payload 文件偏移 `0x3d18`，1251×int16）+ `pool[145+i] ^ 5559`，输出前 200 字符即
 `remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,text_rep_nickname,...`，`count(",")==57`、`len(split(","))==58`。所以「58」**就是这段字符串按逗号切分的结果**，不是代码里数出来的 58 个分支，也不是微X 里的任何常量。
 
 #### (2) 这 58 个名字确实是微X 的真实功能键（来自 4 个 dex）
 
-虽然「58」这个数字是本模块定的，但这 58 个**名字**并非凭空捏造——它们全部是微X 4 个功能 dex 里真实存在的**设置键（feature key）**。用逐方法解密字符串映射（`data/tmp/_bdmethods.json` / `_coremethods.json` / `_donmethods.json`）核对，**58/58 全部命中**，分布为 BaseDex 55、CoreDex 5、DonationDex 4、ThemesDex 4（部分键跨 dex 复用）：
+虽然「58」这个数字是本模块定的，但这 58 个**名字**并非凭空捏造——它们全部是微X 4 个功能 dex 里真实存在的**设置键（feature key）**。用逐方法解密字符串映射（`data/tmp/artifacts/decoded/_bdmethods.json` / `data/tmp/artifacts/decoded/_coremethods.json` / `data/tmp/artifacts/decoded/_donmethods.json`）核对，**58/58 全部命中**，分布为 BaseDex 55、CoreDex 5、DonationDex 4、ThemesDex 4（部分键跨 dex 复用）：
 
 | 名字 | 命中 dex | 典型定义/使用类 |
 |---|---|---|
