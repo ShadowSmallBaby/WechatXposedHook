@@ -23,7 +23,7 @@ WxModuleHook/
 
 ## 编译
 
-需要 JDK 17 与 Android SDK 36(AGP 9.4.1 要求 Gradle 9.6+;wrapper 已锁定版本):
+需要 JDK 17 与 Android SDK 37(AGP 9.4.1 要求 Gradle 9.6+;wrapper 已锁定版本):
 
 ```powershell
 ./gradlew assembleRelease
@@ -33,6 +33,23 @@ WxModuleHook/
 
 > 本机默认 JDK 25 的 class 文件版本(69)不被当前 Gradle 支持,需显式指定 JDK 17:
 > `JAVA_HOME=<JDK17 路径> ./gradlew assembleRelease`
+
+### 签名
+
+发行签名只从环境变量读取,不落库;四个变量任缺一个即回退 debug 签名:
+
+| 环境变量 | 内容 |
+|---|---|
+| `WXH_KEYSTORE_PATH` | 密钥库文件路径 |
+| `WXH_STORE_PASSWORD` | 密钥库口令 |
+| `WXH_KEY_ALIAS` | 私钥条目 alias |
+| `WXH_KEY_PASSWORD` | 私钥条目口令 |
+
+- **本地(IDE)**:Run/Debug 之外的打包走 *Build → Generate Signed App Bundle / APK*,
+  直接选发行密钥库即可,不需要设环境变量。
+- **CI**:四个变量用 Secrets 注入,工作流在密钥库存在时落盘并写入 `GITHUB_ENV`。
+- 密钥库与口令须异地备份,不入源码、CI 日志或发行附件;正式发布后不要更换证书身份,
+  否则模块签名变更会导致覆盖安装失败(需先卸载旧版)。
 
 ## 模块做的事
 

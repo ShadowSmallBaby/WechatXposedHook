@@ -5,7 +5,7 @@
 
 在已连接的 Android 设备上，通过独立 `app_process` 进程执行参考 DEX 和当前源码，比较 Hook 注册目标、参数、回调模式、反射调用顺序及返回值。Xposed API 使用记录调用的替身，不注册真实 Hook、不安装 APK、不访问微信数据。
 
-运行需要 Python、JDK 17、Android SDK 36 / Build Tools 36.0.0,以及本地参考 `data/refs/WxModuleHook-1.2.apk`:
+运行需要 Python、JDK 17、Android SDK 37 / Build Tools 37.0.0,以及本地参考 `data/refs/WxModuleHook-1.2.apk`:
 
 ```powershell
 python -X utf8 tests/hook-regression/run.py --sdk C:/Software/DevTools/Android/SDK --jdk C:/Users/Smallbaby/.jdks/liberica-17.0.20.1

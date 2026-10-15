@@ -2,35 +2,40 @@ plugins {
     id 'com.android.application'
 }
 
+// 发行签名口令只从环境变量读取(CI 用 Secrets 注入;本机在 IDE/系统里设置后同样生效):
+//   WXH_KEYSTORE_PATH / WXH_STORE_PASSWORD / WXH_KEY_ALIAS / WXH_KEY_PASSWORD
+// 未设置时回退 debug 签名,保证 clone 后直接构建仍能成功。
+def ksPath = System.getenv('WXH_KEYSTORE_PATH')
+
 android {
     namespace 'github.shadowbaby.wechatxposed.hook'
-    compileSdk 36
+    compileSdk 37
 
     defaultConfig {
         applicationId 'github.shadowbaby.wechatxposed.hook'
         minSdk 26
-        targetSdk 36
+        targetSdk 37
         versionCode 1
         versionName '1.0'
     }
 
     signingConfigs {
         release {
-            // 密钥库位于项目根目录（data/release.keystore）
-            def ks = rootProject.file('data/release.keystore')
-            if (ks.exists()) {
-                storeFile ks
-                storePassword 'wxmodulehook'
-                keyAlias 'wxmodulehook'
-                keyPassword 'wxmodulehook'
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv('WXH_STORE_PASSWORD')
+                keyAlias System.getenv('WXH_KEY_ALIAS')
+                keyPassword System.getenv('WXH_KEY_PASSWORD')
             }
         }
     }
 
     buildTypes {
         release {
-            minifyEnabled false
-            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig ksPath ? signingConfigs.release : signingConfigs.debug
         }
     }
 
@@ -41,6 +46,6 @@ android {
 }
 
 dependencies {
-    // Xposed API（compileOnly，不打进 dex；运行时由 LSPosed/EdXposed 提供）
+    // Xposed API(compileOnly,不打进 dex;运行时由 LSPosed/EdXposed 提供)
     compileOnly fileTree(dir: 'src/libs', include: ['*.jar'])
 }
