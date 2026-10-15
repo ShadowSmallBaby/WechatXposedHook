@@ -5,7 +5,7 @@
 - `DATA` / `DATA1` / `DATA2` / `DATA_VIP` 四张同构表：`(_ID, ACCOUNT, TAG, TYPE, VALUE, DATA)`
 - `ACCOUNT` 是微信 wxid（或 `+NO_ID+`），`DATA_VIP` 是捐赠用户的数据
 - `TYPE`：`STRING / BOOLEAN / INT / JSON / JSON_ARRAY`
-- 行数（原版库）：DATA 365 / DATA1 378 / DATA2 288 / DATA_VIP 247
+- 行数（完整样本库）：DATA 365 / DATA1 378 / DATA2 288 / DATA_VIP 247
 - 简化库（`FKZ_WX_DATA-wxid_kcvrpkelhtj722`）只有 DATA 表 10 行，是用于学习密钥的最小样本
 
 ## 加密链路（三层）

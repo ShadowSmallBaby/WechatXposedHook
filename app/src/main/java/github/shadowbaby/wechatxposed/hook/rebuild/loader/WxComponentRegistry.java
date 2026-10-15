@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 微X模块的描述列表(原混淆类 b.a)。
+ * 微X模块组件的待挂钩列表。
  *
  * 静态块按 Core → Base → Themes → Donation 的顺序登记四个组件,建好后不再改动,
  * InMemoryDexLoadHook 每发现一个微X dex 就摘掉对应的一项。

@@ -71,10 +71,10 @@ decode(seed, pool):
 
 ### 1.4 功能模块存储（wx6_2.44.tar）
 
-**功能 dex 只有 4 个**（Base / Core / Donation / Themes），这是**补丁 WxModuleHook** 的加载器逻辑决定的（`b.a`/`b.c` 属于补丁，见 3.1 的类归属说明），不是按文件数决定的：
+**功能 dex 只有 4 个**（Base / Core / Donation / Themes），这由 WxModuleHook 的加载器逻辑决定（组件表见 3.1），不是按 tar 里的文件数决定的：
 
-- 补丁 `b.a.<clinit>` 固定构造 4 个组件项（componentId 顺序 1=Core、0=Base、3=Themes、2=Donation），`WX_COMPONENTS` 是长度 4 的 `ArrayList`。
-- 补丁 `b.c.afterHookedMethod` 遍历这 4 个组件，按 `componentId` 用 key 7403 解出**微X**组件类名去 `findClassIfExists`，命中即注入并打印 `Found <dexName>`（这些类名是微X 的）：
+- 组件表固定登记 4 项（componentId 顺序 1=Core、0=Base、3=Themes、2=Donation），`WX_COMPONENTS` 是长度 4 的 `ArrayList`。
+- `InMemoryDexLoadHook.afterHookedMethod` 遍历这 4 个组件，按 `componentId` 取得**微X**组件入口类名去 `findClassIfExists`，命中即注入并打印 `Found <dexName>`（这些类名是微X 的）：
 
 | componentId | dexName | 组件入口类 |
 |---|---|---|
@@ -123,7 +123,7 @@ decode(seed, pool):
 | `_ThemesDexdec.json` | ThemesDex 全量明文（2782 条） |
 | `_alldec.json` | 去重后按 dex 汇总（BaseDex 5721 / CoreDex 1300 / DonationDex 747 / ThemesDex 1054 / main 500） |
 | `_bdmethods.json` 等 | 逐方法的明文引用映射 |
-| `_featverify.py` | 校验补丁 58 项是否都在池里（结果：58/58 命中） |
+| `_featverify.py` | 校验 58 项是否都在池里（结果：58/58 命中） |
 | `_58where.py` | 逐项列出 58 个键命中的 dex/类 |
 
 > **关于本文引用的 `data/tmp/_*.py`**:那些是分析过程中随手写的一次性脚本,产物落在 `data/`
@@ -137,7 +137,7 @@ decode(seed, pool):
 
 问题：`BaseDex` 里能看到 300+ 个业务设置键，那么四个 dex 合起来到底有多少个业务设置键？其中「需要授权」的有几个，是不是 58？
 
-结论先行：**dex 里不存在任何一份「设置键总表」或「授权功能总表」**。设置键是**按功能分散内嵌**在各功能类里的，所以「总数」取决于你用什么口径去数；而「需要授权的有几个」**在 dex 里没有固定答案**——授权是**按 key 动态判定**的（见下）。因此 58 这个数字**不是**微X 的授权项数，而是补丁自己写死的一份清单（见 3.5）。
+结论先行：**dex 里不存在任何一份「设置键总表」或「授权功能总表」**。设置键是**按功能分散内嵌**在各功能类里的，所以「总数」取决于你用什么口径去数；而「需要授权的有几个」**在 dex 里没有固定答案**——授权是**按 key 动态判定**的（见下）。因此 58 这个数字**不是**微X 的授权项数，而是本模块自己写死的一份清单（见 3.5）。
 
 #### (1) 分层口径与实测数字
 
@@ -169,13 +169,13 @@ decode(seed, pool):
 
 #### (3) 58 ≠ 授权项数
 
-补丁的 58 项（`CallMethodBypassHook.FEATURES`，`app/src/main/java/github/shadowbaby/wechatxposed/hook/rebuild/support/CallMethodBypassHook.java:101`）是**补丁自己写死的字符串**，用于在 license 校验被 hook 时 `setResult(FEATURES)` 冒充授权列表（同文件 ~307 行）。它：
+本模块的 58 项(`CallMethodBypassHook.FEATURES`,`app/src/main/java/github/shadowbaby/wechatxposed/hook/rebuild/support/CallMethodBypassHook.java:100`)是**本模块自己写死的字符串**,用于在 license 校验被 hook 时 `setResult(FEATURES)` 冒充授权列表(同文件 ~307 行)。它:
 
 - 58/58 都是微X 真实存在的功能键（`_58where.py` 逐项命中 4 个 dex）；
 - 但只有 8 项是 `_enable` 前缀（即顶层开关），其余是子项/别名；
 - 分散在 BaseDex（约 50 项）、CoreDex/DonationDex/ThemesDex（少数）。
 
-所以 58 是**补丁作者挑的一份「看起来像付费功能」的清单**，既不是 dex 里的设置键总数（209 个 `_enable`），也不是微X 的授权项数（动态、无固定值）。
+所以 58 是**本模块挑的一份「看起来像付费功能」的清单**，既不是 dex 里的设置键总数（209 个 `_enable`），也不是微X 的授权项数（动态、无固定值）。
 
 
 ### 1.7 209 个 `*_enable` 设置键明细表
@@ -1024,21 +1024,20 @@ WxModuleHook-> d3hpZF80NTMzODQ1MzM2NzEy   # base64 解码 = wxid_4533845336712
 
 ---
 
-## 三、WxModuleHook 1.2（破解补丁）
+## 三、WxModuleHook（模块实现）
 
 ### 3.1 基本信息
 
 - 包名 `wx.module.hook`，签名 `IKUN`（**非**微X作者签名）
 - Xposed 模块，作用域 `com.tencent.mm`，仅 79KB / 1 个 classes.dex（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）
 - 入口 `assets/xposed_init` → `wx.module.hook.XposedInit`
-- 同样的控制流混淆 + XOR 字符串加密（`m16/m100: sArr[i] ^ key`，key 按调用点散布；
-  重建后对应 `ReflectBridgeA/B.decodeXor`）
+- 同样的控制流混淆 + XOR 字符串加密（`sArr[i] ^ key`，key 按调用点散布）
 
-**类归属（重要，避免与微X 混淆）**：补丁用单字母包名 `a/b/c`，与微X 的混淆命名空间不同。以下类**属于补丁**（在补丁的 classes.dex 里，**不在**微X 的任何 dex 里）：
+**类归属(重要,避免与微X 混淆)**:WxModuleHook 用单字母包名 `a/b/c`,与微X 的命名空间不同。以下类**属于本模块**(在 APK 的 classes.dex 里,**不在**微X 的任何 dex 里):
 
-| 补丁类 | 作用 |
+| 类 | 作用 |
 |---|---|
-| `Lwx/module/hook/XposedInit;` | 补丁入口 |
+| `Lwx/module/hook/XposedInit;` | 入口 |
 | `Lb/a;` | 组件描述列表容器（`WX_COMPONENTS`，4 项） |
 | `Lb/b;` | dex 定位/文件路径（池 key 48914/17712） |
 | `Lb/c;` | `InMemoryDexClassLoader` hook（池 key 7403/17407） |
@@ -1063,9 +1062,9 @@ WxModuleHook-> d3hpZF80NTMzODQ1MzM2NzEy   # base64 解码 = wxid_4533845336712
 - **无文件写入**：不引用任何输出流
 - **无敏感 API**：不调用 IMEI/手机号、通讯录、定位、剪贴板、已安装应用列表
 - 唯一输出：`XposedBridge.log("WxModuleHook-> ...")`，写入 Xposed 日志
-- 工具类（原 `C0000`/`C0001`，重建后为 `ReflectBridgeA`/`ReflectBridgeB`）封装的全部 API 已核对：字符串处理、Base64、Xposed 挂钩、反射——反射目标全部解密确认为微X内部类
+- 工具类（`C0000`/`C0001`，反射转发包装）封装的全部 API 已核对：字符串处理、Base64、Xposed 挂钩、反射——反射目标全部解密确认为微X内部类
 
-**结论：补丁本体不读取也不上传隐私数据。**
+**结论：模块本体不读取也不上传隐私数据。**
 
 ### 3.4 配套脚本的真实风险（wx6_2.44_auto.sh）
 
@@ -1084,27 +1083,28 @@ chmod -R 777 "$DB_DIR"                # 微信 databases 目录！
 
 这个问题要分两层回答：**「58」这个数字来自哪里**，以及**这 58 个名字是不是微X 真正的付费功能**。
 
-#### (1) 「58」来自补丁自己的字符串池，不是微X 的枚举
+#### (1) 「58」来自本模块自己的字符串池,不是微X 的枚举
 
-`c.b`（即 `Lc/b;`，含 `BYPASS_POOL` / key 5559 / 58 项列表）是**补丁 WxModuleHook 自己的类**，位于 **WxModuleHook-1.2.apk 的 `classes.dex`**（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）。它**不在**微X 2.44 的 `classes.dex`（2397988 字节，2829 类）里，也不在 4 个功能 dex 里。
+`c.b`（即 `Lc/b;`，含 `BYPASS_POOL` / key 5559 / 58 项列表）是**WxModuleHook 自己的类**，位于 **WxModuleHook-1.2.apk 的 `classes.dex`**（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）。它**不在**微X 2.44 的 `classes.dex`（2397988 字节，2829 类）里，也不在 4 个功能 dex 里。
 
-补丁 `c.b.beforeHookedMethod` 里，校验通过时执行：
+`CallMethodBypassHook.beforeHookedMethod` 里,校验通过时执行:
 
 ```
-setResult( decodeXor(f3, 145, 1106, 5559) )   // f3 = 补丁的 BYPASS_POOL（1251 项 short[]）
+String FEATURES = decode(BYPASS_POOL, 145, 1106, 5559);
+param.setResult(FEATURES);
 ```
 
-- `f3` 是补丁类 `Lc/b;` 的静态字段 `۬ۦۗ:[S`，1251 项，由 `<clinit>` 的 `fill-array-data` 写入（`[u2 ident=0x300][u2 elem_width=2][u4 size=1251][1251×int16]`）。
+- `f3` 是 `CallMethodBypassHook` 的静态字段（`BYPASS_POOL`），1251 项，由 `<clinit>` 的 `fill-array-data` 写入（`[u2 ident=0x300][u2 elem_width=2][u4 size=1251][1251×int16]`）。
 - 解码公式 `out[i] = (char)(pool[off+i] ^ key)`，key 是**字面量常量** `const/16 v0, #int 5559`（pc `0x38b0`，`move v4, v0` 后作为第 4 参数传入），不是算出来的。
 - 调用点：`sget-object v15, Lc/b;.۬ۦۗ:[S` → `const/16 v12, #int 145` → `const/16 v8, #int 1106` → `invoke-static {v15, v12, v8, v4}, Lc/ۤ۠۫;.۬ۥۧ:([SIII)Ljava/lang/String;`（pc `0x015d`）。
 - `off=145, len=1106` 解出 1106 个字符，恰好是逗号分隔的功能名列表；`split(",")` 得到 **58 项**（1106 字符、57 个逗号 + 1）。
 
-**独立复现验证**（`data/tmp/_patchdec58.py`）：直接读补丁池 `۬ۦۗ`（payload 文件偏移 `0x3d18`，1251×int16）+ `pool[145+i] ^ 5559`，输出前 200 字符即
-`remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,text_rep_nickname,...`，`count(",")==57`、`len(split(","))==58`。所以「58」**就是补丁这段字符串按逗号切分的结果**，不是代码里数出来的 58 个分支，也不是微X 里的任何常量。
+**独立复现验证**（`data/tmp/_patchdec58.py`）：直接读 `BYPASS_POOL`（payload 文件偏移 `0x3d18`，1251×int16）+ `pool[145+i] ^ 5559`，输出前 200 字符即
+`remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,text_rep_nickname,...`，`count(",")==57`、`len(split(","))==58`。所以「58」**就是这段字符串按逗号切分的结果**，不是代码里数出来的 58 个分支，也不是微X 里的任何常量。
 
 #### (2) 这 58 个名字确实是微X 的真实功能键（来自 4 个 dex）
 
-虽然「58」这个数字是补丁定的，但这 58 个**名字**并非凭空捏造——它们全部是微X 4 个功能 dex 里真实存在的**设置键（feature key）**。用逐方法解密字符串映射（`data/tmp/_bdmethods.json` / `_coremethods.json` / `_donmethods.json`）核对，**58/58 全部命中**，分布为 BaseDex 55、CoreDex 5、DonationDex 4、ThemesDex 4（部分键跨 dex 复用）：
+虽然「58」这个数字是本模块定的，但这 58 个**名字**并非凭空捏造——它们全部是微X 4 个功能 dex 里真实存在的**设置键（feature key）**。用逐方法解密字符串映射（`data/tmp/_bdmethods.json` / `_coremethods.json` / `_donmethods.json`）核对，**58/58 全部命中**，分布为 BaseDex 55、CoreDex 5、DonationDex 4、ThemesDex 4（部分键跨 dex 复用）：
 
 | 名字 | 命中 dex | 典型定义/使用类 |
 |---|---|---|
@@ -1117,9 +1117,9 @@ setResult( decodeXor(f3, 145, 1106, 5559) )   // f3 = 补丁的 BYPASS_POOL（12
 | `integrated_allowed` | CoreDex | `Lc/ﹶˉ/ᴵˉ;`、`Lc/ﹶˉ/ᵔˉ;` |
 | `priority_update` | CoreDex | `Lc/ﹶˉ/ᵔˉ;`、`Lᐧי/ˑˋ;` |
 
-这些键在 dex 里是**逐条分散**的开关名（常成对出现 `xxx` / `xxx_enable` / `xxx_...`，如 `modify_steps` / `modify_steps_enable` / `modify_steps_multiplier`），按 UI 分区归属到不同类（如 `Lˈˑ/ⁱˈ;`=通讯录/邻居、`Lˈˑ/ٴᐧ;`=僵尸粉、`Lˈˑ/ˊˋ;`=朋友圈）。**微X 的 4 个 dex 里不存在任何一份含 ≥3 个功能名的逗号分隔清单**（已用 `_commalist.py` 全量扫描，0 命中），也不存在「58」这个常量。所以补丁作者是**从微X 的设置键里挑选了 58 个**，而不是从某处直接抄来一份 58 项清单。
+这些键在 dex 里是**逐条分散**的开关名（常成对出现 `xxx` / `xxx_enable` / `xxx_...`，如 `modify_steps` / `modify_steps_enable` / `modify_steps_multiplier`），按 UI 分区归属到不同类（如 `Lˈˑ/ⁱˈ;`=通讯录/邻居、`Lˈˑ/ٴᐧ;`=僵尸粉、`Lˈˑ/ˊˋ;`=朋友圈）。**微X 的 4 个 dex 里不存在任何一份含 ≥3 个功能名的逗号分隔清单**（已用 `_commalist.py` 全量扫描，0 命中），也不存在「58」这个常量。所以本模块作者是**从微X 的设置键里挑选了 58 个**，而不是从某处直接抄来一份 58 项清单。
 
-#### (3) 微X 真正的授权门禁机制（为什么补丁要伪造一份列表）
+#### (3) 微X 真正的授权门禁机制(为什么本模块要伪造一份列表)
 
 微X 的付费判定不在 dex 里硬编码功能清单，而是**「授权 key 携带的功能集合」**：
 
@@ -1130,7 +1130,7 @@ setResult( decodeXor(f3, 145, 1106, 5559) )   // f3 = 补丁的 BYPASS_POOL（12
 - DonationDex 激活/转移：`Lˎʿ/ʼﹶ;`、`Lˎʿ/ˈˋ;` 解析 `transferkey`，错误码含 `k1_nofeature`→`transfer_activation_no_features`、`k1_valid`、`k2_valid`/`k2_used`、`k1_sameid`、`k1_donation_notsupported`；字段 `_m_advanced_features` / `_y_advanced_features`、`extra_feature_`、`disable_feature_`。
 - 也就是说：**微X 的「付费功能」= 授权 key 里携带的功能名集合**，由服务端签名下发，客户端只做「请求的功能 ⊆ 授权的功能」的包含判断。
 
-补丁正是利用这一点：它 hook 微X **CoreDex** 里的 `com.fkzhang.wechatxposedhooks.WxJniCoreBridge.CallMethod(I[Ljava/lang/Object;)`（`PUBLIC STATIC SYNCHRONIZED NATIVE`，实现在运行时解密出的 native 库 `.so` 里，APK 内不含 `.so`），把 native 的授权应答替换成**自己写死的 58 项列表**，从而让 `ˆⁱ` 的包含判断对任意请求都成立。（微X 主 dex 里另有一个同样签名的 `com.fkzhang.xposed.hook.WxCoreLoader.CallMethod` native 桥。）
+本模块正是利用这一点：它 hook 微X **CoreDex** 里的 `com.fkzhang.wechatxposedhooks.WxJniCoreBridge.CallMethod(I[Ljava/lang/Object;)`（`PUBLIC STATIC SYNCHRONIZED NATIVE`，实现在运行时解密出的 native 库 `.so` 里，APK 内不含 `.so`），把 native 的授权应答替换成**自己写死的 58 项列表**，从而让 `ˆⁱ` 的包含判断对任意请求都成立。（微X 主 dex 里另有一个同样签名的 `com.fkzhang.xposed.hook.WxCoreLoader.CallMethod` native 桥。）
 
 #### (4) 顺带纠正：58 个 `XpMethodHook` 子类 ≠ 58 个付费功能
 
@@ -1138,7 +1138,7 @@ CoreDex 的 `Lcom/fkzhang/wechatxposedhooks/Wrapper/XpMethodHook;` 恰好有 58 
 
 同一池里其余明文字段（key 5559）还包括 `verifier6`(18/9)、`c.ˉˉ.ٴʻ`(27/7)、`param`(36/5)、`null`(41/4)、`8.0.49`(85/6)、`true`(104/4)、`unlimited`(121/9)、`LIC`(139/3) 等；`afterHookedMethod` 用另一套 key `55463`（pc `0x0249`）解出 `wxid_`(1/5)、`c.ﹳﹶ.ʽᵔ`(6/7)、`ᐧٴ`(13/2)、`ʽᵔ`(15/2)。
 
-**小结**：「58」是**补丁自造列表**的长度；这 58 个名字**取自微X 的真实设置键**（可从 4 个 dex 逐条取证）；微X 原版本身**没有**一份 58 项清单，其付费集合由**授权 key 携带的功能名**决定。
+**小结**:「58」是**本模块自造列表**的长度;这 58 个名字**取自微X 的真实设置键**(可从 4 个 dex 逐条取证);微X 自身**没有**一份 58 项清单,其付费集合由**授权 key 携带的功能名**决定。
 
 ### 3.6 微X 原生库 `libwxcoreloader.so` 分析（CallMethod 的真实实现）
 
@@ -1172,7 +1172,7 @@ fn   = 0x22dc8
 1. 原生库**只实现 3 个命令**（0/1/10），其余 80+ 个 Java 侧命令码（84/82/68/115/111/133/113/79/3…）在 native 侧**直接返回 null**——它们由 Java 层（CoreDex）自行处理。
 2. 原生库里**没有任何付费功能名清单**：全库可打印字符串中不存在 `vip`/`pro`/`license`/`pay`/`order`/`feature`/URL 等字样，`.rodata` 只含 JNI 反射/加密/ZIP 工具串。
 3. **功能是按 `int` ID 索引的**，不是按名字。`mode==1`/`mode==10` 的 map 查找键都是整数（反汇编可见 `cmp w11,#0x2f`、`cmp w11,#0x9d` 的二叉搜索树比较），授权校验针对单个 ID 做验签。
-4. 因此"58 项"既不是 native 里的常量，也不是微X 原版的清单——它是**补丁**在 Java 层伪造的字符串列表（见 3.5）。微X 真实的功能集合体现为 **dex 里的设置键名**（下节）。
+4. 因此"58 项"既不是 native 里的常量，也不是微X 自身的清单——它是**本模块**在 Java 层伪造的字符串列表（见 3.5）。微X 真实的功能集合体现为 **dex 里的设置键名**（下节）。
 
 **微X 真实功能/设置键名（来自解密后的 4 个 dex 字符串表）**：`BaseDex` 含 300+ 个业务设置键，例如
 `auto_shake_friend_max`、`chatgpt_for_bot`、`chatgpt_for_bot_url`、`sns_auto_export`、`sns_auto_export_list`、
@@ -1217,8 +1217,8 @@ WxModuleHook 的可学习技术点及其可复刻形态：
 WxModuleHook **不定义新的数据库密钥**，也不修改 FKZ_WX_DATA 的加密：
 
 - 其字符串 XOR key 按调用点散布（c/a.java 用 52313 解 hook 目标类名；b/c.java 用 7403/17407 解 hook 流程；b/b.java 用 48914/17712 解文件定位；c/b.java 用 5559/55463 解功能列表）——只是**字符串混淆 key**，不是密码学密钥
-- 它的破解方式是替换 `WxJniCoreBridge.CallMethod`、`updateLicense` 等方法返回空/true，**不碰微X的加密层（C0753）**
-- 因此 FKZ_WX_DATA 的第一层 AES 密钥（`31d019ea...`，派生自微X证书 DER + 盐 `9n4hZkF`）在装了 WxModuleHook 的手机上依然是原版密钥，解密脚本通用
+- 它的做法是替换 `WxJniCoreBridge.CallMethod`、`updateLicense` 等方法返回空/true，**不碰微X的加密层（C0753）**
+- 因此 FKZ_WX_DATA 的第一层 AES 密钥(`31d019ea...`,派生自微X证书 DER + 盐 `9n4hZkF`)在装了 WxModuleHook 的手机上依然不变,解密脚本通用
 
 ## 六、相关仓库
 

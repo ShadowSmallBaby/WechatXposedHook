@@ -4,15 +4,15 @@ package docs;
  * XOR 字符串池留档,仅供逆向分析对照。
  *
  * 本文件位于 app 的 sourceSet 之外:不参与编译,不打进 APK。
- * 第三阶段重构后,app 源码引用字符串直接用明文,池与解码调用已从源码移除;
- * 这里保留「池原文 + 偏移 + 长度 + key + 明文」的完整对应关系,便于回查。
+ * 源码里引用字符串直接用明文;这里保留「池原文 + 偏移 + 长度 + key + 明文」
+ * 的完整对应关系,便于回查。
  *
  * 运行(仓库根目录,JDK 11+ 单文件源码启动):
  *   java docs/StringPools.java
  */
 public final class StringPools {
 
-    /** 原 XposedInit 的字符池(37 项)。 */
+    /** XposedInit 的字符池(37 项)。 */
     private static final short[] DEX_LOADER_TARGET_POOL = {
             4960, -26539, -26544, -26531, -26553, -26536, -26534, -26593, -26558, -26552, -26558, -26555,
             -26540, -26532, -26593, -26504, -26529, -26500, -26540, -26532, -26530, -26557, -26552, -26507,
@@ -20,7 +20,7 @@ public final class StringPools {
             -26557
     };
 
-    /** 原 InMemoryDexLoadHook 的字符池(364 项)。 */
+    /** InMemoryDexLoadHook 的字符池(364 项)。 */
     private static final short[] LOADER_POOL = {
             1657, 7338, 7303, 7303, 7371, 7311, 7310, 7315, 7371, 7306, 7303, 7321,
             7310, 7306, 7311, 7314, 7371, 7299, 7300, 7300, 7296, 7310, 7311, 7365,
@@ -55,7 +55,7 @@ public final class StringPools {
             17303, 17306, 17308, 17300
     };
 
-    /** 原 ModuleLogger 的字符池(129 项)。 */
+    /** ModuleLogger 的字符池(129 项)。 */
     private static final short[] LOG_POOL = {
             3114, -16525, -16516, -16522, -16544, -16515, -16517, -16522, -16580, -16525, -16542, -16542,
             -16580, -16557, -16527, -16538, -16517, -16540, -16517, -16538, -16533, -16570, -16518, -16544,
@@ -70,7 +70,7 @@ public final class StringPools {
             17756, 17749, 17784, 17759, 17759, 17755, 17693, 17678, 17680
     };
 
-    /** 原 WxComponentHooks 的字符池(130 项)。 */
+    /** WxComponentHooks 的字符池(130 项)。 */
     private static final short[] HOOK_POOL = {
             4477, 12847, -12641, -13193, -12656, -12664, -13187, -12570, -12019, 12847, -12641, -13193,
             -12571, -13952, -5080, -12571, -13254, -13258, -13260, -13193, -13249, -13262, -13277, -13263,
@@ -85,7 +85,7 @@ public final class StringPools {
             -13187, 13255, -12650, 12847, -12649, -13193, -13799, -12641, -12572, -12569
     };
 
-    /** 原 CallMethodBypassHook 的字符池(1251 项)。 */
+    /** CallMethodBypassHook 的字符池(1251 项)。 */
     private static final short[] BYPASS_POOL = {
             7685, -10032, -10017, -10034, -10045, -9992, -10044, -10103, 9940, 9937, -10103, -9702,
             -14861, -13184, -8493, -9702, -14861, 3981, 5569, 5586, 5573, 5598, 5585, 5598,
@@ -194,7 +194,7 @@ public final class StringPools {
             5586, 5593, 5571
     };
 
-    /** 原 VerifierMethodReplacement 的字符池(67 项)。 */
+    /** VerifierMethodReplacement 的字符池(67 项)。 */
     private static final short[] REPLACEMENT_POOL = {
             5044, -10363, -10362, -10359, -10359, -10366, -10365, -10297, -10345, -10360, -10357, -10357,
             -10354, -10359, -10368, -10297, -10351, -10366, -10347, -10354, -10367, -10354, -10366, -10347,
@@ -290,7 +290,7 @@ public final class StringPools {
             new Entry(REPLACEMENT_POOL, 48, 19, 55271, "VerifierMethodReplacement.UPDATED_TIPS_MESSAGE", "banned updated tips"),
     };
 
-    /** 还原 pool[offset, offset + length) 与 key 异或后的明文。 */
+    /** 计算 pool[offset, offset + length) 与 key 异或后的明文。 */
     private static String decode(short[] pool, int offset, int length, int key) {
         char[] chars = new char[length];
         for (int i = 0; i < length; i++) {

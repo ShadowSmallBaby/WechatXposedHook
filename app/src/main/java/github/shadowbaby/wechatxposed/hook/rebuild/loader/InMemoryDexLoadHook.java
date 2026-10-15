@@ -7,7 +7,7 @@ import java.util.Iterator;
 import github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks;
 
 /**
- * InMemoryDexClassLoader 构造函数 hook(原混淆类 b.c)。
+ * InMemoryDexClassLoader 构造函数 hook。
  *
  * 一个类承担两种角色,由构造参数 mode 选择:
  *   mode 0 —— 挂在 InMemoryDexClassLoader 构造函数上。afterHookedMethod 里检查刚加载的

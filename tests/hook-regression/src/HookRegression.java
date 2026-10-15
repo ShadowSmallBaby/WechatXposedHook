@@ -5,7 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Runs the original DEX and rebuilt Java on the same Android runtime with recording stubs. */
+/** Runs the reference DEX and this module's Java on the same Android runtime with recording stubs. */
 public final class HookRegression {
     private static final String REBUILT = "github.shadowbaby.wechatxposed.hook.rebuild.";
     private static int failures;

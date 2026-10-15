@@ -1,6 +1,6 @@
 # WxModuleHook
 
-微X模块(WeXposed)2.44 的 Xposed 模块重建工程。挂住微X把功能 dex 解密进内存的时机,
+针对 WeXposed(微X模块)2.44 的 Xposed 模块。挂住微X把功能 dex 解密进内存的时机,
 接管它的授权校验入口,并对功能包文件、授权数据库做逆向与验证。
 
 本仓库同时包含**可编译的模块源码**与**完整逆向分析资料**。
@@ -10,14 +10,14 @@
 ```
 WxModuleHook/
 ├── app/                      Android 模块源码(Gradle 工程)
-│   └── 代码结构说明.md        源码组织 / 混淆还原 / 字符串池抽取说明
+│   └── 代码结构说明.md        源码组织 / 命名约定 / 字符串池对照
 ├── scripts/                  逆向与生成脚本(Python)
 ├── docs/                     逆向分析文档
 │   ├── reverse-engineering.md   主报告:dex 反汇编、授权链路、设置键
 │   ├── fkz-wx-data-crypto.md    授权库三层加密链路分析
 │   └── StringPools.java          字符串池留档(不参与编译)
-├── tests/hook-regression/    对照原版 DEX 的行为回归(74 项检查)
-├── data/                     原始 APK / tar / 部署脚本 / 授权库样本(不入库)
+├── tests/hook-regression/    对照参考实现的行为回归(74 项检查)
+├── data/                     分析样本:APK / tar / 部署脚本 / 授权库(不入库)
 └── README.md
 ```
 
@@ -46,8 +46,8 @@ WxModuleHook/
 3. `WxComponentHooks` 对每个 dex 注入 hook,`CallMethodBypassHook` 拦截
    `WxJniCoreBridge.CallMethod`,按 `bypassMode` 伪造授权校验结果与功能列表。
 
-包名说明:原 APK 的混淆包 `a`/`b`/`c` 无法直接编译(包内类名互相遮蔽),
-重建时整体语义化为 `rebuild.annotation` / `rebuild.loader` / `rebuild.support`,
+包名说明:混淆包 `a`/`b`/`c` 的类名互相遮蔽,无法直接编译,
+故整体语义化为 `rebuild.annotation` / `rebuild.loader` / `rebuild.support`,
 详见 `app/代码结构说明.md`。
 
 ## 授权数据库(FKZ_WX_DATA)
@@ -81,9 +81,6 @@ python -X utf8 scripts/generate_min_db.py wxid_a,wxid_b,wxid_c merged.db
 | `scripts/decode_fkz_db.py` | 解密 `FKZ_WX_DATA` 的 AES / RSA 两层 |
 | `scripts/generate_min_db.py` | 生成最小可启动授权库(单/多账号,带自检) |
 | `scripts/decode_microx_strings.py` | 复刻微X的字符串混淆解码器 |
-| `scripts/decode_inmemory_dex_strings.py` | 解 `InMemoryDexClassLoader` hook 的 XOR 字符串池 |
-| `scripts/decode_xposed_init_strings.py` | 解 `XposedInit` 的 XOR 字符串池 |
-| `scripts/inline_string_pools.py` | 把源码里的字符串池内联为明文,并导出 `docs/StringPools.java` |
 
 `docs/StringPools.java` 是字符串池留档,在 app 的 sourceSet 之外,**不参与编译、不打进 APK**。
 可直接运行复核:
@@ -94,7 +91,7 @@ java docs/StringPools.java
 
 ## 行为回归测试
 
-`tests/hook-regression/` 用独立 `app_process` 进程执行原版 DEX 与当前源码,
+`tests/hook-regression/` 用独立 `app_process` 进程执行参考实现与本模块源码,
 比较 Hook 注册目标、参数、回调模式、反射调用顺序及返回值(Xposed API 用记录调用的替身,
 不注册真实 Hook、不安装 APK、不访问微信数据)。
 

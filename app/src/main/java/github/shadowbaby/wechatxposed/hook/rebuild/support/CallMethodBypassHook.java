@@ -9,7 +9,7 @@ import java.util.Arrays;
 import github.shadowbaby.wechatxposed.hook.rebuild.loader.ModuleLogger;
 
 /**
- * 核心 hook:伪造微X的授权返回(原混淆类 c.b)。
+ * 核心 hook:伪造微X的授权返回。
  *
  * 微X把授权判断和功能调用都收敛到少数几个入口里,这个方法按入口类型做三件事之一:
  *   VERIFIER_MESSAGE —— CallMethod(int, Object[]):微X的主要入口。按 msgId 分发,
@@ -97,7 +97,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
     /** 仅当调用方抛异常且参数是这个前缀的微信号时,才额外清理授权缓存。 */
     private static final String WXID_PREFIX = "wxid_";
 
-    /** 解锁后开放的功能列表(原池偏移 145,长度 1106)。 */
+    /** 解锁后开放的功能列表(58 项)。 */
     private static final String FEATURES =
         "remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,"
       + "text_rep_nickname,sort_contacts,contacts_select_sex,contacts_select_location,"
@@ -355,7 +355,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
             releaseLicense();
             XposedHelpers.callMethod(param.thisObject, SET_INTERNAL_VERSION_METHOD, INTERNAL_VERSION);
         } catch (Exception ignored) {
-            // 兜底路径,失败不影响原方法执行。
+            // 兜底路径,失败不影响原有流程。
         }
     }
 
@@ -366,7 +366,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         XposedHelpers.callMethod(utility, RELEASE_LICENSE_METHOD);
     }
 
-    /** 原实现经反射调用 java.util.Objects.equals,保持同一调用形态。 */
+    /** 经反射调用 java.util.Objects.equals。 */
     private static Class<?> objectsClass() {
         return XposedHelpers.findClass(OBJECTS_CLASS, null);
     }

@@ -4,9 +4,7 @@
 /.idea
 .DS_Store
 /build
-local.properties
 /app/build
-/app/release
 /data/
 __pycache__/
 *.pyc

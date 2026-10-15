@@ -4,7 +4,7 @@ import de.robv.android.xposed.XC_MethodReplacement;
 import github.shadowbaby.wechatxposed.hook.rebuild.loader.ModuleLogger;
 
 /**
- * 把一个方法整体替换为固定返回值(原混淆类 c.c)。
+ * 把一个方法整体替换为固定返回值。
  *
  * 用于堵掉微X的轮询校验、接口请求和更新提示三个入口:
  *   mode 0 → 记日志后返回 null

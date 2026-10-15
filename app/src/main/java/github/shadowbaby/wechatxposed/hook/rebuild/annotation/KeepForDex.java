@@ -6,12 +6,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 重建源码：a.a —— 编译期注解（原 apk classes.dex 中的辅助注解）
+ * 编译期注解,可标注 PACKAGE / TYPE / ANNOTATION_TYPE / CONSTRUCTOR / METHOD / FIELD。
  *
- * @Target 覆盖 PACKAGE/TYPE/ANNOTATION_TYPE/CONSTRUCTOR/METHOD/FIELD
- * @Retention CLASS（不进运行时反射）
- *
- * 该注解在运行时逻辑中未被引用，仅为 dex 完整性保留。
+ * @Retention CLASS:只留在 class 文件里,不进运行时反射。
+ * 当前代码未引用,保留仅为与 dex 结构一致。
  */
 @Target({ElementType.PACKAGE, ElementType.TYPE, ElementType.ANNOTATION_TYPE,
         ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.FIELD})

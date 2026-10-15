@@ -7,14 +7,13 @@ import java.io.File;
 import java.io.Serializable;
 
 /**
- * 模块日志(原混淆类 b.b)。
+ * 模块日志。
  *
- * 原始 <clinit> 做两件事:
+ * 类加载时做两件事:
  *   1. 反射 ActivityThread 取系统 Context,再 createPackageContext("com.tencent.mm"),
- *      定位 /data/data/com.tencent.mm/files 下的 "_wx_" 探针。探测结果从未被使用,
- *      目的只是确认模块跑在微信进程里;任何失败都静默忽略。
- *   2. 上述字符串与日志前缀原以 XOR 池存放,现已内联为明文;
- *      池原文与解码对照见 docs/StringPools.java。
+ *      在 /data/data/com.tencent.mm/files 下定位 "_wx_" 探针。探测结果不参与任何逻辑,
+ *      只为确认模块跑在微信进程里;任何失败都静默忽略。
+ *   2. 字符串池对照见 docs/StringPools.java。
  */
 public abstract class ModuleLogger {
 
@@ -29,7 +28,7 @@ public abstract class ModuleLogger {
         probeWeChatEnvironment();
     }
 
-    /** 原 <clinit> 的环境探测;不在微信进程内或隐藏 API 不可用时静默跳过。 */
+    /** 环境探测;不在微信进程内或隐藏 API 不可用时静默跳过。 */
     private static void probeWeChatEnvironment() {
         try {
             Class<?> activityThread = XposedHelpers.findClass(ACTIVITY_THREAD_CLASS, null);
@@ -42,7 +41,7 @@ public abstract class ModuleLogger {
         }
     }
 
-    /** 原 b.b.a(Serializable)。 */
+    /** 输出一条日志;Throwable 直接交给 XposedBridge,其余加前缀。 */
     public static void log(Serializable message) {
         if (message instanceof Throwable) {
             XposedBridge.log((Throwable) message);

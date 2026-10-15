@@ -11,7 +11,7 @@ import github.shadowbaby.wechatxposed.hook.rebuild.loader.InMemoryDexLoadHook;
  * 只做一件事:挂住 dalvik.system.InMemoryDexClassLoader 的构造函数,
  * 等微X模块把功能 dex 解密进内存时,交给 InMemoryDexLoadHook 继续处理。
  *
- * 目标类名原以 XOR 池存放,现已内联为明文;池原文与解码对照见 docs/StringPools.java。
+ * 字符串池对照见 docs/StringPools.java。
  */
 public class XposedInit implements IXposedHookZygoteInit {
 

@@ -5,7 +5,7 @@ import de.robv.android.xposed.XposedHelpers;
 import github.shadowbaby.wechatxposed.hook.rebuild.loader.InMemoryDexLoadHook;
 
 /**
- * 给一个已加载的微X组件 dex 装 hook(原混淆类 c.a)。
+ * 给一个已加载的微X组件 dex 装 hook。
  *
  * 微X把功能拆成四个 dex,每个 dex 里的类名不同,钩法也不同:
  *   Base     —— 只做握手,让模块知道这个 dex 已经进来了
@@ -143,7 +143,7 @@ public final class WxComponentHooks {
         XposedHelpers.findAndHookMethod(CORE_VERIFIER_CLASS, classLoader, CORE_VERIFY_UPDATED_TIPS_METHOD,
                 new VerifierMethodReplacement(VerifierMethodReplacement.UPDATED_TIPS));
 
-        // 6. 授权查询:透传给原方法,只在结果上做修补。
+        // 6. 授权查询:不干预调用本身,只在结果上做修补。
         XposedHelpers.findAndHookMethod(CORE_LICENSE_CLASS, classLoader, CORE_LICENSE_METHOD,
                 String.class,
                 String.class,
