@@ -7,5 +7,6 @@
 local.properties
 /app/build
 /app/release
-/docs/
 /data/
+__pycache__/
+*.pyc

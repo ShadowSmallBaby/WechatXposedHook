@@ -1,10 +1,3 @@
-// WxModuleHook 1.2 —— 重建源码编译为 Xposed 模块 APK
-//
-// 模块结构（对照原 apk WxModuleHook-1.2_3.apk）：
-//   - 单 classes.dex，入口 github.shadowbaby.wechatxposed.hook.XposedInit（assets/xposed_init 指向）
-//   - 无 Activity / Service，纯 IXposedHookZygoteInit
-//   - minSdk 26 / targetSdk 36，包名 github.shadowbaby.wechatxposed.hook，versionCode 3，versionName 1.2
-
 plugins {
     id 'com.android.application'
 }

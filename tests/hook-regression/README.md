@@ -1,5 +1,8 @@
 # 原版 DEX 行为回归
 
+> 依赖原版 `WxModuleHook-1.2.apk`,该文件不入库(在 `data/` 下,已被 .gitignore 忽略)。
+> 请自行取得后放到 `data/refs/WxModuleHook-1.2.apk`,或用 `--original` 指定路径。
+
 在已连接的 Android 设备上，通过独立 `app_process` 进程执行原版 DEX 和当前源码，比较 Hook 注册目标、参数、回调模式、反射调用顺序及返回值。Xposed API 使用记录调用的替身，不注册真实 Hook、不安装 APK、不访问微信数据。
 
 运行需要 Python、JDK 17、Android SDK 36 / Build Tools 36.0.0，以及本地原版 `data/refs/WxModuleHook-1.2.apk`：
