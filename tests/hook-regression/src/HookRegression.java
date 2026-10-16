@@ -7,7 +7,7 @@ import java.util.List;
 
 /** Runs the reference DEX and this module's Java on the same Android runtime with recording stubs. */
 public final class HookRegression {
-    private static final String REBUILT = "github.shadowbaby.wechatxposed.hook.rebuild.";
+    private static final String REBUILT = "github.shadowbaby.wechatxposed.hook.";
     private static int failures;
     private static int checks;
     private static List<String> trace(String type, String method, int component) throws Exception {
@@ -110,7 +110,7 @@ public final class HookRegression {
             error.printStackTrace(System.out);
             System.exit(1);
         });
-        // Initialize loggers before collecting traces; environment probes are outside these checks.
+        // Initialize loggers before collecting traces.
         Class.forName("b.b").getMethod("a", java.io.Serializable.class).invoke(null, "warmup");
         Class.forName(REBUILT + "loader.ModuleLogger").getMethod("log", java.io.Serializable.class).invoke(null, "warmup");
         check("startup", startup("wx.module.hook.XposedInit"),
@@ -125,7 +125,7 @@ public final class HookRegression {
         XposedHelpers.availableClasses.clear();
         for (int component = 0; component < 4; component++) {
             List<String> original = trace("c.a", "a", component);
-            List<String> rebuilt = trace("github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks",
+            List<String> rebuilt = trace("github.shadowbaby.wechatxposed.hook.support.WxComponentHooks",
                                          "inject", component);
             check("component " + component, original, rebuilt);
             check("replacement " + component, replacement("c.c", component),

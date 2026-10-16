@@ -42,7 +42,7 @@ def main():
     adb = [args.sdk / "platform-tools/adb.exe"]
     if args.serial:
         adb += ["-s", args.serial]
-    remote = "/data/local/tmp/wxmodulehook-regression.jar"
+    remote = "/data/local/tmp/wexposedhook-regression.jar"
     run(*adb, "push", combined, remote)
     run(*adb, "shell", "env", "CLASSPATH=" + remote, "app_process", "/system/bin", "HookRegression")
 

@@ -1,7 +1,7 @@
-package github.shadowbaby.wechatxposed.hook.rebuild.support;
+package github.shadowbaby.wechatxposed.hook.support;
 
 import de.robv.android.xposed.XC_MethodReplacement;
-import github.shadowbaby.wechatxposed.hook.rebuild.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 
 /**
  * 把一个方法整体替换为固定返回值。
@@ -22,9 +22,9 @@ public final class VerifierMethodReplacement extends XC_MethodReplacement {
     /** 更新提示。 */
     public static final int UPDATED_TIPS = 2;
 
-    private static final String POLLING_VERIFIER_MESSAGE = "banned polling verifier";
-    private static final String CHECK_API_REQUEST_MESSAGE = "banned check api request";
-    private static final String UPDATED_TIPS_MESSAGE = "banned updated tips";
+    private static final String POLLING_VERIFIER_MESSAGE = "blocked polling verifier";
+    private static final String CHECK_API_REQUEST_MESSAGE = "blocked check api";
+    private static final String UPDATED_TIPS_MESSAGE = "blocked update tips";
 
     private final int replacementMode;
 

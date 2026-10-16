@@ -77,7 +77,7 @@ DATA2: {"fp_themes":"74","fp_sf":"4c","fp_af":"af","fp_vidurlparser":"1f","fp_mf
 ## 安全观察
 
 - 所有授权决策由服务端签名数据驱动，客户端只验签：签名无法伪造
-- WxModuleHook 的做法是直接替换校验方法让它返回 true，并屏蔽 updateLicense——即伪造客户端验签结果，而不是伪造签名
+- WeXposedHook 的做法是直接替换校验方法让它返回 true，并屏蔽 updateLicense——即伪造客户端验签结果，而不是伪造签名
 - 第一层 AES 密钥是客户端固定值（任何人可解），真正的防护在第二层 RSA 签名
 
 ## 解密脚本参考

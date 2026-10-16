@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 为指定 wxid 生成一份最小 FKZ_WX_DATA 数据库（WxModuleHook 部署用）
+# 为指定 wxid 生成一份最小 FKZ_WX_DATA 数据库（WeXposedHook 部署用）
 #
 # 结论来源（对四个 dex 的反汇编，见 docs/reverse-engineering.md）：
 #   - 读表：Lﹶˆ/ⁱʼ;->יˋ  "SELECT * FROM DATA WHERE ACCOUNT=? AND TAG=?"
@@ -157,13 +157,12 @@ def main(wxid: str, out: str):
 
 if __name__ == '__main__':
     # wxid 必须是微X 实际传给 hook 的 userId（即当前登录账号的完整 wxid），
-    # 可在 LSPosed 日志里搜 "WxModuleHook-> <base64>"，base64 解码即得。
+    # 取法是读微信 shared_prefs/com.tencent.mm_preferences.xml 里的 login_weixin_username
+    # （模块启动自检就是这么拿的）。
     # 写错（或写了个不存在的账号）会导致菜单加载不出来。
-    # wxid_hjnpj26slcvs22 - ClawHive
-    # wxid_4pc5e5vgpa2f29 - HolliACP
     if len(sys.argv) < 2:
         sys.exit('用法: python generate_min_db.py <wxid>[,<wxid>...] [输出路径]\n'
-                 '  wxid 取 LSPosed 日志 "WxModuleHook-> <base64>" 解码后的值。\n'
+                 '  wxid 取微信 prefs 里的 login_weixin_username。\n'
                  '  多个 wxid 用逗号分隔,写进同一个库(同一设备多账号共用一份 FKZ_WX_DATA)。')
     wxids = [w for w in sys.argv[1].split(',') if w]
     if len(sys.argv) > 2:

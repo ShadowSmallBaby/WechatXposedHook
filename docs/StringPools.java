@@ -7,6 +7,10 @@ package docs;
  * 源码里引用字符串直接用明文;这里保留「池原文 + 偏移 + 长度 + key + 明文」
  * 的完整对应关系,便于回查。
  *
+ * 池与明文都取自**原始参考 APK**(data/refs/WxModuleHook-1.2.apk),是历史留档;
+ * 本项目源码与它逐项对应,只有一处有意不同:日志前缀改成了 "WeXposedHook-> ",
+ * 见下面 ENTRIES 里带注释的那一行。
+ *
  * 运行(仓库根目录,JDK 11+ 单文件源码启动):
  *   java docs/StringPools.java
  */
@@ -239,6 +243,7 @@ public final class StringPools {
             new Entry(LOG_POOL, 48, 14, 48914, "ModuleLogger.WECHAT_PACKAGE", "com.tencent.mm"),
             new Entry(LOG_POOL, 62, 4, 48914, "ModuleLogger.PROBE_FILE_NAME", "_wx_"),
             new Entry(LOG_POOL, 97, 16, 48914, "ModuleLogger.GET_SYSTEM_CONTEXT", "getSystemContext"),
+            // 本项目有意不同:池里是原始 APK 的 "WxModuleHook-> ",源码已改成 "WeXposedHook-> "。
             new Entry(LOG_POOL, 114, 15, 17712, "ModuleLogger.LOG_PREFIX", "WxModuleHook-> "),
 
             // WxComponentHooks

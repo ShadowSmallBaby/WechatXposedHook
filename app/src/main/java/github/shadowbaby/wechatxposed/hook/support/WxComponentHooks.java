@@ -1,14 +1,14 @@
-package github.shadowbaby.wechatxposed.hook.rebuild.support;
+package github.shadowbaby.wechatxposed.hook.support;
 
 import android.content.Context;
 import de.robv.android.xposed.XposedHelpers;
-import github.shadowbaby.wechatxposed.hook.rebuild.loader.InMemoryDexLoadHook;
+import github.shadowbaby.wechatxposed.hook.loader.InMemoryDexLoadHook;
 
 /**
  * 给一个已加载的微X组件 dex 装 hook。
  *
  * 微X把功能拆成四个 dex,每个 dex 里的类名不同,钩法也不同:
- *   Base     —— 只做握手,让模块知道这个 dex 已经进来了
+ *   Base     —— 只做握手
  *   Core     —— 六个 hook,是全部功能的核心:伪造 CallMethod 的授权返回、堵掉三处校验
  *   Themes   —— 只做握手
  *   Donation —— 只做握手

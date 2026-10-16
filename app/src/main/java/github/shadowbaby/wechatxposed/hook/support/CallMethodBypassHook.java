@@ -1,4 +1,4 @@
-package github.shadowbaby.wechatxposed.hook.rebuild.support;
+package github.shadowbaby.wechatxposed.hook.support;
 
 import android.text.TextUtils;
 import android.util.Base64;
@@ -6,7 +6,7 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import github.shadowbaby.wechatxposed.hook.rebuild.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.CurrentAccount;
 
 /**
  * 核心 hook:伪造微X的授权返回。
@@ -183,7 +183,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
                 }
                 String encodedLicense = String.valueOf(params[1]);
                 String expectedUser = String.valueOf(params[2]);
-                ModuleLogger.log(Base64.encodeToString(expectedUser.getBytes(), Base64.NO_WRAP));
+                CurrentAccount.remember(expectedUser);
                 if (TextUtils.isEmpty(encodedLicense) || NULL_TEXT.equals(encodedLicense)) {
                     releaseLicense();
                     return;
@@ -207,6 +207,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         if (Integer.valueOf(0).equals(queryType)) {
             String userId = String.valueOf(params[1]);
             String encodedLicense = String.valueOf(params[2]);
+            CurrentAccount.remember(userId);
             if (TextUtils.isEmpty(encodedLicense) || NULL_TEXT.equals(encodedLicense)) {
                 return;
             }

@@ -1,10 +1,10 @@
-package github.shadowbaby.wechatxposed.hook.rebuild.loader;
+package github.shadowbaby.wechatxposed.hook.loader;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 import java.util.ArrayList;
 import java.util.Iterator;
-import github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks;
+import github.shadowbaby.wechatxposed.hook.support.WxComponentHooks;
 
 /**
  * InMemoryDexClassLoader 构造函数 hook。
@@ -30,11 +30,11 @@ public final class InMemoryDexLoadHook extends XC_MethodHook {
     /** 握手回调,挂在微X的 DonationDex 入口上。 */
     public static final int DONATION_HANDSHAKE = 3;
 
-    private static final String ALL_DEX_HOOKED = "All dex already hooked.";
-    private static final String IGNORED_NON_MODULE_DEX = "Ignored non wx module dex.";
-    private static final String LOG_FOUND = "Found ";
+    private static final String ALL_DEX_HOOKED = "all dex already hooked";
+    private static final String IGNORED_NON_MODULE_DEX = "ignored non-module dex";
+    private static final String LOG_FOUND = "found ";
     private static final String LOG_ENABLE_SUFFIX = ", enable: ";
-    private static final String LOG_HOOK_SUCCEEDED_SUFFIX = " hook suc.";
+    private static final String LOG_HOOK_SUCCEEDED_SUFFIX = " hooked";
 
     /** 四个微X组件的入口类名,下标即 componentId。 */
     private static final String[] COMPONENT_ENTRY_CLASSES = {

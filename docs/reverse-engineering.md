@@ -1,6 +1,6 @@
-# WxModuleHook 与微X模块逆向分析报告
+# WeXposedHook 与微X模块逆向分析报告
 
-> 分析对象：`WxModuleHook-1.2_3.apk`、`微X模块_2.44.apk`、`FKZ_WX_DATA*`、`wx6_2.44.tar`
+> 分析对象：`WxModuleHook-1.2_3.apk`(本项目改名前的那版构建)、`微X模块_2.44.apk`、`FKZ_WX_DATA*`、`wx6_2.44.tar`
 > 工具：TTDeDroid（jadx 1.4.7 / baksmali 2.5.2）、自写 XOR/字符串池解码器、cryptography（AES/RSA）
 > 用途：学习 Xposed hook 技术与授权体系设计，评估隐私风险
 
@@ -71,7 +71,7 @@ decode(seed, pool):
 
 ### 1.4 功能模块存储（wx6_2.44.tar）
 
-**功能 dex 只有 4 个**（Base / Core / Donation / Themes），这由 WxModuleHook 的加载器逻辑决定（组件表见 3.1），不是按 tar 里的文件数决定的：
+**功能 dex 只有 4 个**（Base / Core / Donation / Themes），这由 WeXposedHook 的加载器逻辑决定（组件表见 3.1），不是按 tar 里的文件数决定的：
 
 - 组件表固定登记 4 项（componentId 顺序 1=Core、0=Base、3=Themes、2=Donation），`WX_COMPONENTS` 是长度 4 的 `ArrayList`。
 - `InMemoryDexLoadHook.afterHookedMethod` 遍历这 4 个组件，按 `componentId` 取得**微X**组件入口类名去 `findClassIfExists`，命中即注入并打印 `Found <dexName>`（这些类名是微X 的）：
@@ -170,7 +170,7 @@ decode(seed, pool):
 
 #### (3) 58 ≠ 授权项数
 
-本模块的 58 项(`CallMethodBypassHook.FEATURES`,`app/src/main/java/github/shadowbaby/wechatxposed/hook/rebuild/support/CallMethodBypassHook.java:100`)是**本模块自己写死的字符串**,用于在 license 校验被 hook 时 `setResult(FEATURES)` 冒充授权列表(同文件 ~307 行)。它:
+本模块的 58 项(`CallMethodBypassHook.FEATURES`,`app/src/main/java/github/shadowbaby/wechatxposed/hook/support/CallMethodBypassHook.java:100`)是**本模块自己写死的字符串**,用于在 license 校验被 hook 时 `setResult(FEATURES)` 冒充授权列表(同文件 ~307 行)。它:
 
 - 58/58 都是微X 真实存在的功能键（`data/tmp/tools/_58where.py` 逐项命中 4 个 dex）；
 - 但只有 8 项是 `_enable` 前缀（即顶层开关），其余是子项/别名；
@@ -1008,33 +1008,35 @@ android.database.sqlite.SQLiteException: table DATA already exists (code 1 SQLIT
 
 **（7）wxid 必须是微X 传入 hook 的真实 userId（菜单空的原因）**
 
-`CallMethodBypassHook` 在 msgId 132 路径会把微X 传入的 `expectedUser` 以 `ModuleLogger.log(Base64(expectedUser))` 打到 LSPosed 日志。实机日志：
-
-```
-WxModuleHook-> d3hpZF80NTMzODQ1MzM2NzEy   # base64 解码 = wxid_4533845336712
-```
-
-即微X 传给 hook 的 `userId` 是**当前登录账号的完整 wxid**（`wxid_4533845336712`）。而 DB 行按 `ACCOUNT=? AND TAG=?` 查、LIC blob 里的 user 又必须与 `userId` 相等，所以：
+在 msgId 132 路径把微X 传入的 `expectedUser` 临时打到日志可以确认：微X 传给 hook 的 `userId` 是
+**当前登录账号的完整 wxid**（实测 `wxid_4533845336712`，与微信 prefs 里的 `login_weixin_username` 一致）。
+而 DB 行按 `ACCOUNT=? AND TAG=?` 查、LIC blob 里的 user 又必须与 `userId` 相等，所以：
 
 - `ACCOUNT` 必须 = 该 userId
 - `LIC` blob 必须编码 `"LIC:" + 该 userId`
 
 若写成别的 wxid（例如猜的 `wxid_4pc5e5vgpa2f29`），DB 查不到行、授权比对失败 → 微X 设置界面能打开但**功能菜单为空**。
 
-**取正确 wxid 的方法**：在 LSPosed 日志里搜 `WxModuleHook-> `，把后面的 base64 解码即得（也可用 `adb logcat | grep WxModuleHook`）。
+**取正确 wxid 的方法**：读微信 `shared_prefs/com.tencent.mm_preferences.xml` 里的
+`login_weixin_username`（模块的启动自检就是这么拿的，见 3.7）。
 
 ---
 
-## 三、WxModuleHook（模块实现）
+## 三、WeXposedHook（模块实现）
 
 ### 3.1 基本信息
+
+> 本节描述的是(`WxModuleHook-1.2.apk`)的内部结构:包名 `wx.module.hook`、
+> 单字母混淆包 `a/b/c`、XOR 字符串加密。本仓库现在的源码是它的语义化重建
+> (包名 `github.shadowbaby.wechatxposed.hook`,分包见 `app/代码结构说明.md`),
+> 行为一致但没有那层混淆。
 
 - 包名 `wx.module.hook`，签名 `IKUN`（**非**微X作者签名）
 - Xposed 模块，作用域 `com.tencent.mm`，仅 79KB / 1 个 classes.dex（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）
 - 入口 `assets/xposed_init` → `wx.module.hook.XposedInit`
 - 同样的控制流混淆 + XOR 字符串加密（`sArr[i] ^ key`，key 按调用点散布）
 
-**类归属(重要,避免与微X 混淆)**:WxModuleHook 用单字母包名 `a/b/c`,与微X 的命名空间不同。以下类**属于本模块**(在 APK 的 classes.dex 里,**不在**微X 的任何 dex 里):
+**类归属(重要,避免与微X 混淆)**:WeXposedHook 用单字母包名 `a/b/c`,与微X 的命名空间不同。以下类**属于本模块**(在 APK 的 classes.dex 里,**不在**微X 的任何 dex 里):
 
 | 类 | 作用 |
 |---|---|
@@ -1049,20 +1051,23 @@ WxModuleHook-> d3hpZF80NTMzODQ1MzM2NzEy   # base64 解码 = wxid_4533845336712
 
 对照：微X 2.44 的 `classes.dex` 是 2397988 字节、2829 类，入口 `com.fkzhang.wechatxposed.XposedInit`，native 桥 `com.fkzhang.xposed.hook.WxCoreLoader.CallMethod`；4 个功能 dex 里的组件入口是 `com.fkzhang.wxfeatures.*.Wrapper.Init` / `com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper`。
 
-### 3.2 工作原理（五步）
+### 3.2 工作原理（六步）
 
 1. **拦截微X的代码加载**：挂钩 `dalvik.system.InMemoryDexClassLoader` 构造函数。微X 把加密功能代码解密进内存再加载，此模块在这一步截住
 2. **识别微X组件**：在加载器里找 `com.fkzhang.wxfeatures.base.Wrapper.Init`、`com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper`、donation、themes，区分 Base/Core/Donation/Themes 四个模块
-3. **屏蔽在线校验**：替换**微X CoreDex 里的** `com.fkzhang.wechatxposedhooks.WxJniCoreBridge.CallMethod(I[Ljava/lang/Object;)`（`PUBLIC STATIC SYNCHRONIZED NATIVE`，实现在 native 库 `.so` 里）及 `process_metadata`、`updateLicense`、`delayed_check` 等方法，直接返回空。其日志自述：`banned polling verifier`、`banned check api request`、`banned updated tips`
+3. **屏蔽在线校验**：替换**微X CoreDex 里的** `com.fkzhang.wechatxposedhooks.WxJniCoreBridge.CallMethod(I[Ljava/lang/Object;)`（`PUBLIC STATIC SYNCHRONIZED NATIVE`，实现在 native 库 `.so` 里）及 `process_metadata`、`updateLicense`、`delayed_check` 等方法，直接返回空。对应日志：`blocked polling verifier`、`blocked check api`、`blocked update tips`
 4. **伪造授权**：校验结果强制返回 `true` / `unlimited` / 版本 `8.0.49`，把 58 个付费功能塞进授权列表（`fake_gps`、`fake_transfer_amount`、`zombie_auto_delete`、`export_contacts`、`sns_export`、`mass_sns_like` 等）。含一处 `startsWith("wxid_")` 判断，仅本地比较（详见 3.5）
-5. **定位微X文件**：`ActivityThread.getSystemContext().createPackageContext("com.tencent.mm")` → `/data/data/com.tencent.mm/files`
+5. **定位微X文件**：参考实现反射 `ActivityThread.getSystemContext().createPackageContext("com.tencent.mm")`，本模块直接用 `handleLoadPackage` 给的 `appInfo.dataDir` → `/data/data/com.tencent.mm/files`
+6. **启动自检 + 内置载荷**：`handleLoadPackage` 在微信主进程启动时补齐 `files/wx6_2.44` 里
+   被微X 删掉的三个功能包，并按账号补齐 `databases/FKZ_WX_DATA`（见 3.7 / 3.9）；
+   不再往菜单里注入入口
 
 ### 3.3 隐私检查结论
 
 - **无网络代码**：不引用任何网络类，无 URL
 - **无文件写入**：不引用任何输出流
 - **无敏感 API**：不调用 IMEI/手机号、通讯录、定位、剪贴板、已安装应用列表
-- 唯一输出：`XposedBridge.log("WxModuleHook-> ...")`，写入 Xposed 日志
+- 唯一输出：`XposedBridge.log("WeXposedHook-> ...")`（英文、精炼），写入 Xposed 日志
 - 工具类（`C0000`/`C0001`，反射转发包装）封装的全部 API 已核对：字符串处理、Base64、Xposed 挂钩、反射——反射目标全部解密确认为微X内部类
 
 **结论：模块本体不读取也不上传隐私数据。**
@@ -1086,7 +1091,7 @@ chmod -R 777 "$DB_DIR"                # 微信 databases 目录！
 
 #### (1) 「58」来自本模块自己的字符串池,不是微X 的枚举
 
-`c.b`（即 `Lc/b;`，含 `BYPASS_POOL` / key 5559 / 58 项列表）是**WxModuleHook 自己的类**，位于 **WxModuleHook-1.2.apk 的 `classes.dex`**（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）。它**不在**微X 2.44 的 `classes.dex`（2397988 字节，2829 类）里，也不在 4 个功能 dex 里。
+`c.b`（即 `Lc/b;`，含 `BYPASS_POOL` / key 5559 / 58 项列表）是**本模块自己的类**，位于 **`WxModuleHook-1.2.apk`（改名前那版构建）的 `classes.dex`**（63712 字节，10 个类，MD5 `76e18d3d5982e2976ef1eeb70d156101`）。它**不在**微X 2.44 的 `classes.dex`（2397988 字节，2829 类）里，也不在 4 个功能 dex 里。
 
 `CallMethodBypassHook.beforeHookedMethod` 里,校验通过时执行:
 
@@ -1183,11 +1188,217 @@ fn   = 0x22dc8
 
 **Java 侧调用链（CoreDex `Lc/ˉˉ/ٴʻ;`）**：`c.ˉˉ.ٴʻ.ٴʻ(I[Ljava/lang/Object;)` 是 `WxJniCoreBridge.CallMethod` 的 Java 包装；例如 `יᵎ:()Z`（状态查询）以 `mode=0x44(68)`、空参数调用，`ᴵᐧ:(Ljava/lang/String;)Z` 以 `mode=0x85(133)` 带一个字符串调用。可见**命令码远多于 native 实现的 3 个**，印证 native 只承担授权门禁这一小块。
 
+### 3.7 启动自检与内置载荷(菜单注入是一条走不通的路)
+
+目标是装好 APK 就能用:不需要设备上的部署脚本,也不需要进菜单点一下。做这件事的是一个启动自检:
+
+```
+XposedInit.handleLoadPackage(lpparam)
+  └─ 只认主进程(packageName == processName == com.tencent.mm)
+       └─ StartupCheck.run(lpparam.appInfo.dataDir, StartupCheck.readLoginAccount(dataDir))
+       ├─ FeaturePackRestorer.ensureOnce(files/)      按清单补齐 30 个功能包文件
+            └─ LicenseInstaller.ensure(databases/..., 账号)  补齐授权库
+```
+
+`dataDir` 直接取 `ApplicationInfo.dataDir`(多用户下也是本进程真正的那份),不用再反射 `ActivityThread` 取 Context。
+
+**为什么要内置功能包**:微X 判定未授权时会删掉 `files/wx6_2.44` 里的三个功能包(见 5b),
+只留 `_c` / `_s` 边车文件,功能菜单随即变空;而恢复必须拿回原样的加密文件——微X 会用 599 字节的
+`_c` 校验块与 256 字节的 `_s` 签名块验它们,自己重新生成一份没用。
+
+另外实测:清空整个目录后 microX 只会按数据库里的版本行补下 12 个文件,凑不齐原来的 30 个
+(它按版本判断"要不要下载",不是按文件在不在);而且它下回来的 4 个文件与本地这套**内容不同**
+(同名文件是另一批版本,`d61f837c…` 那组甚至连名字都换成了内容指纹 `9816b5df…`)。
+所以整套 30 个文件(含三组 `_c` / `_s`)都内置进 APK,缺哪个补哪个:
+
+| 项 | 值 |
+|---|---|
+| 载荷内容 | `files/wx6_2.44` 的整套 30 个文件(文件名为内容指纹),打成不压缩的 zip |
+| 打进 APK 的位置 | `app/src/main/assets/wx6_2.44.zip`,随仓库入库、原样打进 assets(APK 约 3.0 MB) |
+| 读取方式 | 模块是 LSPosed 按路径加载的独立 APK,只能自己按路径读 assets:路径取 `initZygote` 的 `StartupParam.modulePath`,用 `ZipFile` 取出 zip 再解包 |
+| 路径失效时 | LSPosed 记的路径是它上次扫描的安装位置,重装 APK 后目录会变、要到下次重启框架才刷新;文件不存在时按包名在 `/data/app` 下重找一次 |
+| 判据 | 30 个文件在不在、大小对不对(名字即指纹,大小不符按缺失处理),缺哪个补哪个 |
+
+**为什么是文件级检测,而不是追微X 的失败事件**:清理发生在微X 自己的启动线程里(见 5b),
+等它的异常或删除动作出现再反应就晚了,而且它删文件、清状态都不报错;
+「文件在不在、大小对不对」是幂等的,任何一次启动都能把状态拉回来,也天然不会重复动作。
+
+真机启动日志(主进程每次启动两行,正常情况下就是这样):
+
+```
+WeXposedHook-> feature packs: all 30 intact
+WeXposedHook-> license db: wxid_4533845336712 ready
+```
+
+有缺失要补时:
+
+```
+WeXposedHook-> feature packs: restored 30 file(s) from payload
+WeXposedHook-> license db: wxid_... -> /data/user/0/com.tencent.mm/databases/FKZ_WX_DATA (existing, inserted 10, refreshed 0, kept 0), restart microX to apply
+```
+
+补写发生在微X 读文件之前(`handleLoadPackage` 早于微X 的 dex 加载):实测清空整个目录后重启微信,
+同一进程里直接打出 `feature loaded: base 525 / donation 71 / themes 113` 与 `Module loaded successfully!`,
+也就是**一次启动就齐**。只有库的补写轮到微X 校验回调那次触发时(见下面账号来源),
+微X 已经读过库了,那种情况才需要再重启一次。
+
+**账号有两个来源**:启动阶段微X 还没开始校验,只能读微信自己的
+`shared_prefs/com.tencent.mm_preferences.xml` 里的 `login_weixin_username`(读 prefs 原文,
+不需要 Context);微X 校验时交来的 `expectedUser` / `userId` 才是权威值(见 3.9),到了再补一次。
+两处都走同一个幂等写库动作,所以最多写两次。
+
+#### 走不通的那条路:注入微X 自己的设置菜单(已放弃)
+
+最早的做法是往微X 的设置菜单里补一条「WX扩展」入口,点它再生成授权库。**注入本身成功、条目也加进去了,
+但在真机的弹出菜单里看不到**(uiautomator dump 里 18 个条目只有微X 自己的),所以这条路被放弃。
+相关结论留档备查:
+
+| 项 | 值 |
+|---|---|
+| 容器类 | `Lʾⁱ/ⁱʽ;`（BaseDex，`PUBLIC FINAL`） |
+| 字段 `ˉˑ` | `LinkedHashMap`，菜单条目（标题 -> 点击回调） |
+| 字段 `ʿᵔ` | `HashMap`，标题覆盖 |
+| 字段 `ᵎᵔ` | `Menu`，目标菜单，构造时由调用方传入 |
+| 灌菜单方法 | `ʿᵢ()V`（149 insn，smali `data/tmp/artifacts/smali/BaseDex.smali.txt:34760` 起） |
+
+真机日志确实打出了 `menu: 已把 WX扩展 加进这个菜单。`(10:47:05)与 `menu item clicked`(10:50:17),
+但 uiautomator dump 里没有它——容器类被 20+ 个设置页共用,`ᵎᵔ` 指的那个 `Menu` 取决于调用方,
+推测条目落到了另一个 `Menu` 实例上(或被后来的条目覆盖)。不再深挖。
+
+挂这个菜单踩的坑仍然有效(现象都是 `ClassNotFoundException`,原因不同):
+
+1. **类名写成了斜杠形式**。常量原来照着 dex 描述符写成斜杠,但 `Class.forName` 只认点号二进制名——
+   实测斜杠形式必抛 `ClassNotFoundException`,而类就在同一个 dex 里(`tests/dex-probe/` 在真机上把两条都打出来)。
+2. **它原本和 Base 的握手挤在同一个 `inject()` 里**。第 1 条一失败,`inject()` 就抛异常,
+   后面的 `iterator.remove()` 不执行:Base 组件留在待办列表里,之后每加载一个 dex 都重挂一遍握手
+   (日志里 6 次 `found BaseDex, enable: true` + LSPosed `Exception in hooker`)。
+
+### 3.8 小程序宿主版本伪装(零依赖 dex 解析)
+
+有些小程序会检查微信宿主版本(基础库版本),版本低就弹升级、不给用。要伪装的是**微信**给小程序
+报的版本,不是微X 的授权版本(后者见 1.7 的 `LatestVersions` / `FPVersions`)。做法来自 WeKit 的
+`SpoofHostVersion`(参考实现在 `data/refs/WeKit-master/.../miniapps/SpoofHostVersion.kt`):
+
+1. 把启动小程序的 CGI 请求里的 `libVersion` 报成一个很大的值(9999);
+2. 把官方升级页的跳转 URL 清空——空 URL 会走宿主自己的失败回调,不影响小程序 JS 回调
+   (整个方法跳过会让 JS 回调悬着,所以只清 URL)。
+
+目标进程是微信主进程与 `:appbrand0` / `:appbrand1`(小程序跑在后者)。
+
+#### 为什么不用 DexKit
+
+WeKit 用 DexKit 在运行时按字符串特征反查混淆类。实测把 DexKit 2.2.0 引进来会带 4 个 ABI 的
+`libdexkit.so`(共 1.45 MB)+ kotlin-stdlib,APK 从 3.0 MB 涨到约 4.5 MB(只留 arm64 也要 +380 KB)。
+本模块只需要「按字符串常量反查类」这一件事,于是自己写了一个精简解析器(`DexStrings`),
+零第三方依赖,APK 只涨约 3 KB。
+
+#### 反查判据(实测)
+
+微信 8.0.49 的类名是混淆的、且随版本变,所以不写死类名,按 dex 常量池里的字符串反查:
+
+| 目标 | 锚点字符串 | 实测命中 |
+|---|---|---|
+| 启动构造器所在类 | `MicroMsg.AppBrand.CgiLaunchWxaApp\|func:1122` + `<init> cgiHash[%d], ... libVersion[%d], ...` | `wx0.d`,在 `classes5.dex` |
+| private_openUrl 方法 | `private_openUrl` + `geta8key_open_webview_appid` + `open_custom_style_url` | `com.tencent.mm.plugin.appbrand.jsapi.oa`,在 `classes.dex` |
+
+两处细节与 WeKit 的写法不同,都是实测校正的:
+
+- **启动构造器的第二个锚点**:WeKit 只用 `libVersion[%d]`,这一版微信里那个格式化串是完整的一句
+  `<init> cgiHash[%d], username[%s] ... libVersion[%d], ...`;用完整串更不容易误伤。
+- **private_openUrl 的第三个锚点**:WeKit 用 `rawUrl`,但这一版微信里该方法引用的是 `url`,
+  `rawUrl` 根本不在这个类里。换成同样只属于这个方法的 `open_custom_style_url`
+  (`url` 太泛,全 dex 有 65 个类命中,不能当锚点)。
+
+构造器形如 `wx0.d.<init>(String, boolean, ..., int libVersion, ..., int, boolean, String, boolean, boolean)`,
+`libVersion` 是第 7 个参数(下标 6),hook 里直接 `param.args[6] = 9999`。
+private_openUrl 形如 `oa.u(jsapi/l, JSONObject, int)`,JSONObject 是第 2 个参数(下标 1),
+取 `optString("url")` 命中升级页就 `put("url", "")`。
+
+#### 自写解析器要读的 dex 结构
+
+`DexStrings` 只按 dex 规范的固定偏移读,不依赖任何库:
+
+- header 里 `string_ids` / `type_ids` / `proto_ids` / `method_ids` / `class_defs` 各是 `<size, off>` 两个 u32;
+- `class_defs` 每项 32 字节,`class_data_off` 在 +24;
+- `class_data` 开头是 `sf` / `inf` / `dm` / `vm` 四个 uleb128,随后是 encoded_field(2 个 uleb128)
+  与 encoded_method(`diff` / `acc` / `code` 三个 uleb128);
+- `code_item` 是 `<HHHHII>`(registers / ins / outs / tries / debug_info_off / insns_size),
+  指令从 +16 开始,`const-string` = 0x1a(后跟 u16 索引)、`const-string/jumbo` = 0x1b(后跟 u32)。
+
+三个容易踩的坑:
+
+1. **方法索引在 direct 与 virtual 两段里各自从 0 累加**,跨段累加会越界;
+2. **proto 的参数表是「u32 个数 + 若干 u16 类型索引」**,不是以 0 结尾的数组
+   (按「读到 0 为止」解析会把第一个 u16 当成类型,得到错误的签名);
+3. `const-string` 与 `const-string/jumbo` 的索引宽度不同(u16 / u32)。
+
+解析器正确性由 `tests/dex-strings/run.py` 在桌面 JVM 上验证:对微信 base.apk 解出的 15 个 dex,
+和一份独立的 Python 参考实现逐行对照「每个 dex 里命中某字符串的类数」,结果完全一致。
+
+### 3.9 授权库生成内置进模块
+
+原来靠 `scripts/generate_min_db.py` 在设备上跑 shell 部署;现在同一套逻辑搬进了模块
+(`app/.../hook/license/`),启动自检拿到账号就写:
+
+| 类 | 职责 |
+|---|---|
+| `LicenseData` | 按账号生成 10 行;第一层 AES-256-CBC(零 IV/PKCS7)+ Base64;LIC 第 3 段 key = SHA-256(账号),生成后立刻按微X 的解密路径自检 |
+| `LicenseDatabase` | 建表、补齐 10 行、`user_version = 1`;写前备份 `.bak`;写入策略见下 |
+| `LicenseInstaller` | 按定好的账号写入/补齐 `databases/FKZ_WX_DATA`;同一个账号只写一次,失败不记、下次再试 |
+| `StartupCheck` | 启动自检入口:定 `dataDir`、跑功能包自检、把账号递给 `LicenseInstaller`(见 3.7) |
+| `FeaturePackRestorer` | 30 个功能包文件的文件级自检与补写,载荷是 APK 里的 `assets/wx6_2.44.zip` |
+
+账号来源有两处:启动时读微信 prefs 里的 `login_weixin_username`(最早、不需要 Context),
+微X 校验时交来的 msgId 132 `expectedUser` / 功能查询 `userId` 才是权威值
+(`CurrentAccount` 记住它并让自检再补一次)。猜一个 wxid 写出来的库,微X 的
+`SELECT * FROM DATA WHERE ACCOUNT=?` 读不到,等于没写。
+
+一致性校验:`tests/license-data/run.py` 用同一批账号分别跑 Java 实现与
+`scripts/generate_min_db.py`,逐行比对 TAG/TYPE/VALUE(纯 JVM,不需要设备)。
+Java 侧的输出还与设备上被微X 接受的 `data/FKZ_WX_DATA` 对齐(其中 f29/hjn/722 三个
+账号的 10 行与脚本产物逐字节相同)。
+
+#### 库已存在、账号已存在时的写入策略
+
+设备上的库一般已经有这个账号(实测 406 行 / 4 个账号:4533 有 365 行带完整设置),
+所以写入必须是「补齐」而不是「重建」:
+
+| 库 | 账号 | 行为 |
+|---|---|---|
+| 不存在 | — | 新建库 + 写 10 行 + `user_version = 1` |
+| 已存在 | 不存在 | 只插这个账号的 10 行,其他账号一行不动 |
+| 已存在 | 已存在且 10 行齐全 | 一行不新增;LIC/verifier6 已经是该账号的就**原样保留**,其余 8 行也不动 |
+| 已存在 | 已存在但 LIC/verifier6 是别的账号的 | 只重算这两行(照抄库就是这种情况) |
+| 已存在但 `user_version` 不是 1 | 任意 | 改回 1,数据行不动(否则微X 的 `SQLiteOpenHelper` 会重建表,撞 "table DATA already exists") |
+| 已存在 | 已存在、LIC 是本账号的、verifier6 缺行 | 只补 verifier6(`inserted=1 kept=1`),LIC 不动 |
+| 已存在 | 已存在、LIC 是本账号的、verifier6 是别人的 | 只重算 verifier6(`refreshed=1 kept=1`) |
+| 已存在 | 微X 自己那条连接开着(模块就在微信进程里写) | 照常写入,第二条连接不影响 |
+| 已存在 | 微X 占着一个写事务 | `SQLiteDatabaseLockedException`,只记日志、不影响微X,再点一次即可 |
+| 已存在但是 0 字节 | 当成空库:建表 + 写 10 行 |
+| 已存在但不是 SQLite(损坏) | `SQLiteDatabase` 自己删掉坏文件重建后照常写;原文件在写入前已备份成 `.bak` |
+
+「能不能用」的判定(全部在本地做,不联网):
+
+- LIC:第一层 AES 解出来后正好 3 段,blob 还原为 `LIC:<账号>`,
+  且第 3 段能用 `SHA-256(该账号)` 解出 `[1]`;
+- verifier6:blob 还原为 `verifier6#<标记>:<账号>`。标记位不限定——
+  实测厂商发的是 `#A:`, 脚本/模块生成的是 `#D:`, 两种都能用。
+
+正因为厂商发的值与模块生成的等价(正好 3 段 + blob 指向本账号 + 段 3 能解),
+重算覆盖没有收益,所以改成保留原值。
+
+写完什么时候生效看时机:启动自检那次写库跑在微X 读库之前(见 3.7),同一次启动就生效;
+轮到微X 校验回调触发的补写时它已经读过库了,才需要重启微X。写入前会备份 `FKZ_WX_DATA.bak`。
+
+真机验证:`tests/license-data/run-device.py` 把库副本推到 `/data/local/tmp`,用 `app_process`
+跑**真正的** `LicenseDatabase.ensure`(即 `android.database.sqlite`),覆盖上表十一种情形 + 幂等重复,
+当前 12/12 通过(样本取设备实库:406 行 / 4 个账号)。
+
 ## 四、复刻思路（技术层面，不含授权绕过）
 
-WxModuleHook 的可学习技术点及其可复刻形态：
+WeXposedHook 的可学习技术点及其可复刻形态：
 
-| 技术 | WxModuleHook 中的用途 | 无害复刻形态 |
+| 技术 | WeXposedHook 中的用途 | 无害复刻形态 |
 |---|---|---|
 | `InMemoryDexClassLoader` hook | 截获微X的动态 dex | 打印被加载 dex 内容/类名的观察模块 |
 | 字符串 XOR 加密 | 隐藏 hook 目标 | 同款 `short[] ^ key` 编解码器 |
@@ -1213,13 +1424,13 @@ WxModuleHook 的可学习技术点及其可复刻形态：
 | 微X 原生库注册方法 | `CallMethod` `(I[Ljava/lang/Object;)Ljava/lang/Object;` @ arm64 vaddr `0x22dc8`（方法表 `0x721e8`） |
 | 微X 原生库仅实现的 mode | `0`=初始化、`1`=功能校验、`10`=授权验签；其余命令码在 native 侧返回 null |
 
-### WxModuleHook 的密钥情况
+### WeXposedHook 的密钥情况
 
-WxModuleHook **不定义新的数据库密钥**，也不修改 FKZ_WX_DATA 的加密：
+WeXposedHook **不定义新的数据库密钥**，也不修改 FKZ_WX_DATA 的加密：
 
 - 其字符串 XOR key 按调用点散布（c/a.java 用 52313 解 hook 目标类名；b/c.java 用 7403/17407 解 hook 流程；b/b.java 用 48914/17712 解文件定位；c/b.java 用 5559/55463 解功能列表）——只是**字符串混淆 key**，不是密码学密钥
 - 它的做法是替换 `WxJniCoreBridge.CallMethod`、`updateLicense` 等方法返回空/true，**不碰微X的加密层（C0753）**
-- 因此 FKZ_WX_DATA 的第一层 AES 密钥(`31d019ea...`,派生自微X证书 DER + 盐 `9n4hZkF`)在装了 WxModuleHook 的手机上依然不变,解密脚本通用
+- 因此 FKZ_WX_DATA 的第一层 AES 密钥(`31d019ea...`,派生自微X证书 DER + 盐 `9n4hZkF`)在装了 WeXposedHook 的手机上依然不变,解密脚本通用
 
 ## 六、相关仓库
 

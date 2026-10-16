@@ -1,6 +1,6 @@
-package github.shadowbaby.wechatxposed.hook.rebuild.loader;
+package github.shadowbaby.wechatxposed.hook.loader;
 
-import github.shadowbaby.wechatxposed.hook.rebuild.support.WxComponentHooks;
+import github.shadowbaby.wechatxposed.hook.support.WxComponentHooks;
 import java.util.ArrayList;
 import java.util.List;
 
