@@ -2,133 +2,84 @@ package github.shadowbaby.wechatxposed.hook.support;
 
 import android.text.TextUtils;
 import android.util.Base64;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
+import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
+import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
+import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.CurrentAccount;
+import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import github.shadowbaby.wechatxposed.hook.loader.CurrentAccount;
 
-/**
- * 核心 hook:伪造微X的授权返回。
- *
- * 微X把授权判断和功能调用都收敛到少数几个入口里,这个方法按入口类型做三件事之一:
- *   VERIFIER_MESSAGE —— CallMethod(int, Object[]):微X的主要入口。按 msgId 分发,
- *                       把校验结果、版本号、功能列表换成模块想要的返回值。
- *   LICENSE_CONTEXT  —— CallMethod(Context):授权上下文。拿到授权串后判断是否为空白,
- *                       空白即放行(返回 null),否则交给内部版本号兜底。
- *   PASSTHROUGH      —— 授权查询:不干预调用本身,只在原方法抛异常且参数是 wxid_ 时
- *                       额外清理一次授权缓存。
- *
- * 授权串的编码:Base64 包住一串「长度前缀 + 数字段」,再按位异或还原成
- * "用户标识:授权内容",最后用 java.util.Objects.equals 和调用方的用户标识比对。
- */
-public final class CallMethodBypassHook extends XC_MethodHook {
+public final class CallMethodBypassHook implements HookCallback {
 
-    /** 处理 CallMethod(int, Object[]),按 msgId 伪造授权校验结果。 */
     public static final int VERIFIER_MESSAGE = 0;
 
-    /** 处理 CallMethod(Context),按授权上下文决定放行。 */
     public static final int LICENSE_CONTEXT = 1;
 
-    /** 原样放行,只在异常时做清理。 */
     public static final int PASSTHROUGH = 2;
 
-    /** 请求授权校验结果。 */
     private static final int MSG_VERIFY_RESULT = 130;
 
-    /** 上报授权数据块。 */
     private static final int MSG_LICENSE_BLOB = 132;
 
-    /** 查询功能。 */
     private static final int MSG_FEATURE_QUERY = 150;
 
-    /** 微X请求校验结果时用的服务名。 */
-    private static final String VERIFIER_SERVICE = "verifier6";
+    private static final String VERIFIER_SERVICE = Secret.of(SecretConstants.VERIFIER_SERVICE);
 
-    /** msgId 130 请求里,表示「这次调用是查参数」的标记。 */
-    private static final String ACTION_PARAM = "param";
+    private static final String ACTION_PARAM = Secret.of(SecretConstants.ACTION_PARAM);
 
-    /** 授权数据块里字段之间的分隔符。 */
     private static final String FIELD_SEPARATOR = ":";
 
-    /** 用来比对的字符串字面量 "null"。 */
     private static final String NULL_TEXT = "null";
 
-    /** 用来比对的字符串字面量 "true"。 */
     private static final String TRUE_TEXT = "true";
 
-    /** 微X要求的最低版本号,低于它功能会被禁用。 */
-    private static final String MIN_SUPPORTED_VERSION = "8.0.49";
+    private static final String MIN_SUPPORTED_VERSION = Secret.of(SecretConstants.MIN_SUPPORTED_VERSION);
 
-    /** 会员授权标记。 */
-    private static final String UNLIMITED = "unlimited";
+    private static final String UNLIMITED = Secret.of(SecretConstants.UNLIMITED);
 
-    /** 查询功能时表示「远端指令」的标记,命中则不下发功能列表。 */
-    private static final String REMOTE_COMMAND = "remote_rp_cmd";
+    private static final String REMOTE_COMMAND = Secret.of(SecretConstants.REMOTE_COMMAND);
 
-    /** 授权串里用户标识与授权内容的分隔符。 */
     private static final String PAYLOAD_SEPARATOR = "#";
 
-    /** 授权比对用的 JDK 工具类。 */
-    private static final String OBJECTS_CLASS = "java.util.Objects";
-    private static final String OBJECTS_EQUALS_METHOD = "equals";
+    private static final String OBJECTS_CLASS = Secret.of(SecretConstants.OBJECTS_CLASS);
+    private static final String OBJECTS_EQUALS_METHOD = Secret.of(SecretConstants.OBJECTS_EQUALS_METHOD);
 
-    /** 微X内部的授权服务类与工厂方法。 */
-    private static final String VERIFIER_SERVICE_CLASS = "c.\u02C9\u02C9.\u0674\u02BB";
-    private static final String VERIFIER_SERVICE_FACTORY = "\u2071\u02CF";
+    private static final String VERIFIER_SERVICE_CLASS = Secret.of(SecretConstants.VERIFIER_SERVICE_CLASS);
+    private static final String VERIFIER_SERVICE_FACTORY = Secret.of(SecretConstants.VERIFIER_SERVICE_FACTORY);
 
-    /** 读出授权对象的字段。 */
-    private static final String LICENSE_FIELD = "LIC";
-    private static final String LICENSE_GETTER_METHOD = "\uFE73\u02CF";
+    private static final String LICENSE_FIELD = Secret.of(SecretConstants.LICENSE_FIELD);
+    private static final String LICENSE_GETTER_METHOD = Secret.of(SecretConstants.LICENSE_GETTER_METHOD);
 
-    /** 清掉当前授权的方法。 */
-    private static final String RELEASE_LICENSE_METHOD = "\u02BD\u1D54";
+    private static final String RELEASE_LICENSE_METHOD = Secret.of(SecretConstants.RELEASE_LICENSE_METHOD);
 
-    /** 清授权前先取小工具对象的类、工厂方法(与方法名共用 RELEASE_LICENSE_METHOD)。 */
-    private static final String CLEANUP_CLASS = "c.\uFE73\uFE76.\u02BD\u1D54";
-    private static final String CLEANUP_FACTORY_METHOD = "\u1427\u0674";
+    private static final String CLEANUP_CLASS = Secret.of(SecretConstants.CLEANUP_CLASS);
+    private static final String CLEANUP_FACTORY_METHOD = Secret.of(SecretConstants.CLEANUP_FACTORY_METHOD);
 
-    /** 把内部版本号顶上去的方法。 */
-    private static final String SET_INTERNAL_VERSION_METHOD = "\u02D1\u1D4E";
+    private static final String SET_INTERNAL_VERSION_METHOD =
+            Secret.of(SecretConstants.SET_INTERNAL_VERSION_METHOD);
 
-    /** 顶上去的版本号。 */
     private static final int INTERNAL_VERSION = 805;
 
-    /** 仅当调用方抛异常且参数是这个前缀的微信号时,才额外清理授权缓存。 */
-    private static final String WXID_PREFIX = "wxid_";
+    private static final String WXID_PREFIX = Secret.of(SecretConstants.WXID_PREFIX);
 
-    /** 解锁后开放的功能列表(58 项)。 */
-    private static final String FEATURES =
-        "remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,"
-      + "text_rep_nickname,sort_contacts,contacts_select_sex,contacts_select_location,"
-      + "modify_steps,themes,fake_gps,f_autoreply_export,auto_contain_new_contact,"
-      + "chatroom_send_multi_invites,zombie_auto_delete,tail_mode,"
-      + "redpacket_amount_accumulate,integrated_allowed,send_multple_friendcard,"
-      + "scan_gallery_to_camera,videocall_ringtone_advanced,wxid_friend_req,"
-      + "export_chatroom_members,auto_download_chat_media,werun_like_all,"
-      + "moment_original_image,fake_moment_forward,zombie_silent_search,"
-      + "zombie_transfer_search,show_realname,auto_accept_neighbor_req,fast_send,"
-      + "tag_forward,keyword_notification,fake_transfer_amount,accept_neighbor_friendreq,"
-      + "auto_friendreq,new_chatroom_chat_blacklist,auto_label_new_contact,"
-      + "record_showid,unlimited_voice_sel,extract_vid_audio,auto_remark_new_contact,"
-      + "fav_wenote,multi_response,rp_keyword,chatroom_container_tags,"
-      + "moments_container_enable,sns_export,sns_keyword_notification,mass_sns_like,"
-      + "export_contacts,friend_request_import,scheduled_task,"
-      + "task_chatroom_invite_allow_by_identity,chat_schedule_forward,auto_clean_moment";
+    private static final String FEATURES = Secret.of(SecretConstants.FEATURES);
 
-    /** VERIFIER_MESSAGE / LICENSE_CONTEXT / PASSTHROUGH。 */
     public final int bypassMode;
 
-    /** 微X组件 dex 的 ClassLoader,用来解析它自己的混淆类。 */
-    public final ClassLoader hostClassLoader;
+    private final HookFramework framework;
 
-    public CallMethodBypassHook(ClassLoader hostClassLoader, int bypassMode) {
+    private final ClassLoader hostClassLoader;
+
+    public CallMethodBypassHook(HookFramework framework, ClassLoader hostClassLoader, int bypassMode) {
+        this.framework = framework;
         this.hostClassLoader = hostClassLoader;
         this.bypassMode = bypassMode;
     }
 
     @Override
-    public void beforeHookedMethod(MethodHookParam param) throws Throwable {
+    public void before(HookParam param) throws Throwable {
         switch (bypassMode) {
             case VERIFIER_MESSAGE:
                 handleVerifierCall(param);
@@ -137,36 +88,26 @@ public final class CallMethodBypassHook extends XC_MethodHook {
                 handleLicenseContext(param);
                 break;
             default:
-                super.beforeHookedMethod(param);
                 break;
         }
     }
 
     @Override
-    public void afterHookedMethod(MethodHookParam param) throws Throwable {
-        super.afterHookedMethod(param);
+    public void after(HookParam param) {
         if (bypassMode != PASSTHROUGH || !param.hasThrowable()) {
             return;
         }
-        String account = String.valueOf(param.args[0]);
+        String account = String.valueOf(param.arg(0));
         if (!account.startsWith(WXID_PREFIX)) {
             return;
         }
         releaseLicense();
     }
 
-    /**
-     * CallMethod(int msgId, Object[] params)。
-     *
-     * msgId 130 —— 直接给出校验结果:问参数就回最低版本号,问服务就回 "true"。
-     * msgId 132 —— 日志留一份授权数据,然后按白名单比对用户标识。
-     * msgId 150 —— 查功能:分 0/2/4/6 四种查询,分别走授权校验、远端指令判断、
-     *              直接给 "unlimited"、以及读授权对象再比对。
-     */
-    private void handleVerifierCall(MethodHookParam param) {
+    private void handleVerifierCall(HookParam param) {
         try {
-            int msgId = (Integer) param.args[0];
-            Object[] params = (Object[]) param.args[1];
+            int msgId = (Integer) param.arg(0);
+            Object[] params = (Object[]) param.arg(1);
 
             if (msgId == MSG_VERIFY_RESULT) {
                 if (ACTION_PARAM.equals(params[0])) {
@@ -200,8 +141,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /** msgId 150:params[0] 是查询类型。 */
-    private void handleFeatureQuery(MethodHookParam param, Object[] params) {
+    private void handleFeatureQuery(HookParam param, Object[] params) {
         Object queryType = params[0];
 
         if (Integer.valueOf(0).equals(queryType)) {
@@ -216,7 +156,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
 
         if (Integer.valueOf(2).equals(queryType)) {
-            // 远端指令不下发功能列表,其余一律回 true。
+
             if (!REMOTE_COMMAND.equals(params[2])) {
                 param.setResult(Boolean.TRUE);
             }
@@ -229,15 +169,15 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
 
         if (Integer.valueOf(6).equals(queryType)) {
-            // 先从授权服务取出授权对象,再拿它比对;取不到就回空串。
-            Object service = XposedHelpers.callStaticMethod(
-                    XposedHelpers.findClass(VERIFIER_SERVICE_CLASS, hostClassLoader),
+
+            Object service = framework.callStaticMethod(
+                    framework.findClass(VERIFIER_SERVICE_CLASS, hostClassLoader),
                     VERIFIER_SERVICE_FACTORY);
             if (service == null) {
                 param.setResult("");
                 return;
             }
-            Object license = XposedHelpers.callMethod(service, LICENSE_GETTER_METHOD, LICENSE_FIELD, "");
+            Object license = framework.callMethod(service, LICENSE_GETTER_METHOD, LICENSE_FIELD, "");
             if (!(license instanceof String)) {
                 param.setResult("");
                 return;
@@ -246,16 +186,11 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /**
-     * 白名单校验(msgId 132 路径):把调用方给的授权数据解出来,取 ":" 后半段的用户标识
-     * 与实际用户标识比对,一致即放行。
-     */
-    private void verifyAgainstWhitelist(MethodHookParam param, String encodedLicense, String expectedUser) {
+    private void verifyAgainstWhitelist(HookParam param, String encodedLicense, String expectedUser) {
         try {
             String decoded = decodeLicenseBlob(encodedLicense);
-            Class<?> objects = objectsClass();
             String licenseUser = decoded.split(FIELD_SEPARATOR)[1];
-            if (objectsEqual(objects, expectedUser, licenseUser)) {
+            if (objectsEqual(expectedUser, licenseUser)) {
                 param.setResult(Boolean.TRUE);
             } else {
                 releaseLicense();
@@ -266,16 +201,11 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /**
-     * 授权校验(msgId 150 / 查询类型 0):同样的比对,但比对对象是调用方给的用户标识,
-     * 结果回 true / false。
-     */
-    private void verifyLicense(MethodHookParam param, String userId, String encodedLicense) {
+    private void verifyLicense(HookParam param, String userId, String encodedLicense) {
         try {
             String decoded = decodeLicenseBlob(encodedLicense);
-            Class<?> objects = objectsClass();
             String licenseUser = decoded.split(FIELD_SEPARATOR)[1];
-            if (objectsEqual(objects, userId, licenseUser)) {
+            if (objectsEqual(userId, licenseUser)) {
                 param.setResult(Boolean.TRUE);
             } else {
                 releaseLicense();
@@ -286,11 +216,7 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /**
-     * 从授权对象里读出的授权串再比对(查询类型 6):比对通过就下发完整功能列表,
-     * 否则清掉授权并回空串。
-     */
-    private void verifyLicenseFromService(MethodHookParam param, String userId, String license) {
+    private void verifyLicenseFromService(HookParam param, String userId, String license) {
         try {
             if (TextUtils.isEmpty(license)) {
                 param.setResult("");
@@ -302,9 +228,8 @@ public final class CallMethodBypassHook extends XC_MethodHook {
                 return;
             }
             String decoded = decodeLicenseBlob(encodedLicense);
-            Class<?> objects = objectsClass();
             String licenseUser = decoded.split(FIELD_SEPARATOR)[1];
-            if (objectsEqual(objects, userId, licenseUser)) {
+            if (objectsEqual(userId, licenseUser)) {
                 param.setResult(FEATURES);
             } else {
                 releaseLicense();
@@ -316,21 +241,16 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /**
-     * CallMethod(Context):从授权服务取一次授权,只要拿到的不是一串空白就放行(返回 null);
-     * 拿不到或全是空白,就把微X内部版本号顶到 805,让它走自己的兜底逻辑。
-     */
-    private void handleLicenseContext(MethodHookParam param) throws Throwable {
-        super.beforeHookedMethod(param);
+    private void handleLicenseContext(HookParam param) {
         try {
-            Object service = XposedHelpers.callStaticMethod(
-                    XposedHelpers.findClass(VERIFIER_SERVICE_CLASS, hostClassLoader),
+            Object service = framework.callStaticMethod(
+                    framework.findClass(VERIFIER_SERVICE_CLASS, hostClassLoader),
                     VERIFIER_SERVICE_FACTORY);
             if (service == null) {
                 raiseInternalVersion(param);
                 return;
             }
-            Object license = XposedHelpers.callMethod(service, LICENSE_GETTER_METHOD, LICENSE_FIELD, "");
+            Object license = framework.callMethod(service, LICENSE_GETTER_METHOD, LICENSE_FIELD, "");
             if (license == null) {
                 raiseInternalVersion(param);
                 return;
@@ -350,37 +270,26 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         }
     }
 
-    /** 清掉授权缓存,再把内部版本号顶上去;任何一步失败都静默跳过。 */
-    private void raiseInternalVersion(MethodHookParam param) {
+    private void raiseInternalVersion(HookParam param) {
         try {
             releaseLicense();
-            XposedHelpers.callMethod(param.thisObject, SET_INTERNAL_VERSION_METHOD, INTERNAL_VERSION);
+            framework.callMethod(param.thisObject(), SET_INTERNAL_VERSION_METHOD, INTERNAL_VERSION);
         } catch (Exception ignored) {
-            // 兜底路径,失败不影响原有流程。
+
         }
     }
 
-    /** 找到微X的授权小工具并让它清掉当前授权。 */
     private void releaseLicense() {
-        Object utility = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass(CLEANUP_CLASS, hostClassLoader), CLEANUP_FACTORY_METHOD);
-        XposedHelpers.callMethod(utility, RELEASE_LICENSE_METHOD);
+        Object utility = framework.callStaticMethod(
+                framework.findClass(CLEANUP_CLASS, hostClassLoader), CLEANUP_FACTORY_METHOD);
+        framework.callMethod(utility, RELEASE_LICENSE_METHOD);
     }
 
-    /** 经反射调用 java.util.Objects.equals。 */
-    private static Class<?> objectsClass() {
-        return XposedHelpers.findClass(OBJECTS_CLASS, null);
+    private boolean objectsEqual(String left, String right) {
+        return (Boolean) framework.callStaticMethod(
+                framework.findClass(OBJECTS_CLASS, null), OBJECTS_EQUALS_METHOD, left, right);
     }
 
-    private static boolean objectsEqual(Class<?> objects, String left, String right) {
-        return (Boolean) XposedHelpers.callStaticMethod(objects, OBJECTS_EQUALS_METHOD, left, right);
-    }
-
-    /**
-     * 还原授权串:Base64 → 文本 → 一串「长度前缀 + 数字段」→ 按位异或回 "用户标识:授权内容"。
-     *
-     * 例如 "fixture:test-user" 会被编码成一串数字,每段前带一个数字表示该段长度。
-     */
     private static String decodeLicenseBlob(String encoded) {
         String packed = new String(Base64.decode(encoded, Base64.NO_WRAP), StandardCharsets.UTF_8);
         int[] numbers = unpackSegments(packed);
@@ -391,7 +300,6 @@ public final class CallMethodBypassHook extends XC_MethodHook {
         return decoded.toString();
     }
 
-    /** 读出 packed 里每个「长度前缀 + 数字段」表示的数字,越界或前缀为 0 即跳过。 */
     private static int[] unpackSegments(String packed) {
         int[] segments = new int[packed.length()];
         int count = 0;

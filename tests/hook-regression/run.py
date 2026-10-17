@@ -1,10 +1,13 @@
 """Build/run an isolated Android harness; no APK installation or real Xposed hooks."""
 import argparse
+import sys
 from pathlib import Path
 import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tests"))
+import _apk
 
 
 def run(*command):
@@ -23,7 +26,7 @@ def main():
     classes = output / "classes"
     classes.mkdir(exist_ok=True)
     android = args.sdk / "platforms/android-36/android.jar"
-    sources = sorted((ROOT / "app/src/main/java").rglob("*.java"))
+    sources = _apk.app_sources()
     sources += sorted((Path(__file__).parent / "src").rglob("*.java"))
     argfile = output / "javac.args"
     argfile.write_text("\n".join('"' + p.as_posix() + '"' for p in sources), encoding="utf-8")
@@ -44,7 +47,14 @@ def main():
         adb += ["-s", args.serial]
     remote = "/data/local/tmp/wexposedhook-regression.jar"
     run(*adb, "push", combined, remote)
-    run(*adb, "shell", "env", "CLASSPATH=" + remote, "app_process", "/system/bin", "HookRegression")
+    # 敏感常量解码在 so 里,没有它所有字符串都是空的,对照必然全错。
+    remote_lib = "/data/local/tmp/wexposedhook-regression-lib"
+    lib = output / _apk.LIB_NAME
+    lib.write_bytes(_apk.read_lib())
+    run(*adb, "shell", "mkdir -p " + remote_lib)
+    run(*adb, "push", lib, remote_lib + "/" + _apk.LIB_NAME)
+    run(*adb, "shell", "env", "CLASSPATH=" + remote, "LD_LIBRARY_PATH=" + remote_lib,
+        "app_process", "/system/bin", "HookRegression")
 
 
 if __name__ == "__main__":

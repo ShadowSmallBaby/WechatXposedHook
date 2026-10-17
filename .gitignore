@@ -5,6 +5,10 @@
 .DS_Store
 /build
 /app/build
-/data/
 __pycache__/
 *.pyc
+.env
+*.jks
+*.keystore
+/data/
+/app/src/main/jniLibs/

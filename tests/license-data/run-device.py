@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 REMOTE_DIR = "/data/local/tmp"
 REMOTE_JAR = REMOTE_DIR + "/license-db-check.jar"
 REMOTE_DB = REMOTE_DIR + "/license-check.db"
+REMOTE_LIB = REMOTE_DIR + "/license-db-lib"
 MISSING_ACCOUNT = "wxid_fixtureabsent0000"
 REQUIRED = ("hookFail", "disclaimer_disable", "is_new_user", "LatestVersions", "FPVersions",
             "valid", "fp", "fp_async", "LIC", "verifier6")
@@ -39,8 +40,11 @@ def build_and_push(sdk, jdk, adb, serial):
     output = ROOT / "build/license-data/device"
     classes = output / "classes"
     classes.mkdir(parents=True, exist_ok=True)
-    sources = [ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseData.java",
+    sources = [ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseCrypto.java",
+               ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseData.java",
                ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseDatabase.java",
+               ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader/Secret.java",
+               ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader/SecretConstants.java",
                Path(__file__).parent / "LicenseDatabaseCheck.java"]
     android = sdk / "platforms/android-36/android.jar"
     subprocess.run([str(jdk / "bin/javac.exe"), "-encoding", "UTF-8", "-source", "17", "-target", "17",
@@ -55,6 +59,11 @@ def build_and_push(sdk, jdk, adb, serial):
     with zipfile.ZipFile(jar, "w") as archive:
         archive.write(output / "classes.dex", "classes.dex")
     run(adb, serial, "push", jar, REMOTE_JAR)
+    # 敏感常量解码与授权加密链路都在 so 里,没有它 ensure 会抛异常。
+    lib = output / _apk.LIB_NAME
+    lib.write_bytes(_apk.read_lib())
+    run(adb, serial, "shell", "mkdir -p " + REMOTE_LIB)
+    run(adb, serial, "push", lib, REMOTE_LIB + "/" + _apk.LIB_NAME)
 
 
 def run(adb, serial, *command):
@@ -73,7 +82,8 @@ def run_tolerant(adb, serial, *command):
 
 
 def run_check(adb, serial, account, mode=None):
-    command = ("CLASSPATH=" + REMOTE_JAR + " app_process /system/bin LicenseDatabaseCheck "
+    command = ("CLASSPATH=" + REMOTE_JAR + " LD_LIBRARY_PATH=" + REMOTE_LIB
+               + " app_process /system/bin LicenseDatabaseCheck "
                + REMOTE_DB + " " + account)
     if mode:
         command += " " + mode

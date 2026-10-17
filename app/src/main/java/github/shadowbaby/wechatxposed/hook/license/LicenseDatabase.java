@@ -9,63 +9,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
 
-/**
- * 把 LicenseData 生成的 10 行写进微信目录下的 FKZ_WX_DATA。
- *
- * 微X 用 SQLiteOpenHelper 打开这个库,版本号是 1;user_version 不是 1 时它会重新建表
- * (CREATE TABLE 没有 IF NOT EXISTS) → "table DATA already exists" → 微X 启动失败。
- *
- * 写入策略(库里可能已经有这个账号,甚至已经被授权):
- *   - 其余 8 行只在缺失时补齐,不动微X 已经写好的状态;
- *   - LIC / verifier6 是授权判定本身:已经是这个账号的(blob 解得出该账号、段 3 能用自己的
- *     key 解开)就原样保留——设备上厂商发的值与本模块生成的等价,覆盖没有收益;
- *     缺失或者是别的账号的(照抄库)才写入/重算。
- * 写入前先备份一份 .bak。
- */
 public final class LicenseDatabase {
 
-    /** 微X 授权库文件名。 */
-    public static final String DB_FILE_NAME = "FKZ_WX_DATA";
+    public static final String DB_FILE_NAME = LicenseCrypto.dbFileName();
 
-    private static final String TABLE_DATA = "DATA";
-    private static final String TABLE_METADATA = "android_metadata";
-    private static final String COLUMN_ID = "_ID";
-    private static final String COLUMN_ACCOUNT = "ACCOUNT";
-    private static final String COLUMN_TAG = "TAG";
-    private static final String COLUMN_TYPE = "TYPE";
-    private static final String COLUMN_VALUE = "VALUE";
-    private static final String ACCOUNT_TAG_SELECTION =
-            COLUMN_ACCOUNT + "=? AND " + COLUMN_TAG + "=?";
-
-    private static final String CREATE_METADATA =
-            "CREATE TABLE IF NOT EXISTS " + TABLE_METADATA + " (locale TEXT)";
-    private static final String CREATE_DATA =
-            "CREATE TABLE IF NOT EXISTS " + TABLE_DATA + "("
-          + COLUMN_ID + " INTEGER PRIMARY KEY NOT NULL, "
-          + COLUMN_ACCOUNT + " TEXT, " + COLUMN_TAG + " TEXT, "
-          + COLUMN_TYPE + " TEXT, " + COLUMN_VALUE + " TEXT, DATA BLOB)";
-
-    /** 微X 自己的 SQLiteOpenHelper 版本号,必须一致。 */
-    private static final int USER_VERSION = 1;
-
-    /** 设备上可用库的第一条数据行号,空表时从这里开始。 */
-    private static final int FIRST_ROW_ID = 2;
-
-    /** 微X 的语言环境标记。 */
-    private static final String LOCALE = "zh_CN";
-
-    /** 授权判定本身,要判断库里已有的值是不是这个账号的。 */
-    private static final String TAG_LICENSE = "LIC";
-    private static final String TAG_VERIFIER6 = "verifier6";
-
-    private static final String BACKUP_SUFFIX = ".bak";
+    private static final int STRUCTURE_SIZE = 20;
 
     private LicenseDatabase() {
     }
 
-    /** 一次写入的结果,用于日志。 */
     public static final class Result {
 
         public final boolean created;
@@ -81,106 +34,156 @@ public final class LicenseDatabase {
         }
     }
 
-    /** 保证 databaseFile 里有 account 的那 10 行;库不存在则新建,已存在则先备份。 */
+    private static final class Structure {
+
+        final String tableData;
+        final String tableMetadata;
+        final String columnId;
+        final String columnAccount;
+        final String columnTag;
+        final String columnType;
+        final String columnValue;
+        final String selection;
+        final String createMetadata;
+        final String createData;
+        final String locale;
+        final int userVersion;
+        final int firstRowId;
+        final String backupSuffix;
+        final String selectMaxId;
+        final String insertMetadata;
+        final String licenseTag;
+        final String verifierTag;
+        final String countMetadata;
+
+        Structure(String[] raw) {
+            tableData = raw[1];
+            tableMetadata = raw[2];
+            columnId = raw[3];
+            columnAccount = raw[4];
+            columnTag = raw[5];
+            columnType = raw[6];
+            columnValue = raw[7];
+            selection = raw[8];
+            createMetadata = raw[9];
+            createData = raw[10];
+            locale = raw[11];
+            userVersion = Integer.parseInt(raw[12]);
+            firstRowId = Integer.parseInt(raw[13]);
+            backupSuffix = raw[14];
+            selectMaxId = raw[15];
+            insertMetadata = raw[16];
+            licenseTag = raw[17];
+            verifierTag = raw[18];
+            countMetadata = raw[19];
+        }
+    }
+
+    private static Structure structure() {
+        String[] raw = LicenseCrypto.structure();
+        if (raw.length < STRUCTURE_SIZE) {
+            throw new IllegalStateException("license structure unavailable");
+        }
+        return new Structure(raw);
+    }
+
     public static Result ensure(File databaseFile, String account) throws IOException {
+        Structure structure = structure();
         boolean created = !databaseFile.exists();
         if (!created) {
-            backup(databaseFile);
+            backup(databaseFile, structure.backupSuffix);
         }
 
-        SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
-        try {
-            database.execSQL(CREATE_METADATA);
-            database.execSQL(CREATE_DATA);
-            ensureLocale(database);
-            database.setVersion(USER_VERSION);
+        try (SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(databaseFile, null)) {
+            database.execSQL(structure.createMetadata);
+            database.execSQL(structure.createData);
+            ensureLocale(database, structure);
+            database.setVersion(structure.userVersion);
 
             int inserted = 0;
             int refreshed = 0;
             int kept = 0;
             for (LicenseData.Row row : LicenseData.rows(account)) {
-                String stored = storedValue(database, account, row.tag);
-                if (isCritical(row.tag)) {
-                    if (stored != null && isUsable(row.tag, stored, account)) {
+                String stored = storedValue(database, account, row.tag, structure);
+                if (isCritical(structure, row.tag)) {
+                    if (stored != null && isUsable(row.tag, stored, account, structure)) {
                         kept++;
                         continue;
                     }
                     if (stored != null) {
-                        database.update(TABLE_DATA, values(account, row), ACCOUNT_TAG_SELECTION,
-                                new String[]{account, row.tag});
+                        database.update(structure.tableData, values(account, row, structure),
+                                structure.selection, new String[]{account, row.tag});
                         refreshed++;
                         continue;
                     }
-                    insert(database, values(account, row));
+                    insert(database, values(account, row, structure), structure);
                     inserted++;
                     continue;
                 }
                 if (stored != null) {
                     continue;
                 }
-                insert(database, values(account, row));
+                insert(database, values(account, row, structure), structure);
                 inserted++;
             }
             return new Result(created, inserted, refreshed, kept);
-        } finally {
-            database.close();
         }
     }
 
-    private static void insert(SQLiteDatabase database, ContentValues values) {
-        values.put(COLUMN_ID, nextRowId(database));
-        database.insertOrThrow(TABLE_DATA, null, values);
+    private static void insert(SQLiteDatabase database, ContentValues values, Structure structure) {
+        values.put(structure.columnId, nextRowId(database, structure));
+        database.insertOrThrow(structure.tableData, null, values);
     }
 
-    private static ContentValues values(String account, LicenseData.Row row) {
+    private static ContentValues values(String account, LicenseData.Row row, Structure structure) {
         ContentValues values = new ContentValues();
-        values.put(COLUMN_ACCOUNT, account);
-        values.put(COLUMN_TAG, row.tag);
-        values.put(COLUMN_TYPE, row.type);
-        values.put(COLUMN_VALUE, row.value);
+        values.put(structure.columnAccount, account);
+        values.put(structure.columnTag, row.tag);
+        values.put(structure.columnType, row.type);
+        values.put(structure.columnValue, row.value);
         return values;
     }
 
-    private static boolean isCritical(String tag) {
-        return TAG_LICENSE.equals(tag) || TAG_VERIFIER6.equals(tag);
+    private static boolean isCritical(Structure structure, String tag) {
+        return structure.licenseTag.equals(tag) || structure.verifierTag.equals(tag);
     }
 
-    private static boolean isUsable(String tag, String stored, String account) {
-        return TAG_LICENSE.equals(tag)
+    private static boolean isUsable(String tag, String stored, String account,
+                                    Structure structure) {
+        return structure.licenseTag.equals(tag)
                 ? LicenseData.isUsableLicense(stored, account)
                 : LicenseData.isUsableVerifier6(stored, account);
     }
 
-    /** 该账号该 tag 已有的值;没有这一行返回 null。 */
-    private static String storedValue(SQLiteDatabase database, String account, String tag) {
-        try (Cursor cursor = database.query(TABLE_DATA, new String[]{COLUMN_VALUE},
-                ACCOUNT_TAG_SELECTION, new String[]{account, tag}, null, null, null)) {
+    private static String storedValue(SQLiteDatabase database, String account, String tag,
+                                      Structure structure) {
+        try (Cursor cursor = database.query(structure.tableData,
+                new String[]{structure.columnValue}, structure.selection,
+                new String[]{account, tag}, null, null, null)) {
             return cursor.moveToFirst() ? cursor.getString(0) : null;
         }
     }
 
-    private static int nextRowId(SQLiteDatabase database) {
-        try (Cursor cursor = database.rawQuery(
-                "SELECT MAX(" + COLUMN_ID + ") FROM " + TABLE_DATA, null)) {
+    private static int nextRowId(SQLiteDatabase database, Structure structure) {
+        try (Cursor cursor = database.rawQuery(structure.selectMaxId, null)) {
             if (cursor.moveToFirst() && !cursor.isNull(0)) {
-                return Math.max(cursor.getInt(0) + 1, FIRST_ROW_ID);
+                return Math.max(cursor.getInt(0) + 1, structure.firstRowId);
             }
         }
-        return FIRST_ROW_ID;
+        return structure.firstRowId;
     }
 
-    private static void ensureLocale(SQLiteDatabase database) {
-        try (Cursor cursor = database.rawQuery("SELECT COUNT(*) FROM " + TABLE_METADATA, null)) {
+    private static void ensureLocale(SQLiteDatabase database, Structure structure) {
+        try (Cursor cursor = database.rawQuery(structure.countMetadata, null)) {
             if (cursor.moveToFirst() && cursor.getInt(0) > 0) {
                 return;
             }
         }
-        database.execSQL("INSERT INTO " + TABLE_METADATA + " VALUES (?)", new Object[]{LOCALE});
+        database.execSQL(structure.insertMetadata, new Object[]{structure.locale});
     }
 
-    /** 覆盖前留一份同名 .bak,出问题可以手工还原。 */
-    private static void backup(File databaseFile) throws IOException {
-        File backup = new File(databaseFile.getPath() + BACKUP_SUFFIX);
+    private static void backup(File databaseFile, String suffix) throws IOException {
+        File backup = new File(databaseFile.getPath() + suffix);
         try (InputStream input = new FileInputStream(databaseFile);
                 OutputStream output = new FileOutputStream(backup)) {
             byte[] buffer = new byte[8 * 1024];

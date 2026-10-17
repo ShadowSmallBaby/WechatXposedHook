@@ -1,6 +1,8 @@
 package github.shadowbaby.wechatxposed.hook.deploy;
 
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,30 +13,12 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-/**
- * 功能包目录(wx6_2.44)的自检与补齐。
- *
- * 微X 把功能包放在微信的 files/wx6_2.44 下,文件名就是内容指纹。授权判定失败时微X 会自己
- * 删掉其中一部分(实测会删掉 Base / Donation / Themes 三个包,只留 _c / _s 边车文件),
- * 之后功能菜单就是空的;而恢复必须拿回原样的加密文件,自己重新生成没用——
- * 微X 会用 _c 校验块与 _s 签名块验它们。
- *
- * 所以整套 30 个文件(含三组 _c / _s)内置在模块 APK 的 assets/wx6_2.44.zip 里,
- * 启动时按清单检查缺哪个补哪个。清单就是这一套文件的名字与字节数:
- * 文件名是内容指纹,大小对不上说明文件被换过,同样按缺失处理。
- *
- * 选文件级检测而不是追微X 的失败事件:清理发生在微X 自己的代码里,等它报错或删完再反应就晚了,
- * 而「文件在不在、大小对不对」是幂等的,任何一次启动都能把状态拉回来。
- */
 public abstract class FeaturePackRestorer {
 
-    /** 功能包目录,相对微信 files 目录。 */
-    private static final String DIR_NAME = "wx6_2.44";
+    private static final String DIR_NAME = Secret.of(SecretConstants.FEATURE_DIR);
 
-    /** 内置载荷:模块 APK 的 assets/wx6_2.44.zip,里面是下面这份清单的全部文件。 */
-    private static final String PAYLOAD = "wx6_2.44.zip";
+    private static final String PAYLOAD = Secret.of(SecretConstants.FEATURE_PAYLOAD);
 
-    /** 清单:文件名 -> 字节数(文件名即内容指纹)。 */
     private static final String[] NAMES = {
             "14e777717682cce8a53cfcb34a22d65", "14e777717682cce8a53cfcb34a22d65_c",
             "14e777717682cce8a53cfcb34a22d65_s", "24ce1c66be23f9c731fb2db3a76954",
@@ -68,10 +52,8 @@ public abstract class FeaturePackRestorer {
     private static final String LOG_NOT_READABLE = "feature packs: cannot chmod ";
     private static final String LOG_NOT_DELETED = "feature packs: cannot delete temp payload ";
 
-    /** 一个进程只查一次。 */
     private static boolean checked;
 
-    /** 启动自检:清单里缺哪个补哪个;任何失败只记日志,不影响微X。 */
     public static synchronized void ensureOnce(File filesDir) {
         if (checked) {
             return;
@@ -97,7 +79,6 @@ public abstract class FeaturePackRestorer {
         }
     }
 
-    /** 清单里缺失或大小不符的文件名;空表示整套齐全。 */
     public static List<String> missingFiles(File directory) {
         List<String> missing = new ArrayList<>(NAMES.length);
         for (int index = 0; index < NAMES.length; index++) {
@@ -109,7 +90,6 @@ public abstract class FeaturePackRestorer {
         return missing;
     }
 
-    /** 从内置载荷里逐个取出缺失的文件;返回实际补写的数量。 */
     private static int restore(File directory, List<String> missing) throws IOException {
         File archive = new File(directory, PAYLOAD);
         if (!ModuleApk.extractPayload(PAYLOAD, archive)) {
@@ -133,7 +113,7 @@ public abstract class FeaturePackRestorer {
                         output.write(buffer, 0, read);
                     }
                 }
-                // 与原来由脚本写进去的文件一样,同 uid 之外的进程也能读;失败不影响微X。
+
                 if (!target.setReadable(true, false)) {
                     ModuleLogger.log(LOG_NOT_READABLE + name);
                 }

@@ -1,20 +1,40 @@
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
+import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.framework.RecordingFramework;
 import java.nio.charset.StandardCharsets;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Runs the reference DEX and this module's Java on the same Android runtime with recording stubs. */
+/**
+ * 在同一台 Android 运行时上跑参考 DEX 与本模块源码,用记录调用的替身比较行为。
+ *
+ * 参考实现是改名前的 APK(直接调 XposedHelpers);本模块现在多了一层
+ * framework.HookFramework 适配层(为的是同时支持经典 Xposed 与 LibXposed),
+ * 所以两边构造 hook 对象的方式不同,但**注册的目标、回调逻辑与返回值必须一致**。
+ * 这里用 RecordingFramework 把适配层的调用转回同一组替身,让记录序列可比。
+ */
 public final class HookRegression {
     private static final String REBUILT = "github.shadowbaby.wechatxposed.hook.";
     private static int failures;
     private static int checks;
+
     private static List<String> trace(String type, String method, int component) throws Exception {
         XposedHelpers.calls.clear();
         Class<?> cls = Class.forName(type);
         Object instance = cls.getConstructor(int.class).newInstance(component);
         cls.getMethod(method, ClassLoader.class).invoke(instance, HookRegression.class.getClassLoader());
+        return new ArrayList<>(XposedHelpers.calls);
+    }
+
+    /** 本模块版本:inject 现在多一个 HookFramework 参数。 */
+    private static List<String> traceRebuilt(int component) throws Exception {
+        XposedHelpers.calls.clear();
+        Class<?> cls = Class.forName(REBUILT + "support.WxComponentHooks");
+        Object instance = cls.getConstructor(int.class).newInstance(component);
+        cls.getMethod("inject", Class.forName(REBUILT + "framework.HookFramework"), ClassLoader.class)
+                .invoke(instance, new RecordingFramework(), HookRegression.class.getClassLoader());
         return new ArrayList<>(XposedHelpers.calls);
     }
 
@@ -48,6 +68,47 @@ public final class HookRegression {
         return new ArrayList<>(XposedHelpers.calls);
     }
 
+    /** 本模块版本:回调类现在实现 HookCallback,方法名是 before / after。 */
+    private static List<String> callbackRebuilt(String type, int mode, Object[] args, String phase,
+                                                boolean loader, Throwable error) throws Exception {
+        Class<?> cls = Class.forName(type);
+        Object instance = loader
+                ? cls.getConstructor(Class.forName(REBUILT + "framework.HookFramework"), int.class)
+                        .newInstance(new RecordingFramework(), mode)
+                : cls.getConstructor(Class.forName(REBUILT + "framework.HookFramework"),
+                        ClassLoader.class, int.class)
+                        .newInstance(new RecordingFramework(), HookRegression.class.getClassLoader(), mode);
+        RecordingParam param = new RecordingParam();
+        param.args = args;
+        param.thisObject = "host";
+        param.throwable = error;
+        XposedHelpers.calls.clear();
+        try {
+            cls.getMethod(phase, Class.forName(REBUILT + "framework.HookParam")).invoke(instance, param);
+        } catch (InvocationTargetException e) {
+            XposedHelpers.calls.add("thrown " + e.getCause().getClass().getName());
+        }
+        XposedHelpers.calls.add("result " + (param.replaced || param.throwable != null) + " "
+                + (param.replacement == null ? "null"
+                        : param.replacement.getClass().getName() + ":" + param.replacement));
+        return new ArrayList<>(XposedHelpers.calls);
+    }
+
+    /** 记录 setResult 的 HookParam 替身。 */
+    private static final class RecordingParam implements HookParam {
+        private Object[] args;
+        private Object thisObject;
+        private Throwable throwable;
+        private boolean replaced;
+        private Object replacement;
+
+        @Override public Object[] args() { return args; }
+        @Override public Object arg(int index) { return args[index]; }
+        @Override public Object thisObject() { return thisObject; }
+        @Override public void setResult(Object result) { replaced = true; replacement = result; }
+        @Override public boolean hasThrowable() { return throwable != null; }
+    }
+
     private static void check(String label, List<String> original, List<String> rebuilt) {
         checks++;
         if (!original.equals(rebuilt)) {
@@ -60,9 +121,10 @@ public final class HookRegression {
 
     private static void checkCall(String label, int mode, Object... args) throws Exception {
         check(label, callback("c.b", mode, args, "before", false, null),
-                callback(REBUILT + "support.CallMethodBypassHook", mode, args, "before", false, null));
+                callbackRebuilt(REBUILT + "support.CallMethodBypassHook", mode, args, "before", false, null));
     }
 
+    /** 参考实现:整体替换走 replaceHookedMethod。 */
     private static List<String> replacement(String type, int mode) throws Exception {
         XposedHelpers.calls.clear();
         Class<?> cls = Class.forName(type);
@@ -71,6 +133,20 @@ public final class HookRegression {
                 .invoke(instance, new MethodHookParam());
         List<String> trace = new ArrayList<>(XposedHelpers.calls);
         trace.add("return " + (result == null ? "null" : result.getClass().getName() + ":" + result));
+        return trace;
+    }
+
+    /** 本模块版本:整体替换改成 before + setResult。 */
+    private static List<String> replacementRebuilt(String type, int mode) throws Exception {
+        XposedHelpers.calls.clear();
+        Class<?> cls = Class.forName(type);
+        Object instance = cls.getConstructor(int.class).newInstance(mode);
+        RecordingParam param = new RecordingParam();
+        param.args = new Object[0];
+        cls.getMethod("before", Class.forName(REBUILT + "framework.HookParam")).invoke(instance, param);
+        List<String> trace = new ArrayList<>(XposedHelpers.calls);
+        trace.add("return " + (param.replacement == null ? "null"
+                : param.replacement.getClass().getName() + ":" + param.replacement));
         return trace;
     }
 
@@ -94,14 +170,27 @@ public final class HookRegression {
         Class<?> entryType = Class.forName(original ? "c.a" : REBUILT + "support.WxComponentHooks");
         for (int component : new int[]{1, 0, 3, 2}) entries.add(entryType.getConstructor(int.class).newInstance(component));
         Class<?> hookType = Class.forName(original ? "b.c" : REBUILT + "loader.InMemoryDexLoadHook");
-        Object hook = hookType.getConstructor(int.class).newInstance(0);
-        MethodHookParam param = new MethodHookParam();
-        param.thisObject = HookRegression.class.getClassLoader();
+        Object hook = original ? hookType.getConstructor(int.class).newInstance(0)
+                : hookType.getConstructor(Class.forName(REBUILT + "framework.HookFramework"), int.class)
+                        .newInstance(new RecordingFramework(), 0);
         XposedHelpers.calls.clear();
-        hookType.getMethod("afterHookedMethod", MethodHookParam.class).invoke(hook, param);
-        XposedHelpers.calls.add("remaining " + entries.size());
-        // Repeat the notification to verify already registered entries are not hooked twice.
-        hookType.getMethod("afterHookedMethod", MethodHookParam.class).invoke(hook, param);
+        if (original) {
+            MethodHookParam param = new MethodHookParam();
+            param.thisObject = HookRegression.class.getClassLoader();
+            hookType.getMethod("afterHookedMethod", MethodHookParam.class).invoke(hook, param);
+            XposedHelpers.calls.add("remaining " + entries.size());
+            // Repeat the notification to verify already registered entries are not hooked twice.
+            hookType.getMethod("afterHookedMethod", MethodHookParam.class).invoke(hook, param);
+        } else {
+            RecordingParam param = new RecordingParam();
+            param.args = new Object[0];
+            param.thisObject = HookRegression.class.getClassLoader();
+            java.lang.reflect.Method after =
+                    hookType.getMethod("after", Class.forName(REBUILT + "framework.HookParam"));
+            after.invoke(hook, param);
+            XposedHelpers.calls.add("remaining " + entries.size());
+            after.invoke(hook, param);
+        }
         return new ArrayList<>(XposedHelpers.calls);
     }
 
@@ -124,12 +213,9 @@ public final class HookRegression {
         }
         XposedHelpers.availableClasses.clear();
         for (int component = 0; component < 4; component++) {
-            List<String> original = trace("c.a", "a", component);
-            List<String> rebuilt = trace("github.shadowbaby.wechatxposed.hook.support.WxComponentHooks",
-                                         "inject", component);
-            check("component " + component, original, rebuilt);
+            check("component " + component, trace("c.a", "a", component), traceRebuilt(component));
             check("replacement " + component, replacement("c.c", component),
-                    replacement(REBUILT + "support.VerifierMethodReplacement", component));
+                    replacementRebuilt(REBUILT + "support.VerifierMethodReplacement", component));
         }
         for (int mode = 0; mode < 4; mode++) {
             for (String name : new String[]{"disable", "on_update_check", "process_metadata",
@@ -137,7 +223,7 @@ public final class HookRegression {
                 Object[] callArgs = {name};
                 check("loader " + mode + " " + name,
                         callback("b.c", mode, callArgs, "before", true, null),
-                        callback(REBUILT + "loader.InMemoryDexLoadHook", mode, callArgs, "before", true, null));
+                        callbackRebuilt(REBUILT + "loader.InMemoryDexLoadHook", mode, callArgs, "before", true, null));
             }
         }
         String encoded = encode("fixture:test-user");
@@ -163,7 +249,7 @@ public final class HookRegression {
                 Throwable error = thrown ? new IllegalStateException("fixture") : null;
                 check("after " + thrown + " " + key,
                         callback("c.b", 2, callArgs, "after", false, error),
-                        callback(REBUILT + "support.CallMethodBypassHook", 2, callArgs, "after", false, error));
+                        callbackRebuilt(REBUILT + "support.CallMethodBypassHook", 2, callArgs, "after", false, error));
             }
         }
         System.out.println((failures == 0 ? "PASS: " : "FAIL: ") + checks + " checks, " + failures + " differences");

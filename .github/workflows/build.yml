@@ -1,0 +1,72 @@
+name: Build APKs
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Prepare release signing (only if secrets are configured)
+        env:
+          KS: ${{ secrets.WXH_KEYSTORE_BASE64 }}
+          SP: ${{ secrets.WXH_STORE_PASSWORD }}
+          KA: ${{ secrets.WXH_KEY_ALIAS }}
+          KP: ${{ secrets.WXH_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS" ]; then
+            KS_ONE_LINE=$(printf '%s' "$KS" | tr -d '\r\n')
+            {
+              echo "WXH_KEYSTORE_BASE64=$KS_ONE_LINE"
+              echo "WXH_STORE_PASSWORD=$SP"
+              echo "WXH_KEY_ALIAS=$KA"
+              echo "WXH_KEY_PASSWORD=$KP"
+            } >> "$GITHUB_ENV"
+            echo "Release signing configured from secrets."
+          else
+            echo "No signing secrets found; release APKs will be debug-signed."
+          fi
+
+      - name: Build legacy + modern APKs
+        run: |
+          ./gradlew assembleLegacyRelease assembleModernRelease --console=plain --stacktrace
+
+      - name: Collect release assets (fixed names for latest/download links)
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/legacy/release/*.apk dist/WeXposedHook-legacy.apk
+          cp app/build/outputs/apk/modern/release/*.apk dist/WeXposedHook-modern.apk
+
+      - name: Upload workflow artifacts (every build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release (on tag only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

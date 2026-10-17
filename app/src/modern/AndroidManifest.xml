@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- LibXposed 服务声明 minSdk 26,与本模块一致;这里只是显式覆盖,避免合并告警。 -->
+    <uses-sdk tools:overrideLibrary="io.github.libxposed.service,io.github.libxposed.service.interfaces" />
+
+    <application>
+        <!-- 让 LibXposed 框架能绑定本应用的服务(激活与远程偏好)。 -->
+        <provider
+            android:name="io.github.libxposed.service.XposedProvider"
+            android:authorities="${applicationId}.XposedService"
+            android:exported="true" />
+    </application>
+
+</manifest>

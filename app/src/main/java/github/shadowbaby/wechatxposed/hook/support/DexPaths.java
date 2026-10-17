@@ -1,6 +1,8 @@
 package github.shadowbaby.wechatxposed.hook.support;
 
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,21 +14,13 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-/**
- * 从 APK 里取出 dex 条目。
- *
- * 微信的 dex 都在 base.apk 里(classes.dex、classes2.dex …),直接按 zip 条目读,
- * 不走 {@code dalvik.system.DexFile}:后者只能列类名,拿不到字节,而我们要自己解析常量池。
- * 读出来的 dex 字节直接交给 {@link DexStrings},不落盘。
- */
 final class DexPaths {
 
-    private static final String LOG = "host spoof: ";
+    private static final String LOG = ModuleLogger.HOST_SPOOF_PREFIX;
 
     private DexPaths() {
     }
 
-    /** APK 里各 dex 的字节,按 classes.dex / classes2.dex … 的顺序。 */
     static List<byte[]> of(String apkPath) {
         if (apkPath == null || apkPath.isEmpty()) {
             ModuleLogger.log(LOG + "sourceDir empty");
@@ -44,7 +38,9 @@ final class DexPaths {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 String name = entry.getName();
-                if (name.startsWith("classes") && name.endsWith(".dex") && !entry.isDirectory()) {
+                if (name.startsWith(Secret.of(SecretConstants.DEX_PREFIX))
+                        && name.endsWith(Secret.of(SecretConstants.DEX_SUFFIX))
+                        && !entry.isDirectory()) {
                     names.add(name);
                 }
             }

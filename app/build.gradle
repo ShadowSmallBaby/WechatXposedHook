@@ -2,14 +2,17 @@ plugins {
     id 'com.android.application'
 }
 
-// 发行签名口令只从环境变量读取(CI 用 Secrets 注入;本机在 IDE/系统里设置后同样生效):
-//   WXH_KEYSTORE_PATH / WXH_STORE_PASSWORD / WXH_KEY_ALIAS / WXH_KEY_PASSWORD
-// 未设置时回退 debug 签名,保证 clone 后直接构建仍能成功。
-def ksPath = System.getenv('WXH_KEYSTORE_PATH')
+def envValue = { String name -> System.getenv(name)?.trim() }
+def ksBase64 = envValue('WXH_KEYSTORE_BASE64')
+def signingStorePassword = envValue('WXH_STORE_PASSWORD')
+def signingKeyAlias = envValue('WXH_KEY_ALIAS')
+def signingKeyPassword = envValue('WXH_KEY_PASSWORD')
+def hasSigning = ksBase64 && signingStorePassword && signingKeyAlias && signingKeyPassword
 
 android {
     namespace 'github.shadowbaby.wechatxposed.hook'
     compileSdk 37
+    ndkVersion '28.2.13676358'
 
     defaultConfig {
         applicationId 'github.shadowbaby.wechatxposed.hook'
@@ -17,15 +20,27 @@ android {
         targetSdk 37
         versionCode 1
         versionName '1.0'
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
     }
 
     signingConfigs {
         release {
-            if (ksPath) {
-                storeFile file(ksPath)
-                storePassword System.getenv('WXH_STORE_PASSWORD')
-                keyAlias System.getenv('WXH_KEY_ALIAS')
-                keyPassword System.getenv('WXH_KEY_PASSWORD')
+            if (hasSigning) {
+                def keystore = layout.buildDirectory.file('keystore/release.jks').get().asFile
+                keystore.parentFile.mkdirs()
+                try {
+                    keystore.bytes = Base64.getDecoder().decode(ksBase64.replaceAll('\\s', ''))
+                } catch (IllegalArgumentException error) {
+                    throw new GradleException('WXH_KEYSTORE_BASE64 不是合法 Base64: '
+                            + error.message)
+                }
+                storeFile keystore
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
             }
         }
     }
@@ -35,7 +50,19 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig ksPath ? signingConfigs.release : signingConfigs.debug
+            signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    flavorDimensions 'framework'
+    productFlavors {
+        legacy { dimension 'framework' }
+        modern { dimension 'framework' }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
         }
     }
 
@@ -46,7 +73,221 @@ android {
 
 }
 
+def masterKey = System.getenv('WXH_MASTER_KEY')
+def masterKeyBytes = null    // 32 字节原始值,给 clang 用
+def masterKeyText = null     // 原始文本(hex 或 Base64),给 encode_secrets.py 用
+
+def keyBytesLiteral = { String text ->
+    def isHex = text.length() == 64 && (text ==~ /[0-9a-fA-F]{64}/)
+    byte[] raw
+    if (isHex) {
+        raw = new byte[32]
+        for (int index = 0; index < 32; index++) {
+            raw[index] = (byte) Integer.parseInt(text.substring(index * 2, index * 2 + 2), 16)
+        }
+    } else {
+        try {
+            raw = Base64.getDecoder().decode(text)
+        } catch (IllegalArgumentException error) {
+            throw new GradleException('主密钥既不是 64 位 hex,也不是合法 Base64')
+        }
+    }
+    if (raw.length != 32) {
+        throw new GradleException('主密钥必须是 32 字节(256 bit),实际 ' + raw.length + ' 字节')
+    }
+    return raw.collect { String.format('0x%02x', it) }.join(', ')
+}
+
+if (masterKey != null && !masterKey.trim().isEmpty()) {
+    masterKey = masterKey.trim()
+    masterKeyBytes = keyBytesLiteral(masterKey)
+    masterKeyText = masterKey
+}
+
+def nativeCompileFlags = { ->
+    def repoRoot = rootProject.projectDir.absolutePath.replace('\\', '/')
+    return ['-shared', '-fPIC', '-O2',
+            '-fvisibility=hidden', '-fno-asynchronous-unwind-tables', '-fno-unwind-tables',
+            '-Wl,--gc-sections', '-Wl,-s',
+            '-ffile-prefix-map=' + repoRoot + '=.',
+            '-Wl,--build-id=none']
+}
+
+def encodeSecrets = tasks.register('encodeSecrets') {
+    def script = rootProject.file('scripts/encode_secrets.py')
+    def table = rootProject.file('scripts/secrets_table.py')
+    onlyIf { script.isFile() }
+    if (script.isFile()) {
+        inputs.file(script)
+        inputs.property('wxhMasterKey', masterKeyText ?: '')
+    }
+    if (table.isFile()) {
+        inputs.file(table)
+    }
+    outputs.dir(layout.projectDirectory.dir('src/main/java/github/shadowbaby/wechatxposed/hook/loader'))
+    doLast {
+        def python = System.getenv('WXH_PYTHON') ?: 'python'
+        def command = [python, '-X', 'utf8', script.absolutePath]
+        if (masterKeyText != null) {
+            command.addAll(['--master-key', masterKeyText])
+        }
+        try {
+            def result = providers.exec {
+                commandLine command
+                workingDir rootProject.projectDir
+                ignoreExitValue = true
+            }
+            if (result.result.get().exitValue != 0) {
+                logger.warn('encode_secrets.py 执行失败,沿用仓库里已有的密文')
+            }
+        } catch (Exception error) {
+            logger.warn('encode_secrets.py 不可用,沿用仓库里已有的密文: ' + error.message)
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn encodeSecrets
+}
+
+def buildNative = tasks.register('buildNativeSecret') {
+    def jniDir = layout.projectDirectory.dir('src/main/jni')
+    def sources = fileTree(jniDir) { include '*.c' }
+    def headers = fileTree(jniDir) { include '*.inc' }
+    def abis = ['arm64-v8a': 'aarch64-linux-android26',
+                'armeabi-v7a': 'armv7a-linux-androideabi26']
+    def sdkDir = { ->
+        def props = new Properties()
+        def file = rootProject.file('local.properties')
+        if (file.isFile()) {
+            file.withInputStream { props.load(it) }
+        }
+        def dir = props.getProperty('sdk.dir') ?: System.getenv('ANDROID_SDK_ROOT') ?: System.getenv('ANDROID_HOME')
+        if (!dir) {
+            throw new GradleException('找不到 Android SDK:请在 local.properties 里设 sdk.dir')
+        }
+        return new File(dir)
+    }()
+    def ndkDir = new File(sdkDir, 'ndk/' + android.ndkVersion)
+    inputs.files(sources)
+    inputs.files(headers)
+    inputs.property('wxhMasterKey', masterKeyText ?: '')
+    inputs.property('wxhNativeFlags', nativeCompileFlags().join(' '))
+    abis.each { abi, prefix ->
+        outputs.file(layout.projectDirectory.file('src/main/jniLibs/' + abi + '/libwexhook.so'))
+    }
+    doLast {
+        def binDir = new File(ndkDir, 'toolchains/llvm/prebuilt/windows-x86_64/bin')
+        if (!binDir.isDirectory()) {
+            binDir = new File(ndkDir, 'toolchains/llvm/prebuilt/linux-x86_64/bin')
+        }
+        abis.each { abi, prefix ->
+            def compiler = new File(binDir, prefix + '-clang.cmd')
+            if (!compiler.isFile()) {
+                compiler = new File(binDir, prefix + '-clang')
+            }
+            if (!compiler.isFile()) {
+                throw new GradleException('找不到 NDK 交叉编译器: ' + compiler)
+            }
+            def output = layout.projectDirectory.dir('src/main/jniLibs/' + abi)
+            def target = output.file('libwexhook.so')
+            output.asFile.mkdirs()
+            def command = [compiler.absolutePath] + nativeCompileFlags() + [
+                           '-o', target.asFile.absolutePath]
+            if (masterKeyBytes != null) {
+                command.add('-DWXH_MASTER_KEY_BYTES=' + masterKeyBytes)
+            }
+            sources.files.each { command.add(it.absolutePath.replace('\\', '/')) }
+            def result = providers.exec {
+                commandLine command
+                ignoreExitValue = true
+            }
+            if (result.result.get().exitValue != 0) {
+                throw new GradleException('clang 编译失败: ' + abi)
+            }
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    if (layout.projectDirectory.dir('src/main/jni').asFile.isDirectory()) {
+        dependsOn buildNative
+    } else if (!layout.projectDirectory.file('src/main/jniLibs/arm64-v8a/libwexhook.so').asFile.isFile()
+            && !layout.projectDirectory.file('src/main/jniLibs/armeabi-v7a/libwexhook.so').asFile.isFile()) {
+        throw new GradleException('既没有 app/src/main/jni 源码,也没有预编译的 '
+                + 'app/src/main/jniLibs/<abi>/libwexhook.so,无法构建')
+    }
+}
+
+tasks.register('verifyNativeSecret') {
+    def jniDir = layout.projectDirectory.dir('src/main/jni')
+    def committed = ['arm64-v8a', 'armeabi-v7a'].collect {
+        layout.projectDirectory.file('src/main/jniLibs/' + it + '/libwexhook.so').asFile
+    }
+    def reference = layout.buildDirectory.dir('native-reference')
+    onlyIf { jniDir.asFile.isDirectory() }
+    doLast {
+        def backups = [:]
+        committed.each { file ->
+            backups[file] = file.isFile() ? file.bytes : null
+        }
+        def abis = ['arm64-v8a': 'aarch64-linux-android26',
+                    'armeabi-v7a': 'armv7a-linux-androideabi26']
+        def props = new Properties()
+        def local = rootProject.file('local.properties')
+        if (local.isFile()) {
+            local.withInputStream { props.load(it) }
+        }
+        def sdk = props.getProperty('sdk.dir') ?: System.getenv('ANDROID_SDK_ROOT') ?: System.getenv('ANDROID_HOME')
+        if (!sdk) {
+            throw new GradleException('找不到 Android SDK:请在 local.properties 里设 sdk.dir')
+        }
+        def ndk = new File(sdk, 'ndk/' + android.ndkVersion)
+        def binDir = new File(ndk, 'toolchains/llvm/prebuilt/windows-x86_64/bin')
+        if (!binDir.isDirectory()) {
+            binDir = new File(ndk, 'toolchains/llvm/prebuilt/linux-x86_64/bin')
+        }
+        def sources = fileTree(jniDir) { include '*.c' }
+        def stale = []
+        abis.each { abi, prefix ->
+            def committedFile = layout.projectDirectory.file('src/main/jniLibs/' + abi + '/libwexhook.so').asFile
+            if (!committedFile.isFile()) {
+                stale.add(abi + ': 工作区没有 so')
+                return
+            }
+            def compiler = new File(binDir, prefix + '-clang.cmd')
+            if (!compiler.isFile()) {
+                compiler = new File(binDir, prefix + '-clang')
+            }
+            def rebuilt = new File(reference.get().asFile, abi + '/libwexhook.so')
+            rebuilt.parentFile.mkdirs()
+            def command = [compiler.absolutePath] + nativeCompileFlags() + [
+                           '-o', rebuilt.absolutePath]
+            if (masterKeyBytes != null) {
+                command.add('-DWXH_MASTER_KEY_BYTES=' + masterKeyBytes)
+            }
+            sources.files.each { command.add(it.absolutePath.replace('\\', '/')) }
+            def result = providers.exec {
+                commandLine command
+                ignoreExitValue = true
+            }
+            if (result.result.get().exitValue != 0) {
+                throw new GradleException('参考 so 编译失败: ' + abi)
+            }
+            if (!java.util.Arrays.equals(backups[committedFile], rebuilt.bytes)) {
+                stale.add(abi)
+            }
+        }
+        if (!stale.isEmpty()) {
+            throw new GradleException('提交的 so 与源码/密钥不一致(' + stale.join(', ') + ')。'
+                    + '若提示「工作区没有 so」,先跑 ./gradlew buildNativeSecret 再校验、再同步;'
+                    + '否则说明源码或密钥变了而 so 没重编,重新生成后再发布')
+        }
+        logger.lifecycle('verifyNativeSecret: 提交的 so 与源码、主密钥一致')
+    }
+}
+
 dependencies {
-    // Xposed API(compileOnly,不打进 dex;运行时由 LSPosed/EdXposed 提供)
-    compileOnly fileTree(dir: 'src/libs', include: ['*.jar'])
+    compileOnly 'de.robv.android.xposed:api:82'
+    compileOnly 'io.github.libxposed:api:102.0.0'
 }

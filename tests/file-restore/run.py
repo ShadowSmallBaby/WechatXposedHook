@@ -3,19 +3,23 @@
 跑的是真正的 App 代码(FeaturePackRestorer + ModuleApk),载荷取模块 APK 里的
 assets/wx6_2.44.zip。场景都在 /data/local/tmp 下的临时目录里铺,不碰微信真实目录。
 
-需要 JDK17、Android SDK、adb,以及一份已构建的 release APK(默认 app/build/outputs/apk/release/app-release.apk)。
+需要 JDK17、Android SDK、adb,以及一份已构建的 release APK(默认见 tests/_apk.py)。
 """
 import argparse
 import hashlib
 import shutil
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tests"))
+import _apk
 REMOTE_DIR = "/data/local/tmp"
 REMOTE_JAR = REMOTE_DIR + "/file-restore-check.jar"
 REMOTE_APK = REMOTE_DIR + "/file-restore-module.apk"
+REMOTE_LIB = REMOTE_DIR + "/file-restore-lib"
 REMOTE_WORK = REMOTE_DIR + "/file-restore-work"
 REMOTE_FILES = REMOTE_WORK + "/wx6_2.44"
 PAYLOAD_ENTRY = "assets/wx6_2.44.zip"
@@ -44,7 +48,7 @@ def build(sdk, jdk, output, apk):
     classes.mkdir(parents=True, exist_ok=True)
     android = sdk / "platforms/android-36/android.jar"
     xposed = ROOT / "app/src/libs/XposedBridgeAPI-89.jar"
-    sources = sorted((ROOT / "app/src/main/java").rglob("*.java"))
+    sources = _apk.app_sources()
     # 测试替身要排在 API jar 前面(同名类以源码为准)
     sources = [p for p in sources if "XposedBridge" not in p.name]
     sources += sorted((Path(__file__).parent / "src").rglob("*.java"))
@@ -71,7 +75,8 @@ def su(adb, serial, command):
 
 
 def probe(adb, serial, directory, mode="", module_apk=REMOTE_APK):
-    command = ("CLASSPATH=" + REMOTE_JAR + " app_process /system/bin FileRestoreCheck "
+    command = ("CLASSPATH=" + REMOTE_JAR + " LD_LIBRARY_PATH=" + REMOTE_LIB
+               + " app_process /system/bin FileRestoreCheck "
                + directory + " " + (mode or "none") + " " + module_apk)
     # app_process 退出时可能被 SIGKILL(137),输出照样有效
     result = subprocess.run([str(adb), "-s", serial, "shell", command], capture_output=True,
@@ -105,7 +110,7 @@ def setup(adb, serial, files):
 
 def local_payload(tmp):
     """把内置载荷解到本地临时目录,用来铺"正确文件"和"错误文件"两种场景。"""
-    apk = ROOT / "app/build/outputs/apk/release/app-release.apk"
+    apk = _apk.APK
     with zipfile.ZipFile(apk) as module:
         inner = module.read(PAYLOAD_ENTRY)
     tmp.mkdir(parents=True, exist_ok=True)
@@ -131,8 +136,7 @@ def main():
     parser.add_argument("--sdk", type=Path, required=True)
     parser.add_argument("--jdk", type=Path, required=True)
     parser.add_argument("--serial", required=True)
-    parser.add_argument("--apk", type=Path,
-                        default=ROOT / "app/build/outputs/apk/release/app-release.apk")
+    parser.add_argument("--apk", type=Path, default=_apk.APK)
     args = parser.parse_args()
     if not args.apk.exists():
         raise SystemExit("缺少已构建的 APK:" + str(args.apk))
@@ -144,6 +148,12 @@ def main():
     jar = build(args.sdk, args.jdk, output, args.apk)
     run(adb, "-s", args.serial, "push", jar, REMOTE_JAR)
     push_payload(adb, args.serial, args.apk)
+    # 敏感常量解码在 libwexhook.so 里,FileRestoreCheck 要它才能算出目录名与载荷名。
+    lib = output / _apk.LIB_NAME
+    with zipfile.ZipFile(args.apk) as apk:
+        lib.write_bytes(apk.read(_apk.LIB_ENTRY))
+    run(adb, "-s", args.serial, "shell", "mkdir -p " + REMOTE_LIB)
+    run(adb, "-s", args.serial, "push", lib, REMOTE_LIB + "/" + _apk.LIB_NAME)
     files = local_payload(output / "payload")
     results = []
 
