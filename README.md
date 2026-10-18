@@ -11,17 +11,31 @@
 - 同时支持经典 Xposed 与现代 LibXposed 两种入口
 - 一个 APK 同时包含 `arm64-v8a` 与 `armeabi-v7a`,64 位 / 32 位微信都能用
 
-## 下载与版本选择
+## 版本选择指南
 
-从 [Releases](../../releases/latest) 下载最新版本:
+### 第一步:确认框架
 
-| 文件 | 适用框架 | 选择建议 |
-|---|---|---|
-| `WeXposedHook-modern.apk` | 现代 LibXposed(LSPosed API ≥ 102) | 新版 LSPosed 优先选它 |
-| `WeXposedHook-legacy.apk` | 经典 Xposed API(API < 102) | 旧 LSPosed / EdXposed |
+| 你的框架 | 下载文件 |
+|---|---|
+| 新版 LSPosed(模块页面 API ≥ 102) | `WeXposedHook-modern.apk` |
+| 旧版 LSPosed / EdXposed / 其他经典 Xposed | `WeXposedHook-legacy.apk` |
 
 两个包功能完全一致,只是入口 API 不同。不确定时先装 modern;如果框架提示
 「该模块需要更新的 Xposed 版本 102」,改用 legacy。
+
+### 第二步:确认环境
+
+| 项目 | 要求 |
+|---|---|
+| Android | 8.0 及以上 |
+| 微信 | 8.0.49 |
+| 微X模块 | 2.44 |
+
+### 第三步:选择版本
+
+- **最新版**:从 [Releases](../../releases/latest) 下载,修复和新功能优先。
+- **回退旧版**:微信或微X升级后如果新版异常,可回退到上一可用版本。
+- **变更记录**:每个版本改了什么见 [CHANGELOG](CHANGELOG.md)。
 
 ## 使用指南
 
