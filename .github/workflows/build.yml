@@ -30,23 +30,13 @@ jobs:
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "platforms;android-37.0"
+          "$SDKMANAGER" "ndk;28.2.13676358"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-
-      - name: Check native libraries
-        run: |
-          missing=0
-          for abi in arm64-v8a armeabi-v7a; do
-            if [ ! -f "app/src/main/jniLibs/$abi/libwexhook.so" ]; then
-              echo "::error::缺少 $abi 的 so，先等 native workflow 提交产物"
-              missing=1
-            fi
-          done
-          exit $missing
 
       - name: Check required secret
         if: github.repository == 'ShadowSmallBaby/WechatXposedHookCore'
@@ -93,6 +83,9 @@ jobs:
             echo "WXH_MASTER_KEY=$MK"
             echo "WXH_SECRETS_B64=$SB"
           } >> "$GITHUB_ENV"
+
+      - name: Build native libraries
+        run: ./gradlew buildNativeSecret --console=plain
 
       - name: Build all release variants
         run: ./gradlew assembleRelease --console=plain --stacktrace
