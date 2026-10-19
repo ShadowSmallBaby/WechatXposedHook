@@ -71,9 +71,13 @@ public final class X3LicenseBypass {
                     }
                 }
                 ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                if (LICENSE_CLASS.equals(className)) {
+                    PackIntegrity.onOldCoreDetected("license " + className);
+                }
             } catch (Throwable error) {
                 ModuleLogger.log(LOG_FAILED + ": " + className);
                 ModuleLogger.log(error);
+                PackIntegrity.onHookError("license " + className);
             }
         }
     }

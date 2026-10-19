@@ -61,8 +61,12 @@ public final class X3SettingsBypass {
                     count++;
                 }
                 ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                if (SETTINGS_CLASS.equals(className)) {
+                    PackIntegrity.onOldCoreDetected("settings " + className);
+                }
             } catch (Throwable error) {
                 ModuleLogger.log(LOG_FAILED + className + " " + error);
+                PackIntegrity.onHookError("settings " + className);
             }
         }
     }

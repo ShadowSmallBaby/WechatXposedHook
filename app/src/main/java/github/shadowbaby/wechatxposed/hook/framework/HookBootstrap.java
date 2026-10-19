@@ -11,6 +11,7 @@ import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.support.HostVersionSpoof;
 import github.shadowbaby.wechatxposed.hook.support.NoticeSuppressor;
 import github.shadowbaby.wechatxposed.hook.support.PackGuard;
+import github.shadowbaby.wechatxposed.hook.support.PackIntegrity;
 import github.shadowbaby.wechatxposed.hook.support.SignatureVerifyBypass;
 import java.io.File;
 
@@ -54,6 +55,7 @@ public final class HookBootstrap {
             return;
         }
         if (isAppBrandProcess(processName)) {
+            installPackIntegrity(framework, new File(dataDir));
             installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, false);
             return;
         }
@@ -66,10 +68,19 @@ public final class HookBootstrap {
                 }
             }
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
+            installPackIntegrity(framework, data);
             SignatureVerifyBypass.install(framework);
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
             installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, true);
+        }
+    }
+
+    private static void installPackIntegrity(HookFramework framework, File dataDir) {
+        try {
+            PackIntegrity.install(framework, dataDir);
+        } catch (Throwable error) {
+            framework.log(error);
         }
     }
 

@@ -51,6 +51,9 @@ public final class PackGuard {
 
         @Override
         public void before(HookParam param) {
+            if (PackIntegrity.isRepairing()) {
+                return;
+            }
             Object target = param.thisObject();
             if (!(target instanceof File file)) {
                 return;

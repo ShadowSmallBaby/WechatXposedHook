@@ -116,6 +116,8 @@ public final class X3GuardBypass implements HookCallback {
     private static final String LOG_HOOKED = "X3 guard hooked: ";
     private static final String LOG_SKIPPED = "X3 params apply skipped: ";
     private static final String LOG_PARAMS = "X3 params: ";
+    private static final String BASE_UPDATE_TASK = "c.ˏᵎ.ᵢᵔ$ʾʻ";
+    private static final String BASE_UPDATE_DONE = "onPostExecute";
 
     private static final int LOG_LIMIT = 600;
 
@@ -149,12 +151,17 @@ public final class X3GuardBypass implements HookCallback {
                 Class<?> target = Class.forName(className, false, classLoader);
                 int count = hookAll(framework, target);
                 ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                if (UPDATE_CLASS.equals(className)) {
+                    PackIntegrity.onOldCoreDetected("update " + className);
+                }
             } catch (Throwable error) {
                 ModuleLogger.log("X3 guard hook failed: " + className + " " + error);
+                PackIntegrity.onHookError("guard " + className);
             }
         }
         hookWrapper(framework, classLoader, WRAPPER, WRAPPER_CALL);
         hookWrapper(framework, classLoader, WRAPPER_V207, WRAPPER_CALL_V207);
+        hookBaseUpdateTask(framework, classLoader);
         hookUi(framework, classLoader);
         if (BuildConfig.DEBUG) {
             hookCoreData(framework, classLoader);
@@ -526,6 +533,24 @@ public final class X3GuardBypass implements HookCallback {
             ModuleLogger.log("X3 handshake hooked: " + className + "." + methodName);
         } catch (Throwable error) {
             ModuleLogger.log("X3 handshake hook failed: " + className + " " + error);
+        }
+    }
+
+    private static void hookBaseUpdateTask(HookFramework framework, ClassLoader classLoader) {
+        try {
+            Class<?> task = framework.findClassIfExists(BASE_UPDATE_TASK, classLoader);
+            if (task == null) {
+                return;
+            }
+            for (Method method : task.getDeclaredMethods()) {
+                if (BASE_UPDATE_DONE.equals(method.getName())
+                        && method.getParameterCount() == 1) {
+                    framework.hookMethod(method, new NoOp("base update done"));
+                    ModuleLogger.log("base update callback hooked");
+                }
+            }
+        } catch (Throwable ignored) {
+            // 版本不同或类不存在时跳过
         }
     }
 

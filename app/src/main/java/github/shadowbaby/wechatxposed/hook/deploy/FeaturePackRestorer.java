@@ -18,8 +18,8 @@ import java.util.zip.ZipFile;
  * 按清单补齐功能包。
  *
  * 每个 APK 只处理对应版本的运行时目录:
- *   - 微X 2.44: files/wx6_2.44, 24 个文件
- *   - X 3.0: files/x7_3.0, 26 个文件
+ *   - 微X 2.44: files/wx6_2.44, 基础包 26 / 扩展包 3
+ *   - X 3.0: files/x7_3.0, 基础包 26 / 扩展包 3
  */
 public abstract class FeaturePackRestorer {
 
@@ -38,7 +38,7 @@ public abstract class FeaturePackRestorer {
     private static final String LOG_NOT_READABLE = "feature packs: cannot chmod ";
     private static final String LOG_NOT_DELETED = "feature packs: cannot delete temp payload ";
 
-    private static final String[] V24_NAMES = {
+    private static final String[] V24_BASE_NAMES = {
             "14e777717682cce8a53cfcb34a22d65", "14e777717682cce8a53cfcb34a22d65_c",
             "14e777717682cce8a53cfcb34a22d65_s",
             "36a76b97b96b5d46742bb4bcd2ff24d", "36a76b97b96b5d46742bb4bcd2ff24d_c",
@@ -49,59 +49,96 @@ public abstract class FeaturePackRestorer {
             "739440c5d87b2b8095b99f9d2a1bbf9",
             "802766a4a4bd401c145a57463274d4dd", "802766a4a4bd401c145a57463274d4dd_c",
             "802766a4a4bd401c145a57463274d4dd_s",
-            "9816b5dfd637d3ce1473a9951b9e05", "a89eaf67dc796cb3af54d94fac0198b",
-            "a89eaf67dc796cb3af54d94fac0198b_c", "a89eaf67dc796cb3af54d94fac0198b_s",
+            "a89eaf67dc796cb3af54d94fac0198b", "a89eaf67dc796cb3af54d94fac0198b_c",
+            "a89eaf67dc796cb3af54d94fac0198b_s",
             "d61f837cad1d412f80b84d143e1257", "d61f837cad1d412f80b84d143e1257_c",
-            "d61f837cad1d412f80b84d143e1257_s", "dc7be70f1898d3a58965a919740f97"};
+            "d61f837cad1d412f80b84d143e1257_s",
+            "dc7be70f1898d3a58965a919740f97",
+            "df4e6fd144fab2389ece8cb79eaa8f", "df4e6fd144fab2389ece8cb79eaa8f_c",
+            "df4e6fd144fab2389ece8cb79eaa8f_s"};
 
-    private static final long[] V24_SIZES = {
+    private static final long[] V24_BASE_SIZES = {
             1035962L, 599L, 256L,
             528976L, 599L, 256L, 4568L, 1159L,
             259018L, 48008L, 41352L, 43336L, 98264L,
             200890L, 599L, 256L,
-            352186L, 121466L, 599L, 256L,
+            121466L, 599L, 256L,
             347578L, 599L, 256L,
-            461560L};
+            461560L,
+            131050L, 599L, 256L};
 
-    private static final String[] X30_NAMES = {
+    private static final String[] V24_EXT_NAMES = {
+            "257f23e0175be13dec231373679bedc",
+            "ec38a2b5b262d9c72f75edacb8875cfe",
+            "ee06cd8f9beaf915a27b8bad9e8c2f"};
+
+    private static final long[] V24_EXT_SIZES = {
+            88670L, 151710L, 178558L};
+
+    private static final String[] X30_BASE_NAMES = {
             "14e777717682cce8a53cfcb34a22d65", "14e777717682cce8a53cfcb34a22d65_c",
             "14e777717682cce8a53cfcb34a22d65_s",
             "36a76b97b96b5d46742bb4bcd2ff24d", "36a76b97b96b5d46742bb4bcd2ff24d_c",
             "36a76b97b96b5d46742bb4bcd2ff24d_s", "44c29edb103a2872f519adc9afdaaa",
             "534a9729a0c461cbd7a4379978fb742",
             "5dbc98dcc983a7728bd82d1a47546e", "62a4e566b714ea1c4349923c9ea6c35",
-            "69691c7bdcc3ce6d5d8a1361f22d4ac", "6d6586c9c5458ecfc98981b52ee662de",
+            "69691c7bdcc3ce6d5d8a1361f22d4ac",
+            "6d6586c9c5458ecfc98981b52ee662de",
             "739440c5d87b2b8095b99f9d2a1bbf9",
             "802766a4a4bd401c145a57463274d4dd", "802766a4a4bd401c145a57463274d4dd_c",
             "802766a4a4bd401c145a57463274d4dd_s",
-            "9816b5dfd637d3ce1473a9951b9e05", "a89eaf67dc796cb3af54d94fac0198b",
-            "a89eaf67dc796cb3af54d94fac0198b_c", "a89eaf67dc796cb3af54d94fac0198b_s",
+            "a89eaf67dc796cb3af54d94fac0198b", "a89eaf67dc796cb3af54d94fac0198b_c",
+            "a89eaf67dc796cb3af54d94fac0198b_s",
             "d61f837cad1d412f80b84d143e1257", "d61f837cad1d412f80b84d143e1257_c",
             "d61f837cad1d412f80b84d143e1257_s",
-            "d61f837cad1d412f80b84d143e1257_backup_c",
-            "d61f837cad1d412f80b84d143e1257_backup_s",
+            "df4e6fd144fab2389ece8cb79eaa8f",
+            "df4e6fd144fab2389ece8cb79eaa8f_c",
+            "df4e6fd144fab2389ece8cb79eaa8f_s",
             "dc7be70f1898d3a58965a919740f97"};
 
-    private static final long[] X30_SIZES = {
+    private static final long[] X30_BASE_SIZES = {
             994250L, 599L, 256L,
             597288L, 599L, 256L, 4568L, 1159L,
-            258922L, 48008L, 41464L, 43336L, 98264L,
+            258922L, 48008L, 41464L,
+            43336L, 98264L,
             200554L, 599L, 256L,
-            372458L, 121962L, 599L, 256L,
-            370042L, 599L, 256L, 599L, 256L,
+            121962L, 599L, 256L,
+            370042L, 599L, 256L,
+            129498L, 599L, 256L,
             533080L};
 
-    private static final Pack V24 = new Pack("v24",
+    private static final String[] X30_EXT_NAMES = {
+            "257f23e0175be13dec231373679bedc",
+            "ec38a2b5b262d9c72f75edacb8875cfe",
+            "ee06cd8f9beaf915a27b8bad9e8c2f"};
+
+    private static final long[] X30_EXT_SIZES = {
+            91594L, 148186L, 182538L};
+
+    private static final String V24_EXT_PAYLOAD = "wx6_2.44_ext.zip";
+    private static final String X30_EXT_PAYLOAD = "x7_3.0_ext.zip";
+
+    private static final Pack V24_BASE = new Pack("v24",
             Secret.of(SecretConstants.FEATURE_DIR),
             Secret.of(SecretConstants.FEATURE_PAYLOAD),
-            V24_NAMES, V24_SIZES);
+            V24_BASE_NAMES, V24_BASE_SIZES);
 
-    private static final Pack X30 = new Pack("x30",
-            "x7_3.0", "x7_3.0.zip", X30_NAMES, X30_SIZES);
+    private static final Pack V24_EXT = new Pack("v24-ext",
+            Secret.of(SecretConstants.FEATURE_DIR),
+            V24_EXT_PAYLOAD, V24_EXT_NAMES, V24_EXT_SIZES);
 
-    /** 每个 APK 只内置当前微X版本对应的功能包。 */
+    private static final Pack X30_BASE = new Pack("x30",
+            "x7_3.0", "x7_3.0.zip", X30_BASE_NAMES, X30_BASE_SIZES);
+
+    private static final Pack X30_EXT = new Pack("x30-ext",
+            "x7_3.0", X30_EXT_PAYLOAD, X30_EXT_NAMES, X30_EXT_SIZES);
+
+    /** 公开版只有基础包；full 额外补齐扩展包。 */
     private static final Pack[] PACKS = BuildConfig.WX_PACK.startsWith("wx6")
-            ? new Pack[]{V24} : new Pack[]{X30};
+            ? (BuildConfig.FULL_EDITION
+                    ? new Pack[]{V24_BASE, V24_EXT} : new Pack[]{V24_BASE})
+            : (BuildConfig.FULL_EDITION
+                    ? new Pack[]{X30_BASE, X30_EXT} : new Pack[]{X30_BASE});
 
     private static boolean checked;
 
@@ -120,7 +157,26 @@ public abstract class FeaturePackRestorer {
     }
 
     public static List<String> missingFiles(File directory) {
-        return missingFiles(directory, V24);
+        return missingFiles(directory, BuildConfig.WX_PACK.startsWith("wx6")
+                ? V24_BASE : X30_BASE);
+    }
+
+    /** 当前 APK 对应的运行时目录名。 */
+    public static String packDirName() {
+        return BuildConfig.WX_PACK.startsWith("wx6")
+                ? Secret.of(SecretConstants.FEATURE_DIR) : "x7_3.0";
+    }
+
+    /** 当前 APK 内置载荷的 zip 名。 */
+    public static String payloadName() {
+        return BuildConfig.WX_PACK.startsWith("wx6")
+                ? Secret.of(SecretConstants.FEATURE_PAYLOAD) : "x7_3.0.zip";
+    }
+
+    /** full 版额外内置的扩展包 zip 名。 */
+    public static String extPayloadName() {
+        return BuildConfig.WX_PACK.startsWith("wx6")
+                ? V24_EXT_PAYLOAD : X30_EXT_PAYLOAD;
     }
 
     private static void ensure(File filesDir, Pack pack) {

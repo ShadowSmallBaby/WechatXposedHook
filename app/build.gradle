@@ -86,12 +86,6 @@ android {
         main {
             jniLibs.srcDirs = ['src/main/jniLibs']
         }
-        wx244 {
-            assets.srcDirs = ["$buildDir/generated/featurepacks/wx244"]
-        }
-        wx30 {
-            assets.srcDirs = ["$buildDir/generated/featurepacks/wx30"]
-        }
         publicEdition {
             java.srcDirs += ["$buildDir/generated/secrets/publicEdition/java"]
         }
@@ -113,7 +107,16 @@ androidComponents {
         def framework = flavors['framework']
         def wx = flavors['wx'] == 'wx244' ? '2.44' : '3.0'
         def edition = flavors['edition'] == 'fullEdition' ? '-full' : ''
+        def pack = flavors['wx'] == 'wx244' ? 'wx244' : 'wx30'
         def appVersion = android.defaultConfig.versionName
+        variant.sources.assets?.addStaticSourceDirectory(
+                layout.buildDirectory.dir("generated/featurepacks/${pack}")
+                        .get().asFile.absolutePath)
+        if (flavors['edition'] == 'fullEdition') {
+            variant.sources.assets?.addStaticSourceDirectory(
+                    layout.buildDirectory.dir("generated/featurepacks/${pack}-ext")
+                            .get().asFile.absolutePath)
+        }
         variant.outputs.each { output ->
             output.outputFileName.set(
                     "WeXposedHook-${framework}-wx${wx}-v${appVersion}${edition}.apk")
@@ -345,7 +348,9 @@ def generateFeaturePacks = tasks.register('generateFeaturePacks', Exec) {
     inputs.file(script)
     inputs.files(rootProject.fileTree('xmetadata') { include 'wx6/**', 'wx7/**' })
     outputs.files(packs.get().file('wx244/wx6_2.44.zip'),
-            packs.get().file('wx30/x7_3.0.zip'))
+            packs.get().file('wx244-ext/wx6_2.44_ext.zip'),
+            packs.get().file('wx30/x7_3.0.zip'),
+            packs.get().file('wx30-ext/x7_3.0_ext.zip'))
 }
 
 tasks.named('preBuild') {
