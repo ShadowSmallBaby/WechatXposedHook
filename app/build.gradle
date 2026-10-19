@@ -18,8 +18,8 @@ android {
         applicationId 'github.shadowbaby.wechatxposed.hook'
         minSdk 26
         targetSdk 37
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '1.1'
 
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
@@ -54,15 +54,49 @@ android {
         }
     }
 
-    flavorDimensions 'framework'
+    flavorDimensions 'framework', 'wx', 'edition'
     productFlavors {
         legacy { dimension 'framework' }
         modern { dimension 'framework' }
+
+        wx244 {
+            dimension 'wx'
+            buildConfigField 'String', 'WX_PACK', '"wx6_2.44"'
+        }
+        wx30 {
+            dimension 'wx'
+            buildConfigField 'String', 'WX_PACK', '"x7_3.0"'
+        }
+
+        publicEdition {
+            dimension 'edition'
+            buildConfigField 'boolean', 'FULL_EDITION', 'false'
+        }
+        fullEdition {
+            dimension 'edition'
+            buildConfigField 'boolean', 'FULL_EDITION', 'true'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     sourceSets {
         main {
             jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+        wx244 {
+            assets.srcDirs = ["$buildDir/generated/featurepacks/wx244"]
+        }
+        wx30 {
+            assets.srcDirs = ["$buildDir/generated/featurepacks/wx30"]
+        }
+        publicEdition {
+            java.srcDirs += ["$buildDir/generated/secrets/publicEdition/java"]
+        }
+        fullEdition {
+            java.srcDirs += ["$buildDir/generated/secrets/fullEdition/java"]
         }
     }
 
@@ -71,6 +105,20 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def flavors = variant.productFlavors.collectEntries { [(it.first): it.second] }
+        def framework = flavors['framework']
+        def wx = flavors['wx'] == 'wx244' ? '2.44' : '3.0'
+        def edition = flavors['edition'] == 'fullEdition' ? '-full' : ''
+        def appVersion = android.defaultConfig.versionName
+        variant.outputs.each { output ->
+            output.outputFileName.set(
+                    "WeXposedHook-${framework}-wx${wx}-v${appVersion}${edition}.apk")
+        }
+    }
 }
 
 def masterKey = System.getenv('WXH_MASTER_KEY')
@@ -116,32 +164,32 @@ def nativeCompileFlags = { ->
 def encodeSecrets = tasks.register('encodeSecrets') {
     def script = rootProject.file('scripts/encode_secrets.py')
     def table = rootProject.file('scripts/secrets_table.py')
-    onlyIf { script.isFile() }
+    def output = layout.buildDirectory.dir('generated/secrets')
+    def secretsB64 = System.getenv('WXH_SECRETS_B64')
+    onlyIf { script.isFile() && (masterKeyText != null || secretsB64 != null || table.isFile()) }
     if (script.isFile()) {
         inputs.file(script)
         inputs.property('wxhMasterKey', masterKeyText ?: '')
+        inputs.property('wxhSecrets', secretsB64 ?: '')
     }
     if (table.isFile()) {
         inputs.file(table)
     }
-    outputs.dir(layout.projectDirectory.dir('src/main/java/github/shadowbaby/wechatxposed/hook/loader'))
+    outputs.dir(output)
     doLast {
         def python = System.getenv('WXH_PYTHON') ?: 'python'
-        def command = [python, '-X', 'utf8', script.absolutePath]
+        def command = [python, '-X', 'utf8', script.absolutePath,
+                       '--output-root', output.get().asFile.absolutePath]
         if (masterKeyText != null) {
             command.addAll(['--master-key', masterKeyText])
         }
-        try {
-            def result = providers.exec {
-                commandLine command
-                workingDir rootProject.projectDir
-                ignoreExitValue = true
-            }
-            if (result.result.get().exitValue != 0) {
-                logger.warn('encode_secrets.py 执行失败,沿用仓库里已有的密文')
-            }
-        } catch (Exception error) {
-            logger.warn('encode_secrets.py 不可用,沿用仓库里已有的密文: ' + error.message)
+        def result = providers.exec {
+            commandLine command
+            workingDir rootProject.projectDir
+            ignoreExitValue = true
+        }
+        if (result.result.get().exitValue != 0) {
+            throw new GradleException('encode_secrets.py 执行失败: 检查 WXH_MASTER_KEY / WXH_SECRETS_B64')
         }
     }
 }
@@ -210,12 +258,12 @@ def buildNative = tasks.register('buildNativeSecret') {
 }
 
 tasks.named('preBuild') {
-    if (layout.projectDirectory.dir('src/main/jni').asFile.isDirectory()) {
+    // so 由 CI 的 native job 构建并提交；只有缺失时才在本机构建兜底。
+    def soMissing = ['arm64-v8a', 'armeabi-v7a'].any {
+        !layout.projectDirectory.file('src/main/jniLibs/' + it + '/libwexhook.so').asFile.isFile()
+    }
+    if (soMissing) {
         dependsOn buildNative
-    } else if (!layout.projectDirectory.file('src/main/jniLibs/arm64-v8a/libwexhook.so').asFile.isFile()
-            && !layout.projectDirectory.file('src/main/jniLibs/armeabi-v7a/libwexhook.so').asFile.isFile()) {
-        throw new GradleException('既没有 app/src/main/jni 源码,也没有预编译的 '
-                + 'app/src/main/jniLibs/<abi>/libwexhook.so,无法构建')
     }
 }
 
@@ -285,6 +333,23 @@ tasks.register('verifyNativeSecret') {
         }
         logger.lifecycle('verifyNativeSecret: 提交的 so 与源码、主密钥一致')
     }
+}
+
+def generateFeaturePacks = tasks.register('generateFeaturePacks', Exec) {
+    def script = rootProject.file('scripts/build_release_packs.py')
+    def packs = layout.buildDirectory.dir('generated/featurepacks')
+    def python = System.getProperty('os.name').toLowerCase().contains('windows')
+            ? 'python' : 'python3'
+    commandLine python, script.absolutePath, '--output-root', packs.get().asFile.absolutePath
+    onlyIf { script.isFile() && rootProject.file('xmetadata').isDirectory() }
+    inputs.file(script)
+    inputs.files(rootProject.fileTree('xmetadata') { include 'wx6/**', 'wx7/**' })
+    outputs.files(packs.get().file('wx244/wx6_2.44.zip'),
+            packs.get().file('wx30/x7_3.0.zip'))
+}
+
+tasks.named('preBuild') {
+    dependsOn generateFeaturePacks
 }
 
 dependencies {

@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LOADER = ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader"
+LOADER = ROOT / "app/build/generated/secrets/fullEdition/java/github/shadowbaby/wechatxposed/hook/loader"
 HERE = Path(__file__).resolve().parent
 
 

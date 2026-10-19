@@ -6,7 +6,18 @@
 公开仓没有本文件,构建时直接用同步过去的 SecretConstants.java(密文)。
 若某个内部 CI 也不想落明文,可改用环境变量 WXH_SECRETS_B64(见 encode_secrets.py)。
 scripts/publish_public.py 的 DENY 列表里有本文件,同步时不会过去。
+
+直接运行本脚本可导出 CI Secrets 用的两份文件(默认写到 data/secrets/):
+
+    python -X utf8 scripts/secrets_table.py [--output-dir DIR] [--name PREFIX]
+
+    secrets.json  可读的明文 JSON
+    secrets.b64   WXH_SECRETS_B64 的值(明文 JSON 的 Base64)
 """
+import argparse
+import base64
+import json
+from pathlib import Path
 
 SECRETS = {
     # XposedInit
@@ -20,6 +31,38 @@ SECRETS = {
     "COMPONENT_CORE": "com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper",
     "COMPONENT_DONATION": "com.fkzhang.wxfeatures.donation.Wrapper.Init",
     "COMPONENT_THEMES": "com.fkzhang.wxfeatures.themes.Wrapper.Init",
+    # X 3.0（cn.android.x）
+    "COMPONENT_X30": "com.android.xc.Wrapper.HookWrapper",
+    "X30_BRIDGE_CLASS": "com.android.xc.WxJniCoreBridge",
+    "X30_LOADER_CLASS": "com.android.x.xposed.hook.WxCoreLoader",
+    "X30_LICENSE_CLASS": "c.ـˉ.ˈʽ",
+    "X30_UPDATE_CLASS": "c.ـˉ.ⁱⁱ",
+    "X30_SETTINGS_CLASS": "c.יᴵ.ٴʻ",
+    # core v207 重新混淆后的名字（2.44 CoreDex 与 v206 一一对应的类）
+    "X30_LICENSE_CLASS_V207": "c.ˏᵎ.ـʼ",
+    "X30_UPDATE_CLASS_V207": "c.ˏᵎ.ˎ",
+    "X30_SETTINGS_CLASS_V207": "c.ˉˆ.ʼˊ",
+    # 更新类里的关键方法（旧名 / v207 名）
+    "X30_PARAMS_APPLY": "ʿʽ",
+    "X30_PARAMS_APPLY_V207": "ˋˉ",
+    "X30_PARAMS_VERIFY": "ʼﾞ",
+    "X30_PARAMS_VERIFY_V207": "ˑˏ",
+    "X30_VERIFIER_EXPIRED": "ﹶٴ",
+    "X30_VERIFIER_EXPIRED_V207": "ᵎᐧ",
+    "X30_DOWNLOAD_PARAMS": "ˊᵔ",
+    "X30_DOWNLOAD_PARAMS_V207": "ⁱᵔ",
+    "X30_DOWNLOAD_CORE": "ﹶˆ",
+    "X30_DOWNLOAD_CORE_V207": "ˈʽ",
+    # 核心调用 native 桥的统一包装类（v206 是 c.ˈⁱ.ᵔﹶ，v207 重命名）
+    "X30_BRIDGE_WRAPPER": "c.ˈⁱ.ᵔﹶ",
+    "X30_BRIDGE_WRAPPER_V207": "c.ˊﹶ.ˉˎ",
+    "X30_BRIDGE_CALL": "ʻᵢ",
+    "X30_BRIDGE_CALL_V207": "ﾞⁱ",
+    "X30_SET_DISABLE": "ـˑ",
+    "X30_SET_DISABLE_V207": "ﹳᵎ",
+    "X30_DISABLE_FEATURES": "ᵔʿ",
+    "X30_DISABLE_FEATURES_V207": "ᴵˎ",
+    "X30_CALL_METHOD": "CallMethod",
     "COMPONENT_NAME_BASE": "BaseDex",
     "COMPONENT_NAME_CORE": "CoreDex",
     "COMPONENT_NAME_DONATION": "DonationDex",
@@ -83,8 +126,12 @@ SECRETS = {
         "record_showid,unlimited_voice_sel,extract_vid_audio,auto_remark_new_contact,"
         "fav_wenote,multi_response,rp_keyword,chatroom_container_tags,"
         "moments_container_enable,sns_export,sns_keyword_notification,mass_sns_like,"
-        "export_contacts,friend_request_import,scheduled_task,"
-        "task_chatroom_invite_allow_by_identity,chat_schedule_forward,auto_clean_moment"),
+        "export_contacts,friend_request_import,scheduled_task,modify_message,"
+        "task_chatroom_invite_allow_by_identity,chat_schedule_forward,auto_clean_moment,"
+        # 关于 -> 自助获取高级功能：四项独立于打赏功能集
+        "multichat_autoforward,moments_auto_forward,secret_friend,auto_accept_chatroom_invite,"
+        # 关于 -> 自助获取高级功能：内置模式
+        "integrated_mode"),
 
     # LicenseData
 
@@ -122,3 +169,31 @@ SECRETS = {
     "DEX_SUFFIX": ".dex",
     "DEX_PREFIX": "classes",
 }
+
+
+def main():
+    """导出明文表:JSON 给人看,Base64 直接填进 WXH_SECRETS_B64。"""
+    parser = argparse.ArgumentParser(description="导出明文常量表(仅供内部使用)")
+    parser.add_argument("--output-dir", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "data" / "secrets",
+                        help="输出目录(默认 data/secrets,已在 .gitignore 里)")
+    parser.add_argument("--name", default="secrets",
+                        help="输出文件名前缀(默认 secrets)")
+    args = parser.parse_args()
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = args.output_dir / (args.name + ".json")
+    b64_path = args.output_dir / (args.name + ".b64")
+    json_path.write_text(
+        json.dumps(SECRETS, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    compact = json.dumps(SECRETS, ensure_ascii=False, separators=(",", ":"))
+    b64_path.write_text(
+        base64.b64encode(compact.encode("utf-8")).decode("ascii"), encoding="ascii")
+    print("已导出 %d 个常量(明文,勿提交):" % len(SECRETS))
+    print("  JSON  : " + str(json_path))
+    print("  Base64: " + str(b64_path))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

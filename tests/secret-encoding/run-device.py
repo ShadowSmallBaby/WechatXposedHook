@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests"))
 import _apk
-LOADER = ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader"
+LOADER = ROOT / "app/build/generated/secrets/fullEdition/java/github/shadowbaby/wechatxposed/hook/loader"
 HERE = Path(__file__).resolve().parent
 REMOTE_DIR = "/data/local/tmp"
 REMOTE_JAR = REMOTE_DIR + "/secret-native-check.jar"

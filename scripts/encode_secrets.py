@@ -29,7 +29,16 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LOADER = ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader"
+PACKAGE = Path("java/github/shadowbaby/wechatxposed/hook/loader")
+EDITIONS = ("publicEdition", "fullEdition")
+
+ADVANCED_FEATURES = {
+    "multichat_autoforward",
+    "moments_auto_forward",
+    "secret_friend",
+    "auto_accept_chatroom_invite",
+    "integrated_mode",
+}
 
 # 全部常量名(不含明文)。与源码里 Secret.of(SecretConstants.XXX) 的引用一一对应。
 NAMES = [
@@ -44,6 +53,34 @@ NAMES = [
     "COMPONENT_CORE",
     "COMPONENT_DONATION",
     "COMPONENT_THEMES",
+    "COMPONENT_X30",
+    "X30_BRIDGE_CLASS",
+    "X30_LOADER_CLASS",
+    "X30_LICENSE_CLASS",
+    "X30_UPDATE_CLASS",
+    "X30_SETTINGS_CLASS",
+    "X30_LICENSE_CLASS_V207",
+    "X30_UPDATE_CLASS_V207",
+    "X30_SETTINGS_CLASS_V207",
+    "X30_PARAMS_APPLY",
+    "X30_PARAMS_APPLY_V207",
+    "X30_PARAMS_VERIFY",
+    "X30_PARAMS_VERIFY_V207",
+    "X30_VERIFIER_EXPIRED",
+    "X30_VERIFIER_EXPIRED_V207",
+    "X30_DOWNLOAD_PARAMS",
+    "X30_DOWNLOAD_PARAMS_V207",
+    "X30_DOWNLOAD_CORE",
+    "X30_DOWNLOAD_CORE_V207",
+    "X30_BRIDGE_WRAPPER",
+    "X30_BRIDGE_WRAPPER_V207",
+    "X30_BRIDGE_CALL",
+    "X30_BRIDGE_CALL_V207",
+    "X30_SET_DISABLE",
+    "X30_SET_DISABLE_V207",
+    "X30_DISABLE_FEATURES",
+    "X30_DISABLE_FEATURES_V207",
+    "X30_CALL_METHOD",
     "COMPONENT_NAME_BASE",
     "COMPONENT_NAME_CORE",
     "COMPONENT_NAME_DONATION",
@@ -237,15 +274,15 @@ def validate(table: dict) -> None:
                          % (sorted(missing), sorted(extra)))
 
 
-def main():
-    parser = argparse.ArgumentParser(description="把敏感常量编码成 SecretConstants.java")
-    parser.add_argument("--master-key",
-                        help="32 字节主密钥(64 位 hex 或标准 Base64);缺省用 WXH_MASTER_KEY"
-                             " 或内置默认值,必须与 so 里 secret_crypto.inc 的取值一致")
-    args = parser.parse_args()
-    # 每项的子密钥按常量名派生(与 so 里的 derive_subkey 一致),dex 里没有密钥。
-    key_source = apply_master_key(args.master_key)
-    table, source = secrets_table()
+def public_table(table: dict) -> dict:
+    result = dict(table)
+    features = [item for item in result["FEATURES"].split(",")
+                if item not in ADVANCED_FEATURES]
+    result["FEATURES"] = ",".join(features)
+    return result
+
+
+def write_constants(table: dict, target: Path, source: str, key_source: str) -> None:
     lines = [
         "package github.shadowbaby.wechatxposed.hook.loader;",
         "",
@@ -261,8 +298,29 @@ def main():
         "}",
         "",
     ]
-    (LOADER / "SecretConstants.java").write_text("\n".join(lines), encoding="utf-8")
-    print("已生成 %d 个常量密文(来源 %s;主密钥 %s)" % (len(table), source, key_source))
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "SecretConstants.java").write_text("\n".join(lines), encoding="utf-8")
+    print("已生成 %d 个常量密文 -> %s(来源 %s;主密钥 %s)"
+          % (len(table), target, source, key_source))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="把敏感常量编码成 SecretConstants.java")
+    parser.add_argument("--master-key",
+                        help="32 字节主密钥(64 位 hex 或标准 Base64);缺省用 WXH_MASTER_KEY"
+                             " 或内置默认值,必须与 so 里 secret_crypto.inc 的取值一致")
+    parser.add_argument("--output-root", type=Path,
+                        default=ROOT / "app" / "build" / "generated" / "secrets",
+                        help="生成目录（默认 app/build/generated/secrets）")
+    args = parser.parse_args()
+    # 每项的子密钥按常量名派生(与 so 里的 derive_subkey 一致),dex 里没有密钥。
+    key_source = apply_master_key(args.master_key)
+    table, source = secrets_table()
+    for edition, edition_table in (
+            ("fullEdition", table),
+            ("publicEdition", public_table(table))):
+        target = args.output_root / edition / PACKAGE
+        write_constants(edition_table, target, source, key_source)
 
 
 if __name__ == "__main__":

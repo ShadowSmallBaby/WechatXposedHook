@@ -43,7 +43,7 @@ def run_java(sdk, jdk, serial):
     sources = [ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseCrypto.java",
                ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/license/LicenseData.java",
                ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader/Secret.java",
-               ROOT / "app/src/main/java/github/shadowbaby/wechatxposed/hook/loader/SecretConstants.java",
+               ROOT / "app/build/generated/secrets/fullEdition/java/github/shadowbaby/wechatxposed/hook/loader/SecretConstants.java",
                Path(__file__).parent / "LicenseDataCheck.java"]
     subprocess.run([str(jdk / "bin/javac.exe"), "-encoding", "UTF-8", "-source", "17", "-target", "17",
                     "-classpath", str(android), "-d", str(classes)]
