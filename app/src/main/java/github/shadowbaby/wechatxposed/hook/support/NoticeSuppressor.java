@@ -7,10 +7,10 @@ import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 
 /**
- * 屏蔽 X 3.0 菜单顶部的「无法连接服务器下载更新文件」提示。
+ * 屏蔽 X 3.0 菜单顶部的更新失败提示。
  *
- * 更新链路被我们主动拦截后，核心仍会把失败文案设置到 TextView 上。
- * 这里在 TextView.setText 层做文本过滤：命中提示语就不设置，其余文本不受影响。
+ * 更新链路被拦截后，宿主仍可能把失败文案设置到 TextView 上。
+ * 这里在 TextView.setText 层过滤提示语，其余文本不受影响。
  */
 public final class NoticeSuppressor {
 

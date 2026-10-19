@@ -9,14 +9,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 阻止微X核心在「参数校验失败 / 更新失败」时删除本地功能包。
+ * 阻止核心在参数校验或更新失败时删除本地功能包。
  *
- * 微X核心的 params 响应里带 {@code del_fp} / {@code del_param} 指令，
- * 校验不通过时会直接删掉 files/wx6_2.44、files/x7_3.0 下的文件，
- * 下一次启动就加载不到功能包，界面落到「Disabled error code: 00329」。
- *
- * 这里只拦这两个目录下的普通文件；FeaturePackRestorer 自己解压用的
- * {@code *.zip} 临时包放行，避免影响启动补齐。
+ * 只拦截 files/wx6_2.44、files/x7_3.0 下的普通文件；
+ * FeaturePackRestorer 解压用的 *.zip 临时包放行。
  */
 public final class PackGuard {
 

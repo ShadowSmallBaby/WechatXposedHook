@@ -14,18 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * X 3.0 核心的 params / 更新链路绕过。
+ * X 3.0 的 params / 更新链路防护。
  *
- * 核心在收到 params 后会执行 JSON 里的 del_fp / del_param / disable_code，
- * 校验失败（离线、下载失败、版本握手不一致）时尤其容易触发，结果是
- * files/x7_3.0 被删空，下次启动就没有功能包，界面显示 00329。
- *
- * 这里做四件事：
- *   1. params 应用方法先看 JSON，出现破坏性键就整段跳过；
- *   2. params 校验失败 / verifier 过期 直接 no-op（不再删 params 文件）；
- *   3. download params / download core 直接 no-op（离线时不再走失败分支，
- *      同时避免核心被在线替换成我们还没适配的混淆版本）；
- *   4. 同时兼容 v206 与 v207 两套混淆名。
+ * 拦截会删除功能包、关闭组件或写入禁用码的 params/更新调用，
+ * 并在设置页构建菜单期间维持可用状态。
  */
 public final class X3GuardBypass implements HookCallback {
 
@@ -57,20 +49,15 @@ public final class X3GuardBypass implements HookCallback {
     private static final String[] DISABLE_FEATURES = {
             Secret.of(SecretConstants.X30_DISABLE_FEATURES),
             Secret.of(SecretConstants.X30_DISABLE_FEATURES_V207),
-            // v207 的定时「授权失效」检查：内部会 setDisableCode(820) 并卸载全部组件。
             "ʿᴵ"};
 
-    /**
-     * 核心的「环境/授权/有效期」判定。离线时这些条件必然失败，核心会走
-     * 失败分支：设置 820、关闭组件、菜单变空。这里统一置真，走成功分支
-     * （组件保持加载，bridge 标志位也会被置起）。
-     */
+    /** 授权/有效期判定的布尔方法。 */
     private static final String[] TRUE_METHODS = {
             "ﾞˈ", "ʻᴵ", "ʻﹳ", "ᵢˎ", "ⁱʻ", "ʼˏ"};
 
     private static final String LOG_TRUE = "X3 validity forced: ";
 
-    /** 核心设置页：c.ˏᴵ.ʻᵔ，ﾞʿ=false 时直接跳过菜单构建。 */
+    /** 核心设置页的菜单构建入口。 */
     private static final String UI_CLASS = "c.ˏᴵ.ʻᵔ";
     private static final String UI_OPTIONS = "ٴˋ";
     private static final String UI_KEYWORDS = "ᵔˑ";
@@ -86,7 +73,7 @@ public final class X3GuardBypass implements HookCallback {
     private static final String LOG_REBUILD = "menu rebuild triggered: ";
     private static final String FEATURE_MANAGER = "c.ˎﹳ.ʾᐧ";
     private static final String FEATURE_UNLOAD = "ⁱʽ";
-    /** 单个功能卸载：ʼˋ(String name, String message)。校验失败后走这里移除 donation/base。 */
+    /** 单个功能卸载入口。 */
     private static final String FEATURE_UNLOAD_ONE = "ʼˋ";
     private static final String FEATURE_LOAD_ONE = "ˏـ";
     private static final String FEATURE_LOAD_CLASS = "ᴵʻ";
@@ -175,7 +162,7 @@ public final class X3GuardBypass implements HookCallback {
         hookManagerProbe(framework, classLoader);
     }
 
-    /** 记录核心管理器布尔查询的返回值，用于定位功能 hook 被哪一项关掉。 */
+    /** 记录管理器布尔查询的返回值。 */
     private static void hookManagerProbe(HookFramework framework, ClassLoader classLoader) {
         String key = "manager-probe@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -205,7 +192,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 离线时 appname/donate_desc 资源为空，打赏分组标题会是空串；这里给默认文案。 */
+    /** 为菜单资源提供默认文案。 */
     private static void hookMenuResource(HookFramework framework, ClassLoader classLoader) {
         String key = "resource@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -229,7 +216,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 只在设置页构建菜单期间把这些条件临时置真，避免影响启动/授权流程。 */
+    /** 只在设置页构建菜单期间将条件置真。 */
     private static void hookMenuTrue(HookFramework framework, ClassLoader classLoader,
             String className, String methodName) {
         String key = className + "#" + methodName + "@" + System.identityHashCode(classLoader);
@@ -297,7 +284,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** “打赏”分组依赖 registration 标志；离线校验失败后它会变成 false，这里固定为 true。 */
+    /** 固定 registration 标志。 */
     private static void hookSettingsWrapper(HookFramework framework, ClassLoader classLoader) {
         String key = SETTINGS_WRAPPER + "@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -323,7 +310,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 核心停用时会遍历功能表逐个 finish，最后 clear 注册表——这是菜单数据消失的根源。 */
+    /** 保护功能注册表，避免停用流程清空菜单数据。 */
     private static void hookFeatureManager(HookFramework framework, ClassLoader classLoader) {
         String key = FEATURE_MANAGER + "@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -343,8 +330,7 @@ public final class X3GuardBypass implements HookCallback {
                             + FEATURE_MANAGER + "." + FEATURE_UNLOAD);
                 } else if (FEATURE_UNLOAD_ONE.equals(methodName) && types.length == 2
                         && types[0] == String.class && types[1] == String.class) {
-                    // 关掉单功能卸载：核心在校验/更新失败后靠它把 donation/base 从注册表摘掉，
-                    // 同时调用组件自己的 unload，把分组等 hook 一并反注册。
+                    // 拦截单功能卸载，避免捐赠/基础组件被移出注册表。
                     framework.hookMethod(method, new NamedUnloadGuard());
                     ModuleLogger.log("feature manager hooked: "
                             + FEATURE_MANAGER + "." + FEATURE_UNLOAD_ONE);
@@ -370,7 +356,7 @@ public final class X3GuardBypass implements HookCallback {
                     }
                 }
             }
-            // 功能组件自身的 unload 入口：只记录调用栈，确认是谁在反注册 hook。
+            // 观察组件自身的卸载入口。
             Class<?> feature = framework.findClassIfExists("c.ˎﹳ.ᵢʼ", classLoader);
             if (feature != null) {
                 for (Method method : feature.getDeclaredMethods()) {
@@ -386,8 +372,7 @@ public final class X3GuardBypass implements HookCallback {
     }
 
     /**
-     * 设置页可能在功能组件加载完成之前就构建过一次（启动恢复 Activity 时常见），
-     * 那时 options 只有 1 条。这里在组件加载完成后主动重建一次菜单。
+     * 组件加载完成后主动重建一次菜单。
      */
     private static void scheduleMenuRebuild(Class<?> uiClass) {
         try {
@@ -428,7 +413,7 @@ public final class X3GuardBypass implements HookCallback {
             thread.setDaemon(true);
             thread.start();
         } catch (Throwable ignored) {
-            // 诊断/重建失败不影响主流程
+            // 重建失败不影响主流程
         }
     }
 
@@ -454,7 +439,7 @@ public final class X3GuardBypass implements HookCallback {
             thread.setDaemon(true);
             thread.start();
         } catch (Throwable ignored) {
-            // 诊断失败不影响主流程
+            // 探测失败不影响主流程
         }
     }
 
@@ -483,7 +468,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 强制设置页的菜单构建开关，避免核心在离线校验失败后直接不生成菜单。 */
+    /** 维持设置页的菜单构建开关。 */
     private static void hookUi(HookFramework framework, ClassLoader classLoader) {
         String key = UI_CLASS + "@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -524,8 +509,7 @@ public final class X3GuardBypass implements HookCallback {
     }
 
     /**
-     * 核心的 130（param）走统一包装类；包装类在初始化标志未就绪时直接返回 null，
-     * 根本不进 native 桥，于是 params 校验必然失败。这里在包装层直接应答。
+     * 在包装层应答 130 握手。
      */
     private static void hookWrapper(HookFramework framework, ClassLoader classLoader,
             String className, String methodName) {
@@ -591,7 +575,7 @@ public final class X3GuardBypass implements HookCallback {
         return type == Boolean.TYPE || type == Boolean.class;
     }
 
-    /** 把核心的成功标志位/禁用码直接写进 update 单例。 */
+    /** 写入成功标志位与禁用码。 */
     private static void forceFlags(Object target) {
         if (target == null) {
             return;
@@ -779,7 +763,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 拼一小段调用栈，用来定位禁用/卸载是谁触发的。 */
+    /** 拼一段调用栈用于日志。 */
     private static String stack(Throwable error) {
         StringBuilder builder = new StringBuilder();
         StackTraceElement[] frames = error.getStackTrace();
@@ -798,7 +782,7 @@ public final class X3GuardBypass implements HookCallback {
         return builder.toString();
     }
 
-    /** 拦截按名字卸载单个功能；这是 donation/base 从注册表消失、分组 hook 失效的直接入口。 */
+    /** 拦截按名字卸载单个功能。 */
     private static final class NamedUnloadGuard implements HookCallback {
 
         private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
@@ -817,7 +801,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 只观察功能组件自身的 unload 调用，不拦截；用于定位分组 hook 被谁反注册。 */
+    /** 观察组件自身的卸载调用。 */
     private static final class ComponentUnloadProbe implements HookCallback {
 
         private static final Set<Integer> LOGGED = ConcurrentHashMap.newKeySet();
@@ -843,7 +827,7 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    /** 功能加载链路探针：ˏـ/ᴵʻ/ᵎי，只记录名字与结果，不改变行为。 */
+    /** 记录功能加载链路的名字与结果。 */
     private static final class LoadProbe implements HookCallback {
 
         private final String tag;
@@ -1166,7 +1150,7 @@ public final class X3GuardBypass implements HookCallback {
             try {
                 Object flag = param.arg(0);
                 if (!Boolean.TRUE.equals(flag)) {
-                    // check.php 失败回调：原始逻辑会在这里禁用功能/关闭组件。
+                    // params 失败回调：跳过禁用功能/关闭组件的逻辑。
                     if (LOGGED_FAILURE.compareAndSet(false, true)) {
                         ModuleLogger.log("X3 params failure skipped");
                     }

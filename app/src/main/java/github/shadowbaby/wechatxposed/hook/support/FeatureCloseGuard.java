@@ -10,15 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 阻止 X 3.0 在更新/校验失败后关闭功能组件。
+ * 阻止 X 3.0 在更新或校验失败后关闭功能组件。
  *
- * 3.0 的三个功能包入口都有 {@code finish()V}，核心判断「需要禁用」时会调用它，
- * 入口里会打印 {@code closed!} 并反注册所有 hook。除此之外，核心还会通过
- * {@code publish("disable"/"on_update_check"/...)} 给组件发禁用事件，组件收到后
- * 会把自己的设置项/功能项从注册表里摘掉。两条路径都要堵。
- *
- * 另外 base 组件内部有一个以 {@code disable_feature_} 为前缀的开关读取器，
- * 这里一并固定为 false，避免它按功能名过滤菜单。
+ * 组件入口的 finish() 会反注册 hook，禁用事件会把设置项/功能项移出注册表；
+ * 这里同时拦截两条路径，并固定 base 组件的 disable_feature_ 开关。
  */
 public final class FeatureCloseGuard {
 
@@ -27,10 +22,10 @@ public final class FeatureCloseGuard {
             "com.android.xf.donation.Wrapper.Init",
             "com.android.xf.themes.Wrapper.Init"};
 
-    /** base 功能包的设置包装类（5.42）：b.ⁱᵔ.ˈˈ */
+    /** base 功能包的设置包装类。 */
     private static final String BASE_SETTINGS = "b.ⁱᵔ.ˈˈ";
 
-    /** base 功能包的注册表/事件总线（5.42）：b.ʾᵢ.ʾᵢ */
+    /** base 功能包的注册表/事件总线。 */
     private static final String BASE_REGISTRY = "b.ʾᵢ.ʾᵢ";
 
     private static final String FINISH = "finish";
@@ -58,7 +53,7 @@ public final class FeatureCloseGuard {
 
     private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
 
-    /** settings.options 返回给 UI 的列表对象；核心停用时可能会被原地 clear。 */
+    /** settings.options 返回给 UI 的列表对象。 */
     private static final Set<Integer> MENU_LISTS = ConcurrentHashMap.newKeySet();
 
     private static final AtomicInteger PUBLISH_LOGS = new AtomicInteger();
@@ -190,8 +185,7 @@ public final class FeatureCloseGuard {
     }
 
     private static boolean blocked(String command) {
-        // 只拦精确的禁用事件；不能按子串拦，否则会误伤
-        // on_chattingUICloseClass_* 这类正常的 hook 注册命令。
+        // 只拦精确的禁用事件，避免误伤正常命令。
         for (String blocked : BLOCKED_COMMANDS) {
             if (blocked.equals(command)) {
                 return true;

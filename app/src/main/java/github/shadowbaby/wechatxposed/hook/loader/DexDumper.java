@@ -8,8 +8,7 @@ import java.nio.ByteBuffer;
 /**
  * 调试用：把 {@code InMemoryDexClassLoader} 构造时传入的 dex 字节落盘。
  *
- * 仅在微信数据目录存在标记文件 {@code files/wxh_dump_dex} 时启用；用于分析
- * 新版本微X（例如 X 3.0）运行时解密的 dex。分析完删除标记即可停止。
+ * 存在标记文件 {@code files/wxh_dump_dex} 时启用。
  */
 public final class DexDumper {
 

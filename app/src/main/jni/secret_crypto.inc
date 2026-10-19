@@ -1,22 +1,9 @@
 /*
  * 敏感常量解码的纯算法部分(无 JNI)。
  *
- * 单独拆出来是为了让桌面测试能直接编译同一份源码:
- * tests/secret-encoding/secret_crypto_check.c 直接 include 本文件,
- * 用主机 clang 编出可执行文件,与 scripts/encode_secrets.py 逐项对照。
- * secret.c 也 include 它,再补上 JNI 导出。
- *
- * 结构:
- *   1. 主密钥(SECRET_DEFAULT_MASTER_KEY)只存在于本文件,编译进 so,dex 里没有;
- *      构建时设 WXH_MASTER_KEY(32 字节 hex 或 Base64)可由 Gradle 覆盖它;
- *   2. 每个常量用「常量名」当 HKDF-SHA256 的 salt,从主密钥派生一把独立的
- *      32 字节子密钥(derive_subkey);子密钥再按逐字节 XOR + 位置混合解密密文。
- *
- * 与早期版本的区别:早期全部常量共用一把会话种子,逆出一项等于逆出全部;
- * 现在每项一把子密钥(HKDF 的 salt 是常量名),单项泄露不扩散到其它常量。
- *
- * 这一层不是密码学安全(so 可被反汇编),目的是把门槛从「strings 一下」
- * 抬到「逆 native 代码 + 复现 HKDF」。
+ * 主密钥(SECRET_MASTER_KEY)编译进 so;构建时可由 WXH_MASTER_KEY 覆盖。
+ * 每个常量用常量名作为 HKDF-SHA256 的 salt 派生独立子密钥。
+ * secret.c 在包含本文件后补上 JNI 导出。
  */
 #ifndef WEXPOSEDHOOK_SECRET_CRYPTO_INC
 #define WEXPOSEDHOOK_SECRET_CRYPTO_INC

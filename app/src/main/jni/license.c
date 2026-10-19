@@ -1,22 +1,7 @@
 /*
- * 授权库(FKZ_WX_DATA)的加密链路(阶段 3:下沉到 so)。
+ * 授权库(FKZ_WX_DATA)的 JNI 入口。
  *
- * 这里放的是「微X 授权数据」的全部算法与密钥:
- *   - 第一层 AES-256-CBC(零 IV、PKCS7)+ Base64;
- *   - LIC 第 3 段的 key = SHA-256(账号);
- *   - 把 "LIC:<账号>" 编成「一位长度前缀 + 数字段」的 blob 编码。
- *
- * 这些以前在 license/LicenseData.java 里,dex 反编译就能看到 AES 密钥与
- * blob 编码规则;下沉后 dex 里只剩 native 调用,密钥与算法都只在本 so 内。
- *
- * 纯算法在 license_crypto.inc(桌面测试直接编它),本文件只负责 JNI 绑定。
- *
- * 与 Java 侧一致的两处约定:
- *   1. 明文先按 UTF-8 取字节再加密;解出来也按 UTF-8 还原;
- *   2. Base64 用标准字母表、无换行(Java 侧 Base64.getEncoder())。
- *
- * 这一层不是密码学安全(so 可被反汇编),目的是把门槛从「反编译 dex」抬到
- * 「逆 native 代码」。
+ * 纯算法在 license_crypto.inc;本文件只负责 JNI 绑定。
  */
 #include <jni.h>
 #include <stdio.h>

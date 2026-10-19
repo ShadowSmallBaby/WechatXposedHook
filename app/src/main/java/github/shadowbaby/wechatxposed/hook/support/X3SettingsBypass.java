@@ -11,11 +11,9 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 /**
- * X 3.0 的设置/DB 读取层绕过。
+ * X 3.0 的设置/数据库读取层处理。
  *
- * 3.0 的禁用码 00322 最终是通过设置读取 `disabled_code` / `valid` / `s_valid`
- * 等键落地的。这里 hook 设置 helper（{@code c.יᴵ.ٴʻ}）里「首参为 String」的读取
- * 方法：禁用码返回 0/false，valid 类返回 true。
+ * 禁用码返回 0/false，valid 类返回 true。
  */
 public final class X3SettingsBypass {
 

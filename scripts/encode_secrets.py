@@ -4,21 +4,14 @@
     python -X utf8 scripts/encode_secrets.py [--master-key <32 字节 hex 或 Base64>]
 
 明文来源(按优先级):
-   1. 环境变量 WXH_SECRETS_B64:整张表 JSON 序列化后 Base64(由 CI Secrets 注入,
-      适合不想在 CI 机器上落明文的场景);
-   2. scripts/secrets_table.py:明文表(只在内部仓提交,公开仓没有这个文件)。
+   1. 环境变量 WXH_SECRETS_B64:整张表 JSON 序列化后 Base64;
+   2. scripts/secrets_table.py:本地明文表(可选)。
 
-本文件本身不含任何明文,随仓入库。NAMES 列出全部常量名,用来校验
-明文表是否齐全(缺项 / 多项都直接报错),也方便对照源码里的引用。
+本文件不含明文。NAMES 列出全部常量名,用于校验明文表是否齐全。
 
-编码后写进 app/src/main/java/github/shadowbaby/wechatxposed/hook/loader/SecretConstants.java。
-主密钥固定(见下方 MASTER_KEY,必须与 app/src/main/jni/secret_crypto.inc 逐字节一致);
-用 --master-key 或环境变量 WXH_MASTER_KEY 可覆盖(32 字节,hex 或 Base64),
-格式要求与 C 侧的 secret_master_key() 相同。每个常量用「常量名」当 HKDF-SHA256 的 salt
-从主密钥派生一把独立子密钥,所以同一份明文表每次生成的密文完全相同,但不同常量的密文
-互不可推。密文格式 "<常量名>:<Base64>",常量名随密文一起存进 SecretConstants,
-运行时 so 从密文里取名字派生同一把子密钥。
-编码方式与 app 里的 loader/Secret.java 一致:逐字节 XOR + 位置混合,再 Base64。
+编码后写入 app/build/generated/secrets/<edition>/.../SecretConstants.java。
+主密钥用 --master-key 或 WXH_MASTER_KEY 覆盖;每个常量以常量名作为
+HKDF-SHA256 的 salt 派生独立子密钥,再做逐字节 XOR + 位置混合并 Base64。
 """
 import argparse
 import base64

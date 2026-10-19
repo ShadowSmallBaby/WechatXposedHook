@@ -258,7 +258,7 @@ def buildNative = tasks.register('buildNativeSecret') {
 }
 
 tasks.named('preBuild') {
-    // so 由 CI 的 native job 构建并提交；只有缺失时才在本机构建兜底。
+    // so 由 CI 的 native job 构建并缓存；只有缺失时才在本机构建兜底。
     def soMissing = ['arm64-v8a', 'armeabi-v7a'].any {
         !layout.projectDirectory.file('src/main/jniLibs/' + it + '/libwexhook.so').asFile.isFile()
     }

@@ -11,13 +11,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 /**
- * X 3.0 的授权门禁绕过。
+ * X 3.0 的授权门禁处理。
  *
- * 3.0 把授权判断放在核心 dex 的 {@code c.ـˉ.ˈʽ}（LIC 类）里，而不是 2.44 那种
- * native 桥消息。这里把该类的布尔方法统一置真，并把返回 ArrayList 的授权列表
- * 方法置空（2.44 的逻辑里“列表为空”等同于放行）。
- *
- * 这是偏宽的绕过，用于先让 3.0 功能加载起来；后续可以按实际方法收窄。
+ * 将 LIC 类的布尔方法置真，并清空授权列表返回值。
  */
 public final class X3LicenseBypass {
 

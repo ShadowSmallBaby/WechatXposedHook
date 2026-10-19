@@ -10,11 +10,9 @@ import github.shadowbaby.wechatxposed.hook.support.X3LicenseBypass;
 import github.shadowbaby.wechatxposed.hook.support.X3SettingsBypass;
 
 /**
- * 补抓 {@code DexClassLoader} / {@code PathClassLoader} 加载的 3.0 dex。
+ * 补抓通过 {@code DexClassLoader} / {@code PathClassLoader} 加载的 3.0 dex。
  *
- * 3.0 的 core dex 走 InMemoryDexClassLoader，但 base dex（含 LIC/设置类）有时走
- * DexClassLoader。这里在构造后按 ClassLoader 探测 3.0 的关键类，命中就安装对应
- * 的绕过 hook。
+ * 构造完成后按 ClassLoader 探测关键类，命中即安装对应 hook。
  */
 public final class DexClassLoaderHook implements HookCallback {
 

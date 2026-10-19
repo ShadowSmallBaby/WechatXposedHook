@@ -15,21 +15,18 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * 按清单补齐微X功能包。
+ * 按清单补齐功能包。
  *
- * 同时支持两套运行时目录：
- *   - 微X 2.44：files/wx6_2.44，28 个文件
- *   - X 3.0：files/x7_3.0，26 个文件（含 b62 回退边车）
- *
- * 两套目录都会检查并补齐；微X 自己只会读取当前版本对应的那一个。
+ * 每个 APK 只处理对应版本的运行时目录:
+ *   - 微X 2.44: files/wx6_2.44, 24 个文件
+ *   - X 3.0: files/x7_3.0, 26 个文件
  */
 public abstract class FeaturePackRestorer {
 
     private static final int BUFFER_SIZE = 16 * 1024;
 
     /**
-     * 存在该标记时跳过补齐：在线更新/调试时，运行时目录里可能已经是新包，
-     * 不能再按内置载荷的旧字节数把它们覆盖回去。
+     * 存在该标记时跳过补齐，避免覆盖运行时目录里的新包。
      */
     private static final String SKIP_MARKER = "wxh_skip_restore";
 

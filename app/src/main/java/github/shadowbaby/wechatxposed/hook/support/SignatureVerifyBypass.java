@@ -6,16 +6,12 @@ import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 
 /**
- * 跳过微X 对功能包的 SHA1withRSA 验签。
+ * 跳过对功能包的 SHA1withRSA 验签。
  *
- * 微X 2.44 在 BaseDex 的 {@code Lﹶˆ/ٴʻ;.ᵎᵔ(File)Z} 里读取 {@code <body>_s} 并调用
- * {@code Signature.getInstance("SHA1withRSA")} 验签；3.0 的验签器在运行时 dex 里，
- * 类名不同，但最终都走 {@code java.security.Signature.verify}。
+ * 功能包由项目自签，不使用原始签名，因此在
+ * {@code java.security.Signature.verify} 层对 SHA1withRSA 返回 true。
  *
- * 因此这里直接 hook 系统类，只对算法名为 SHA1withRSA 的验签返回 true。这样用
- * source 装配出来、没有作者私钥签名的 body 也能被加载。副作用是会同时放过微X
- * 其它 SHA1withRSA 校验（例如授权块），本模块本来就已经在绕过授权，影响可控；
- * 但微信进程里若还有其它 SHA1withRSA 校验也会被放过，需要注意。
+ * 注意：同一进程内其它 SHA1withRSA 校验也会一并放行。
  */
 public final class SignatureVerifyBypass implements HookCallback {
 

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """从 xmetadata 生成两个运行时功能包 zip。
 
-- 源文件 = SHA-256(body)[32] + body
-- 边车：<源目录>/cfg/<角色> -> <运行时文件名>_c
-        <源目录>/sig/<角色> -> <运行时文件名>_s
-- P 资源只取 P 与 P_8049，不带历史版本变体
+源文件格式为 SHA-256(body)[32] + body;边车按角色从 cfg/ 与 sig/ 读取。
 """
 
 from __future__ import annotations

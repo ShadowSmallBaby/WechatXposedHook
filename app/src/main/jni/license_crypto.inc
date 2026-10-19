@@ -1,10 +1,7 @@
 /*
- * 授权库(FKZ_WX_DATA)加密链路的纯算法部分(无 JNI)。
+ * 授权库数据加密算法(纯算法,无 JNI)。
  *
- * 单独拆出来是为了让桌面测试能直接编译同一份源码:
- * tests/license-crypto/license_crypto_check.c 直接 include 本文件,
- * 用主机 clang 编出可执行文件,与 Python 参考实现逐项对照。
- * license.c 也 include 它,再补上 JNI 导出。
+ * license.c 在包含本文件后补上 JNI 导出。
  */
 #ifndef WEXPOSEDHOOK_LICENSE_CRYPTO_INC
 #define WEXPOSEDHOOK_LICENSE_CRYPTO_INC
@@ -13,23 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 /*
- * 这里放的是「微X 授权数据」的全部算法与密钥:
+ * 授权数据算法:
  *   - 第一层 AES-256-CBC(零 IV、PKCS7)+ Base64;
  *   - LIC 第 3 段的 key = SHA-256(账号);
- *   - 把 "LIC:<账号>" 编成「一位长度前缀 + 数字段」的 blob 编码。
+ *   - "LIC:<账号>" 的 blob 编码。
  *
- * 这些以前在 license/LicenseData.java 里,dex 反编译就能看到 AES 密钥与
- * blob 编码规则;下沉后 dex 里只剩 native 调用,密钥与算法都只在本 so 内。
- *
- * 与 Java 侧一致的两处约定:
- *   1. 明文先按 UTF-8 取字节再加密;解出来也按 UTF-8 还原;
- *   2. Base64 用标准字母表、无换行(Java 侧 Base64.getEncoder())。
- *
- * 这一层不是密码学安全(so 可被反汇编),目的是把门槛从「反编译 dex」抬到
- * 「逆 native 代码」。
+ * 与 Java 侧的两个约定:
+ *   1. 明文按 UTF-8 取字节;
+ *   2. Base64 使用标准字母表、无换行。
  */
 
-/* 第一层 AES-256 密钥:32 字节。改动它必须同时改 scripts/secrets_table.py 的 AES_KEY_HEX。 */
+/* 第一层 AES-256 密钥:32 字节。改动后需要重新生成授权数据。 */
 static const uint8_t AES_KEY[32] = {
     0x31, 0xd0, 0x19, 0xea, 0x56, 0xd5, 0x74, 0x13,
     0x35, 0x08, 0xb1, 0x0d, 0x94, 0x4b, 0x41, 0x3c,
@@ -415,7 +406,6 @@ static uint8_t *base64_decode(const char *text, size_t length, size_t *out_lengt
 /*
  * "LIC:<账号>" 编成数字串:每个字符先算 base = (char << 2) - (index << 2) - length,
  * 取第一个非负的 base + delta(delta 0..3)与 index^2 异或,再写成「一位长度前缀 + 数字」。
- * 与 license/LicenseData.encodeBlob 一致。
  */
 static char *blob_encode(const uint16_t *text, size_t length) {
     size_t capacity = length * 12 + 1;
@@ -456,7 +446,7 @@ static char *blob_encode(const uint16_t *text, size_t length) {
     return packed;
 }
 
-/* blob_encode 的逆运算,与 license/LicenseData.decodeBlob 一致。 */
+/* blob_encode 的逆运算。 */
 static uint16_t *blob_decode(const char *packed, size_t length, size_t *out_length) {
     uint16_t *numbers = (uint16_t *) malloc((length + 1) * sizeof(uint16_t));
     if (numbers == NULL) {

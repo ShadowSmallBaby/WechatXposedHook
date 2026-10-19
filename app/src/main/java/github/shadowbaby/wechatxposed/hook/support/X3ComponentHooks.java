@@ -8,11 +8,9 @@ import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.nio.ByteBuffer;
 
 /**
- * X 3.0（cn.android.x）的组件注入。
+ * X 3.0 的组件注入。
  *
- * 3.0 的运行时核心 dex 里是 {@code com.android.xc.Wrapper.HookWrapper} 单入口，
- * native 桥为 {@code com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object}。
- * 在 InMemoryDexClassLoader 加载到含该入口类的 dex 时注入。
+ * 在 InMemoryDexClassLoader 加载到含入口类的 dex 时注入桥与授权 hook。
  */
 public final class X3ComponentHooks {
 

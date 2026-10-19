@@ -1,15 +1,10 @@
 /*
- * 敏感字符串解码(阶段 4:每项独立子密钥)。
+ * 敏感字符串解码的 JNI 入口。
  *
- * 纯算法(SHA-256 / HMAC / HKDF 派生 + XOR 还原)在 secret_crypto.inc 里,
- * 桌面测试直接编它;本文件只负责 JNI 绑定与 UTF-8 -> UTF-16 转换。
- * 主密钥与 info 串都在 .inc 内,dex 里既没有明文也没有密钥。
+ * 纯算法(SHA-256 / HMAC / HKDF 派生 + XOR 还原)在 secret_crypto.inc;
+ * 本文件只负责 JNI 绑定与 UTF-8 -> UTF-16 转换。
  *
- * 密文格式:"<常量名>:<Base64 密文>"。常量名是 HKDF 的 salt,
- * 必须随密文一起传进来,所以 Secret.of 的签名不用改。
- *
- * 这一层不是密码学安全(so 可被反汇编),目的是把门槛从「strings 一下」
- * 抬到「逆 native 代码 + 复现 HKDF」。
+ * 密文格式:"<常量名>:<Base64 密文>"。
  */
 #include <jni.h>
 #include <stdint.h>
@@ -79,7 +74,7 @@ Java_github_shadowbaby_wechatxposed_hook_loader_Secret_nativeOf(JNIEnv *env, jcl
 
     /*
      * 解出的字节是 UTF-8,不能一个字节当一个 UTF-16 字符:
-     * 多字节字符(微X 的混淆类名全是)会变成乱码。这里手工做 UTF-8 -> UTF-16。
+     * 多字节字符会变成乱码。这里手工做 UTF-8 -> UTF-16。
      */
     jchar *plain = (jchar *) malloc(sizeof(jchar) * ((size_t) raw_length + 1));
     if (plain == NULL) {

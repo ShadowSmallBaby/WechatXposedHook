@@ -7,18 +7,17 @@ import github.shadowbaby.wechatxposed.hook.loader.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 
 /**
- * X 3.0 的 native 桥 {@code com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object}
- * 的授权应答替换。
+ * X 3.0 native 桥 {@code com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object}
+ * 的应答替换。
  *
- * 3.0 的 verifier/服务类名与 2.44 不同，所以这里不复用 2.44 的
- * {@link CallMethodBypassHook}（它会去找 2.44 的 verifier 类），而是按消息号直接
- * 返回成功/功能列表。
+ * 按消息号返回授权结果与功能列表。
  */
 public final class X3CallMethodHook implements HookCallback {
 
     private static final int MSG_VERIFY_RESULT = 130;
     private static final int MSG_LICENSE_BLOB = 132;
-    private static final int MSG_FEATURE_QUERY = 150;    private static final String ACTION_PARAM = Secret.of(SecretConstants.ACTION_PARAM);
+    private static final int MSG_FEATURE_QUERY = 150;
+    private static final String ACTION_PARAM = Secret.of(SecretConstants.ACTION_PARAM);
     private static final String VERIFIER_SERVICE = Secret.of(SecretConstants.VERIFIER_SERVICE);
     private static final String MIN_SUPPORTED_VERSION =
             Secret.of(SecretConstants.MIN_SUPPORTED_VERSION);
@@ -49,9 +48,7 @@ public final class X3CallMethodHook implements HookCallback {
                 ModuleLogger.log("X3 call #" + call + " msg=" + msgId);
             }
 
-            // 130 的 param 是版本握手：核心拿返回值跟本机微信版本比较，
-            // 不一致就删 params 文件并落到 Disabled error code。这里回本机版本，
-            // 与 2.44 的 CallMethodBypassHook 保持一致。
+            // 130 的 param 是版本握手，返回本机支持的版本。
             if (msgId == MSG_VERIFY_RESULT) {
                 if (ACTION_PARAM.equals(String.valueOf(params[0]))) {
                     ModuleLogger.log("X3 130 param -> " + MIN_SUPPORTED_VERSION
