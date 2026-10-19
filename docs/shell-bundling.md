@@ -14,7 +14,7 @@ WeChat 进程
 ├── 微X 2.44 / X 3.0（壳，Xposed 模块）
 │   ├── classes.dex        入口、native 桥、设置 UI、授权/params、更新检查
 │   ├── native loader      libwxcoreloader（ELF，实际来自功能包 dc7be70f）
-│   └── 功能包              wx6_2.44（24 文件）/ x7_3.0（26 文件）
+│   └── 功能包              wx6_2.44（基础 26 + 扩展 3）/ x7_3.0（基础 26 + 扩展 3）
 │                          加密 dex + _c 校验块 + _s RSA 签名 + ELF/资源
 └── WeXposedHook（本模块）
     ├── 还原功能包目录
@@ -36,7 +36,7 @@ WeChat 进程
 
 本模块已经具备的：
 
-- 两套功能包的完整还原（2.44 24 文件 / 3.0 26 文件）
+- 两套功能包的完整还原（2.44 基础 26 + 扩展 3 / 3.0 基础 26 + 扩展 3）
 - 两套 native 桥 hook、LIC/verifier 绕过、`SHA1withRSA` 验签绕过
 - 2.44 授权库写入与功能清单覆盖
 - 3.0 的入口识别、桥消息、LIC/guard/settings hook
@@ -65,8 +65,8 @@ WeChat 进程
 
 | 版本 | 壳 dex | native loader | 功能包 | 备注 |
 |---|---|---|---|---|
-| 2.44 | `微X模块_2.44.apk!/classes.dex`（约 2.4 MB） | 功能包 `dc7be70f…`（ELF，461560 B） | `wx6_2.44` 24 文件 | 壳入口 `com.fkzhang.wechatxposed.XposedInit` |
-| 3.0 | `X_3.0.apk!/classes.dex`（约 1.74 MB） | 功能包 `dc7be70f…`（ELF，533080 B） | `x7_3.0` 26 文件 | 壳入口 `com.android.x.XposedInit` |
+| 2.44 | `微X模块_2.44.apk!/classes.dex`（约 2.4 MB） | 功能包 `dc7be70f…`（ELF，461560 B） | `wx6_2.44` 基础 26 + 扩展 3 | 壳入口 `com.fkzhang.wechatxposed.XposedInit` |
+| 3.0 | `X_3.0.apk!/classes.dex`（约 1.74 MB） | 功能包 `dc7be70f…`（ELF，533080 B） | `x7_3.0` 基础 26 + 扩展 3 | 壳入口 `com.android.x.XposedInit` |
 
 另外需要：
 
@@ -86,8 +86,10 @@ WeChat 进程
 assets/
 ├── shell/2.44/classes.dex
 ├── shell/3.0/classes.dex
-├── packs/wx6_2.44.zip          # 24 文件
-├── packs/x7_3.0.zip            # 26 文件
+├── packs/wx6_2.44.zip          # 基础包 26 文件
+├── packs/wx6_2.44_ext.zip      # 扩展包 3 文件（仅 full）
+├── packs/x7_3.0.zip            # 基础包 26 文件
+├── packs/x7_3.0_ext.zip        # 扩展包 3 文件（仅 full）
 └── native/<abi>/libwxcoreloader.so   # 从功能包 dc7be70f 提取
 ```
 

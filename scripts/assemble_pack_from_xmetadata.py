@@ -67,7 +67,6 @@ DEFAULT_MAP: list[dict] = [
 # 现有运行时包里、当前源快照无法直接给出的条目（留给 --name-map / --sidecars）
 UNMAPPED_RUNTIME = [
     "44c29edb103a2872f519adc9afdaaa",
-    "9816b5dfd637d3ce1473a9951b9e05",
     "36a76b97b96b5d46742bb4bcd2ff24d",
     "14e777717682cce8a53cfcb34a22d65_c",
     "14e777717682cce8a53cfcb34a22d65_s",

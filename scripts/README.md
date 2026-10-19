@@ -188,6 +188,7 @@ python scripts/assemble_pack_from_xmetadata.py --out build/xmeta_pack \
 - 产出 15 个主体 + 10 个边车；11 个资源与现有包完全一致
 - 4 个 dex 本体与运行时包**版本不同**（旧快照的 `r/fp/*` 与 CoreDex 均差 1,456 字节）
 - 3 个运行时条目旧源快照里没有对应文件：`44c29edb…`、`9816b5df…`、`36a76b97…`
+  （历史 849 包记录；`9816b5df…` 现已移除，不参与当前打包）
 
 **旧源快照缺失、现已由 849 快照补齐的三类东西**：
 
@@ -195,7 +196,7 @@ python scripts/assemble_pack_from_xmetadata.py --out build/xmeta_pack \
    `data/xmetadata/2.44_849.mapping.json`（本地文件，不入库）记录内容 ID 与角色路径的对应。
 2. **`_c` / `_s` 边车**：849 快照已按 `r/fp/base_c`、`r/C_s` 等约定保存。
    `_s` 是 RSA-SHA1 签名，运行时由 `SignatureVerifyBypass` 跳过验签。
-3. **服务端资源包** `9816b5df…`：849 快照保存为 `r/server_resource`。
+3. **服务端资源包** `9816b5df…`：849 快照曾保存为 `r/server_resource`；现已移除，不参与当前打包。
 
 **2026-10-18 真机验证**（微信 8.0.49 / 微X 2.44_5.41 / 原始包为基线）：
 
@@ -228,7 +229,7 @@ xmetadata/wx6/
 │   ├── L                 # 849 覆盖
 │   ├── fp/base|donation|themes   # 849 覆盖
 │   ├── A_p  A_xv  digest  fp/af|mf|sf|vidurlparser|xv  pl  xm
-│   └── server_resource   # 849 新增
+│   └── （server_resource 已移除）
 ├── pr/                   # 原版 P_*；P 覆盖为 849
 └── D  H_p  H_xv  LD  LD64  M  S  X  Xmd  log  log2
 ```
@@ -297,7 +298,7 @@ python scripts/assemble_pack_from_xmetadata.py \
 
 合并时会覆盖 6 个版本相关文件：`r/fp/base|donation|themes`、`r/C`、`r/L`、`pr/P`。
 其余 11 个同名文件（含 `pr/P_8049`、`pr/P_80482588p`、`D`、`H_p`、`M`、`S`、`Xmd`、
-`LD64`）逐字节一致；`server_resource` 是新增。10 个 `_c`/`_s` 边车不入库；
+`LD64`）逐字节一致；`server_resource` 曾是 849 新增，现已移除，不参与当前打包。10 个 `_c`/`_s` 边车不入库；
 `36a7_c`/`36a7_s` 保留在运行时载荷里。旧 848 的差异文件可从
 `data/refs/xmetadata` 的原始备份恢复。
 

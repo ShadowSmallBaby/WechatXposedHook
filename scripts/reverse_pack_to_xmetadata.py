@@ -59,7 +59,6 @@ LAYOUT = {
     "89d9d67db0a14fc9b040cf25a28ef71": "pr/P_80422428p",
     "7e72d95130d766517ea69c215f38ddd": "pr/P_80482588p",
     "44c29edb103a2872f519adc9afdaaa": "pr/P",
-    "9816b5dfd637d3ce1473a9951b9e05": "r/server_resource",
     # 实机修复工具 8.0.49 包里的两个额外 P_ 变体（内容与现有角色相同/重复）
     "5f184c4b7f68e4cc14bebc85dd23e95": "pr/P_80422429p",
     "ce9750a2ba134879eb33ac335f55e2d": "pr/P_8048",

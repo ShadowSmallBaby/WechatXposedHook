@@ -59,11 +59,12 @@ WeXposedHook-{modern|legacy}-wx{2.44|3.0}-v{version}-full.apk
 app/build/outputs/apk/<framework><wx><edition>/release/
 ```
 
-每个 APK 只内置对应微X版本的一份功能包；完整版与公开版只在授权功能编码上有差异。
+每个 APK 只内置对应微X版本的基础包；完整版额外内置扩展包，公开版不带扩展包。
 两个 ABI 仍同时打包在同一个 APK 中。
 
 > 功能包 zip 不再入库，构建前由 `generateFeaturePacks` 从 `xmetadata` 生成到
-> `app/build/generated/featurepacks/wx244/` 与 `wx30/`。
+> `app/build/generated/featurepacks/wx244/`（基础包）、`wx244-ext/`（扩展包），
+> 以及对应的 `wx30/`、`wx30-ext/`。
 
 > 本机默认 JDK 25 的 class 文件版本(69)不被当前 Gradle 支持,需显式指定 JDK 17:
 > `JAVA_HOME=<JDK17 路径> ./gradlew assembleRelease`
@@ -183,6 +184,9 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
    - `FeaturePackRestorer` 按 APK 版本检查对应运行时目录(2.44 24 个 / 3.0 26 个文件,
      文件名是内容指纹,大小对不上也算缺失),缺哪个就从 APK 的内置载荷补写——
      载荷由构建脚本从 `xmetadata/` 生成;微X 判定未授权时会自己删掉其中一部分;
+   - `PackIntegrity` 在主进程与 `:appbrand0/1` 都安装:按内置载荷校验文件数量与 SHA-256,
+     `d61f8` / `36a76b` / `dc7b` 等核心文件被写入、出现 `a660e` / `a282` 自解包副本,
+     或旧核心类出现时,直接对 `files/x7_3.0` 做目录级覆盖恢复;
    - `LicenseInstaller` 按账号补齐 `databases/FKZ_WX_DATA`:10 行内容、表结构与 SQL 都由
      `libwexhook.so` 生成/提供,Java 只负责调度,不再依赖设备上的 shell 脚本。账号先读微信 prefs 里的
     `login_weixin_username`,微X 校验时再把权威账号交过来补一次。
