@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.loader;
 
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -56,7 +57,9 @@ public final class InMemoryDexLoadHook implements HookCallback {
 
     @Override
     public void after(HookParam param) {
-        DexDumper.maybeDump(param);
+        if (BuildConfig.DEBUG) {
+            DexDumper.maybeDump(param);
+        }
         if (mode != DEX_LOADER || !(param.thisObject() instanceof ClassLoader hostClassLoader)) {
             return;
         }

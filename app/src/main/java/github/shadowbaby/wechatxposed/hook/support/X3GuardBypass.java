@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.support;
 
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -152,14 +153,18 @@ public final class X3GuardBypass implements HookCallback {
         hookWrapper(framework, classLoader, WRAPPER, WRAPPER_CALL);
         hookWrapper(framework, classLoader, WRAPPER_V207, WRAPPER_CALL_V207);
         hookUi(framework, classLoader);
-        hookCoreData(framework, classLoader);
+        if (BuildConfig.DEBUG) {
+            hookCoreData(framework, classLoader);
+        }
         hookFeatureManager(framework, classLoader);
         hookSettingsWrapper(framework, classLoader);
         hookMenuTrue(framework, classLoader, "c.ˏᵎ.ˑᵎ", "ᴵـ");
         hookMenuTrue(framework, classLoader, "c.ˏᵎ.ʾﹳ", "יʾ");
         hookMenuTrue(framework, classLoader, "c.ˏᵎ.ˎ", "ʾʽ");
         hookMenuResource(framework, classLoader);
-        hookManagerProbe(framework, classLoader);
+        if (BuildConfig.DEBUG) {
+            hookManagerProbe(framework, classLoader);
+        }
     }
 
     /** 记录管理器布尔查询的返回值。 */
@@ -336,13 +341,19 @@ public final class X3GuardBypass implements HookCallback {
                             + FEATURE_MANAGER + "." + FEATURE_UNLOAD_ONE);
                 } else if (FEATURE_LOAD_ONE.equals(methodName) && types.length == 1
                         && types[0] == String.class) {
-                    framework.hookMethod(method, new LoadProbe("load"));
+                    if (BuildConfig.DEBUG) {
+                        framework.hookMethod(method, new LoadProbe("load"));
+                    }
                 } else if (FEATURE_LOAD_CLASS.equals(methodName) && types.length == 1
                         && types[0] == String.class) {
-                    framework.hookMethod(method, new LoadProbe("class"));
+                    if (BuildConfig.DEBUG) {
+                        framework.hookMethod(method, new LoadProbe("class"));
+                    }
                 } else if (FEATURE_LOAD_DEX.equals(methodName) && types.length == 2
                         && types[0] == java.io.File.class && types[1] == String.class) {
-                    framework.hookMethod(method, new LoadProbe("dex"));
+                    if (BuildConfig.DEBUG) {
+                        framework.hookMethod(method, new LoadProbe("dex"));
+                    }
                 }
             }
             Class<?> handler = framework.findClassIfExists(UNLOAD_HANDLER, classLoader);
@@ -356,13 +367,15 @@ public final class X3GuardBypass implements HookCallback {
                     }
                 }
             }
-            // 观察组件自身的卸载入口。
-            Class<?> feature = framework.findClassIfExists("c.ˎﹳ.ᵢʼ", classLoader);
-            if (feature != null) {
-                for (Method method : feature.getDeclaredMethods()) {
-                    if (UNLOAD_HANDLER_CALL.equals(method.getName())
-                            && method.getParameterCount() == 0) {
-                        framework.hookMethod(method, new ComponentUnloadProbe());
+            // 观察组件自身的卸载入口（仅调试构建）。
+            if (BuildConfig.DEBUG) {
+                Class<?> feature = framework.findClassIfExists("c.ˎﹳ.ᵢʼ", classLoader);
+                if (feature != null) {
+                    for (Method method : feature.getDeclaredMethods()) {
+                        if (UNLOAD_HANDLER_CALL.equals(method.getName())
+                                && method.getParameterCount() == 0) {
+                            framework.hookMethod(method, new ComponentUnloadProbe());
+                        }
                     }
                 }
             }
@@ -547,8 +560,10 @@ public final class X3GuardBypass implements HookCallback {
             } else if (PARAMS_FILE_METHOD.equals(name)
                     && method.getParameterCount() == 0
                     && method.getReturnType() == java.io.File.class) {
-                framework.hookMethod(method, new ParamsFileLogger());
-                count++;
+                if (BuildConfig.DEBUG) {
+                    framework.hookMethod(method, new ParamsFileLogger());
+                    count++;
+                }
             } else if (contains(PARAMS_VERIFY, name)) {
                 framework.hookMethod(method, new ParamsVerify());
                 count++;

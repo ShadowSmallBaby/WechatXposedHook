@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.support;
 
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -76,10 +77,12 @@ public final class FeatureCloseGuard {
             framework.hookMethod(arrayList, "clear", new Class<?>[]{}, new MenuClearGuard());
             clearGuardInstalled = true;
             ModuleLogger.log("menu clear guard installed");
-            Class<?> url = framework.findClassIfExists("java.net.URL", null);
-            if (url != null) {
-                framework.hookMethod(url, "openConnection", new Class<?>[]{}, new UrlLogger());
-                ModuleLogger.log("url probe installed");
+            if (BuildConfig.DEBUG) {
+                Class<?> url = framework.findClassIfExists("java.net.URL", null);
+                if (url != null) {
+                    framework.hookMethod(url, "openConnection", new Class<?>[]{}, new UrlLogger());
+                    ModuleLogger.log("url probe installed");
+                }
             }
         } catch (Throwable error) {
             framework.log(error);
@@ -109,10 +112,10 @@ public final class FeatureCloseGuard {
                     } else if (methodName.startsWith(PUBLISH_PREFIX)) {
                         framework.hookMethod(method, new PublishGuard(name));
                         count++;
-                    } else if ("getData".equals(methodName)) {
+                    } else if ("getData".equals(methodName) && BuildConfig.DEBUG) {
                         framework.hookMethod(method, new GetDataLogger());
                         count++;
-                    } else if ("init".equals(methodName)) {
+                    } else if ("init".equals(methodName) && BuildConfig.DEBUG) {
                         framework.hookMethod(method, new InitLogger(name));
                         count++;
                     }
@@ -149,7 +152,7 @@ public final class FeatureCloseGuard {
                     framework.hookMethod(method, new PublishGuard(BASE_REGISTRY));
                     count++;
                 } else if (REGISTRY_GET_DATA.equals(methodName) && types.length == 2
-                        && types[0] == String.class) {
+                        && types[0] == String.class && BuildConfig.DEBUG) {
                     framework.hookMethod(method, new GetDataLogger());
                     count++;
                 }

@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.framework;
 
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.deploy.ModuleApk;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
 import github.shadowbaby.wechatxposed.hook.loader.DexClassLoaderHook;
@@ -59,9 +60,11 @@ public final class HookBootstrap {
         }
         if (WECHAT_PACKAGE.equals(processName)) {
             File data = new File(dataDir);
-            File dumpMarker = new File(data, "files/" + DexDumper.MARKER);
-            if (dumpMarker.exists()) {
-                DexDumper.setDirectory(new File(data, "files/" + DexDumper.DIR));
+            if (BuildConfig.DEBUG) {
+                File dumpMarker = new File(data, "files/" + DexDumper.MARKER);
+                if (dumpMarker.exists()) {
+                    DexDumper.setDirectory(new File(data, "files/" + DexDumper.DIR));
+                }
             }
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
             SignatureVerifyBypass.install(framework);
