@@ -1,7 +1,8 @@
-"""在设备上验证 FeaturePackRestorer:按清单补齐 files/wx6_2.44 的 30 个文件。
+"""在设备上验证 FeaturePackRestorer:按清单补齐 files/wx6_2.44 的 24 个文件。
 
 跑的是真正的 App 代码(FeaturePackRestorer + ModuleApk),载荷取模块 APK 里的
-assets/wx6_2.44.zip。场景都在 /data/local/tmp 下的临时目录里铺,不碰微信真实目录。
+assets/wx6_2.44.zip(构建时由 xmetadata 生成)。场景都在 /data/local/tmp 下的临时目录里铺,
+不碰微信真实目录。
 
 需要 JDK17、Android SDK、adb,以及一份已构建的 release APK(默认见 tests/_apk.py)。
 """
@@ -160,7 +161,7 @@ def main():
     def scenario(label, ok, detail):
         results.append((label, bool(ok), detail))
 
-    # 场景 1:目录不存在 -> 建目录 + 铺满 30 个
+    # 场景 1:目录不存在 -> 建目录 + 铺满 28 个
     su(adb, args.serial, "rm -rf " + REMOTE_WORK)
     parsed = probe(adb, args.serial, REMOTE_WORK)
     listing = device_listing(adb, args.serial)
@@ -168,7 +169,7 @@ def main():
              and parsed.get("files") == str(len(manifest)) and len(listing) == len(manifest),
              parsed)
 
-    # 场景 2:目录为空 -> 铺满 30 个
+    # 场景 2:目录为空 -> 铺满 28 个
     setup(adb, args.serial, {})
     parsed = probe(adb, args.serial, REMOTE_WORK)
     listing = device_listing(adb, args.serial)
