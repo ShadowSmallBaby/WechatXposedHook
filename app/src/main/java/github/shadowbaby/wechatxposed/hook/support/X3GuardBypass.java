@@ -52,10 +52,6 @@ public final class X3GuardBypass implements HookCallback {
             Secret.of(SecretConstants.X30_DISABLE_FEATURES_V207),
             Secret.of(SecretConstants.X30_GUARD_DISABLE_EXTRA)};
 
-    /** 授权/有效期判定的布尔方法。 */
-    private static final String[] TRUE_METHODS =
-            Secret.of(SecretConstants.X30_TRUE_METHODS).split(",");
-
     private static final String LOG_TRUE = "X3 validity forced: ";
 
     /** 核心设置页的菜单构建入口。 */
@@ -174,7 +170,6 @@ public final class X3GuardBypass implements HookCallback {
         hookMenuTrue(framework, classLoader,
                 Secret.of(SecretConstants.X30_MENU_CLASS_3),
                 Secret.of(SecretConstants.X30_MENU_METHOD_3));
-        hookMenuResource(framework, classLoader);
         if (BuildConfig.DEBUG) {
             hookManagerProbe(framework, classLoader);
         }
@@ -205,32 +200,6 @@ public final class X3GuardBypass implements HookCallback {
                 }
             }
             ModuleLogger.log("manager probe hooked: " + count + " method(s)");
-        } catch (Throwable ignored) {
-            // 忽略
-        }
-    }
-
-    /** 为菜单资源提供默认文案。 */
-    private static void hookMenuResource(HookFramework framework, ClassLoader classLoader) {
-        String key = "resource@" + System.identityHashCode(classLoader);
-        if (!DONE.add(key)) {
-            return;
-        }
-        try {
-            Class<?> target = framework.findClassIfExists(
-                    Secret.of(SecretConstants.X30_MENU_RESOURCE_CLASS), classLoader);
-            if (target == null) {
-                return;
-            }
-            for (Method method : target.getDeclaredMethods()) {
-                Class<?>[] types = method.getParameterTypes();
-                if (Secret.of(SecretConstants.X30_MENU_RESOURCE_METHOD).equals(method.getName())
-                        && types.length == 1
-                        && types[0] == String.class && method.getReturnType() == String.class) {
-                    framework.hookMethod(method, new MenuResourceGuard());
-                    ModuleLogger.log("menu resource hooked");
-                }
-            }
         } catch (Throwable ignored) {
             // 忽略
         }
@@ -932,36 +901,6 @@ public final class X3GuardBypass implements HookCallback {
                 args = args.substring(0, 120);
             }
             ModuleLogger.log("manager probe: " + name + args + " = " + param.result());
-        }
-    }
-
-    private static final class MenuResourceGuard implements HookCallback {
-
-        private static final AtomicBoolean LOGGED = new AtomicBoolean();
-
-        @Override
-        public void before(HookParam param) {
-            if (!Boolean.TRUE.equals(MENU_BUILDING.get())) {
-                return;
-            }
-            String key = String.valueOf(param.arg(0));
-            String value = null;
-            if ("appname".equals(key)) {
-                value = "微X模块";
-            } else if ("donate_desc".equals(key)) {
-                value = "打赏";
-            } else if ("donate_desc_pay".equals(key)) {
-                value = "支持开发";
-            } else if ("donate_desc2".equals(key)) {
-                value = "感谢支持";
-            }
-            if (value == null) {
-                return;
-            }
-            if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("menu resource default: " + key);
-            }
-            param.setResult(value);
         }
     }
 

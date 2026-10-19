@@ -65,7 +65,6 @@ SECRETS = {
     "X30_CALL_METHOD": "CallMethod",
     # X 3.0 guard / UI / feature registry
     "X30_GUARD_DISABLE_EXTRA": "ʿᴵ",
-    "X30_TRUE_METHODS": "ﾞˈ,ʻᴵ,ʻﹳ,ᵢˎ,ⁱʻ,ʼˏ",
     "X30_UI_CLASS": "c.ˏᴵ.ʻᵔ",
     "X30_UI_OPTIONS": "ٴˋ",
     "X30_UI_KEYWORDS": "ᵔˑ",
@@ -93,8 +92,6 @@ SECRETS = {
     "X30_MENU_METHOD_2": "יʾ",
     "X30_MENU_CLASS_3": "c.ˏᵎ.ˎ",
     "X30_MENU_METHOD_3": "ʾʽ",
-    "X30_MENU_RESOURCE_CLASS": "c.ˊﹶ.ˉˎ",
-    "X30_MENU_RESOURCE_METHOD": "יʾ",
     "X30_COMPONENT_UNLOAD_CLASS": "c.ˎﹳ.ᵢʼ",
     "X30_CORE_DATA_INSTANCE_METHOD": "ˊﹶ",
     "X30_UPDATE_INIT_METHOD": "יˑ",

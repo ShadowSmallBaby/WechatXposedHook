@@ -63,39 +63,9 @@ public final class FeatureCloseGuard {
 
     private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
 
-    /** settings.options 返回给 UI 的列表对象。 */
-    private static final Set<Integer> MENU_LISTS = ConcurrentHashMap.newKeySet();
-
     private static final AtomicInteger PUBLISH_LOGS = new AtomicInteger();
 
-    private static boolean clearGuardInstalled;
-
     private FeatureCloseGuard() {
-    }
-
-    /** 安装一次性的全局防护（ArrayList.clear）。 */
-    public static synchronized void install(HookFramework framework) {
-        if (clearGuardInstalled) {
-            return;
-        }
-        try {
-            Class<?> arrayList = framework.findClassIfExists("java.util.ArrayList", null);
-            if (arrayList == null) {
-                return;
-            }
-            framework.hookMethod(arrayList, "clear", new Class<?>[]{}, new MenuClearGuard());
-            clearGuardInstalled = true;
-            ModuleLogger.log("menu clear guard installed");
-            if (BuildConfig.DEBUG) {
-                Class<?> url = framework.findClassIfExists("java.net.URL", null);
-                if (url != null) {
-                    framework.hookMethod(url, "openConnection", new Class<?>[]{}, new UrlLogger());
-                    ModuleLogger.log("url probe installed");
-                }
-            }
-        } catch (Throwable error) {
-            framework.log(error);
-        }
     }
 
     public static void probe(HookFramework framework, ClassLoader classLoader) {
@@ -241,43 +211,6 @@ public final class FeatureCloseGuard {
         }
     }
 
-    private static final class MenuClearGuard implements HookCallback {
-
-        @Override
-        public void before(HookParam param) {
-            Object self = param.thisObject();
-            if (!(self instanceof java.util.List<?> list)) {
-                return;
-            }
-            boolean menu = MENU_LISTS.contains(System.identityHashCode(list));
-            if (!menu && list.size() >= 8) {
-                String first = String.valueOf(list.get(0));
-                menu = first.startsWith("Pair{")
-                        && (first.contains("自动回复") || first.contains("打赏")
-                        || first.contains("主题") || first.contains("转发")
-                        || first.contains("朋友圈") || first.contains("红包"));
-            }
-            if (!menu) {
-                return;
-            }
-            ModuleLogger.log("menu list clear blocked: size=" + list.size());
-            param.setResult(null);
-        }
-    }
-
-    private static final class UrlLogger implements HookCallback {
-
-        private static final AtomicInteger CALLS = new AtomicInteger();
-
-        @Override
-        public void before(HookParam param) {
-            String url = String.valueOf(param.thisObject());
-            if (url.contains("check.php") || CALLS.incrementAndGet() <= 12) {
-                ModuleLogger.log("core url: " + url);
-            }
-        }
-    }
-
     private static final class InitLogger implements HookCallback {
 
         private final String className;
@@ -321,9 +254,6 @@ public final class FeatureCloseGuard {
             }
             Object result = param.result();
             int size = result instanceof java.util.Collection<?> values ? values.size() : -1;
-            if (result != null && "settings.options".equals(String.valueOf(param.arg(0)))) {
-                MENU_LISTS.add(System.identityHashCode(result));
-            }
             String first = "";
             if (result instanceof java.util.Collection<?> values && !values.isEmpty()) {
                 Object value = values.iterator().next();

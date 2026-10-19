@@ -8,7 +8,6 @@ import github.shadowbaby.wechatxposed.hook.loader.DexDumper;
 import github.shadowbaby.wechatxposed.hook.loader.InMemoryDexLoadHook;
 import github.shadowbaby.wechatxposed.hook.loader.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
-import github.shadowbaby.wechatxposed.hook.support.FeatureCloseGuard;
 import github.shadowbaby.wechatxposed.hook.support.HostVersionSpoof;
 import github.shadowbaby.wechatxposed.hook.support.NoticeSuppressor;
 import github.shadowbaby.wechatxposed.hook.support.PackGuard;
@@ -70,7 +69,6 @@ public final class HookBootstrap {
             SignatureVerifyBypass.install(framework);
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
-            FeatureCloseGuard.install(framework);
             installHostVersionSpoof(framework, classLoader, sourceDir);
         }
     }

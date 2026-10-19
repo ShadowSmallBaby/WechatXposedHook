@@ -66,52 +66,36 @@ app/build/outputs/apk/<framework><wx><edition>/release/
 > `app/build/generated/featurepacks/wx244/` 与 `wx30/`。
 
 > 本机默认 JDK 25 的 class 文件版本(69)不被当前 Gradle 支持,需显式指定 JDK 17:
-> `JAVA_HOME=<JDK17 路径> ./gradlew assembleLegacyRelease assembleModernRelease`
+> `JAVA_HOME=<JDK17 路径> ./gradlew assembleRelease`
 
 > native(敏感常量与授权加密)在 `preBuild` 前用 NDK 的 clang 现编成
-> `app/src/main/jniLibs/<abi>/libwexhook.so`。**内部仓**有 `app/src/main/jni/` 源码,
-> 每次构建现编;**公开仓**没有源码,直接用随仓提交的 so。两者都没有会在配置阶段报错。
+> `app/src/main/jniLibs/<abi>/libwexhook.so`。内部仓与核心仓都有 `app/src/main/jni/`
+> 源码;**so 只是构建产物**,不入库,核心仓 CI 用 Actions cache 复用。
 
-### 两个仓
+### 三个仓
 
-同一个应用分两个仓,公开仓是内部仓裁掉敏感部分 + 补上编译产物的结果:
+| | 内部仓(阿里云效) | 核心仓(GitHub 私有) | 公开仓(GitHub) |
+|---|---|---|---|
+| 角色 | 完整开发仓 | 构建/发布仓 | 源码公开仓 |
+| `app/src/main/jni/` native 源码 | 提交 | 同步 | 没有 |
+| `app/src/main/jniLibs/<abi>/libwexhook.so` | gitignore(构建时现编) | CI 构建后缓存,不提交 | 没有 |
+| `scripts/` | 全部 | 仅 `encode_secrets.py` / `build_release_packs.py` | 没有 |
+| `docs/`、`tests/`、`app/代码结构说明.md` | 有 | 没有 | 没有 |
+| `xmetadata/` | 有 | 有 | 有 |
+| 构建 | 本地 | GitHub Actions,8 个 APK | 不构建 |
+| 发布 | 无 | Release / tag | 无,只接收 README / CHANGELOG 同步 |
 
-| | 内部仓(阿里云效) | 公开仓(GitHub) |
-|---|---|---|
-| 角色 | 完整开发仓 | 只放 app 与编译好的 so |
-| `app/src/main/jni/` native 源码 | 提交 | **没有** |
-| `app/src/main/jniLibs/<abi>/libwexhook.so` | gitignore(构建时现编) | **提交**(由内部仓同步) |
-| `scripts/` 全部脚本 | 有 | **一个都没有** |
-| `docs/` 逆向文档、`tests/` | 有 | **没有** |
-| `app/代码结构说明.md` | 有 | **没有** |
-| `app/build.gradle` | 完整版(含 native 与密钥任务) | 由 `app/build.gradle.public` 同步改名 |
-| 构建 | 本地(阿里云效仓) | GitHub Actions,打两个 APK |
-
-公开仓不需要 native 工具链:CI 直接拿提交的 so 打包,不装 NDK、不跑 clang。
-
-公开仓**不含任何脚本**,这是有意的:`scripts/encode_secrets.py` 里有默认主密钥与完整
-编码算法,`scripts/secrets_table.py` 是明文表,两者公开等于把加密作废。密文表
-`SecretConstants.java` 在内部仓生成好后随源码同步过去,公开仓构建时直接用
-(`encodeSecrets` 任务自动跳过)。所以公开仓 CI **不需要** `WXH_SECRETS_B64`。
-
-公开仓构建**不需要**设 `WXH_MASTER_KEY`:没有 native 源码,构建不消费主密钥,密文表与
-so 都是内部仓同步过来的现成产物。**CI 只负责构建**,不做任何密钥 / 文件检测。
-
-密钥是否与密文配套,由内部仓本地的 `scripts/publish_public.py` 在同步前校验:它用
-`WXH_MASTER_KEY` 把明文表重新编码一遍,逐项比对工作区的 `SecretConstants.java`,
-任何一项不一致都会中止;两个 ABI 的 so、AndroidManifest、gradle wrapper 等构建必需
-文件也在这里一次性检查。
+核心仓构建时用 `WXH_MASTER_KEY` + `WXH_SECRETS_B64` 生成 `SecretConstants` 与两个功能包 zip;
+`so` 由 native workflow 构建并写入 Actions cache,不入库。公开仓只保留 `xmetadata/`、
+README、CHANGELOG、LICENSE,不构建、不发布,文档由核心仓发版时自动同步。
 
 同步由 `scripts/publish_public.py` 做(白名单复制,默认拒绝):
 
 ```powershell
-# 先在内部仓用发布密钥构建出两个 ABI 的 so(不设密钥时脚本会直接拒绝同步)
-$env:WXH_MASTER_KEY = "<32 字节 hex 或 Base64>"
-./gradlew buildNativeSecret encodeSecrets
-# 预演:只比对不写,列出会改哪些 / 公开仓里哪些多余(含空目录、敏感内容)
-python -X utf8 scripts/publish_public.py --to <公开仓路径> --check
+# 预演:只比对不写,列出会改哪些 / 核心仓里哪些多余(含空目录、敏感内容)
+python -X utf8 scripts/publish_public.py --to <核心仓路径> --check
 # 同步(只改文件,不提交不推送)
-python -X utf8 scripts/publish_public.py --to <公开仓路径>
+python -X utf8 scripts/publish_public.py --to <核心仓路径>
 ```
 
 同步脚本在本地做完全部前置检测,CI 只构建:
@@ -119,16 +103,16 @@ python -X utf8 scripts/publish_public.py --to <公开仓路径>
 - **密钥必填 + 配套**:没设 `WXH_MASTER_KEY` 直接退出(防默认密钥);设了就用它把
   明文表重新编码、逐项比对 `SecretConstants.java`,不一致中止。本机调试确实要用
   默认密钥时显式加 `--allow-default-key`。
-- **构建必需文件**:同步清单里必须有 AndroidManifest、两个 ABI 的 so、
-  `SecretConstants.java`、gradle wrapper 等,缺一个直接中止。
+- **构建必需文件**:同步清单里必须有 AndroidManifest、`xmetadata/`、两个构建脚本、
+  gradle wrapper 等,缺一个直接中止。
 - **内容扫描**:白名单是目录粒度(`app/src` 整棵树),复制前会扫内置默认主密钥的
   原始值 / hex / Base64、私钥头、常见 token,命中即中止;确认无害再加
   `--allow-sensitive`。
-- **清空目录**:删掉白名单外的多余文件,并把因此变空的目录一并删掉,保证公开仓里没有
+- **清空目录**:删掉白名单外的多余文件,并把因此变空的目录一并删掉,保证核心仓里没有
   `docs/`、`tests/`、`jni/` 之类残留。
 
-公开仓里 `git status` 确认后自行提交、推送。换密钥、改 native、改业务代码都走同一条路:
-内部仓构建 → 同步 → 公开仓提交。
+核心仓里 `git status` 确认后自行提交、推送。换密钥、改 native、改业务代码都走同一条路:
+内部仓构建 → 同步 → 核心仓提交 → 打 tag 触发 CI。
 
 ### 签名
 
