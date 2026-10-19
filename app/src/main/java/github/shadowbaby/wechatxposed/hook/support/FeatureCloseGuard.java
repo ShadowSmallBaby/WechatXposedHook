@@ -5,6 +5,8 @@ import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,29 +21,36 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class FeatureCloseGuard {
 
     private static final String[] ENTRY_CLASSES = {
-            "com.android.xf.base.Wrapper.Init",
-            "com.android.xf.donation.Wrapper.Init",
-            "com.android.xf.themes.Wrapper.Init"};
+            Secret.of(SecretConstants.X30_ENTRY_BASE),
+            Secret.of(SecretConstants.X30_ENTRY_DONATION),
+            Secret.of(SecretConstants.X30_ENTRY_THEMES)};
 
     /** base 功能包的设置包装类。 */
-    private static final String BASE_SETTINGS = "b.ⁱᵔ.ˈˈ";
+    private static final String BASE_SETTINGS = Secret.of(SecretConstants.X30_BASE_SETTINGS);
 
     /** base 功能包的注册表/事件总线。 */
-    private static final String BASE_REGISTRY = "b.ʾᵢ.ʾᵢ";
+    private static final String BASE_REGISTRY = Secret.of(SecretConstants.X30_BASE_REGISTRY);
 
     private static final String FINISH = "finish";
 
     private static final String PUBLISH_PREFIX = "publish";
 
-    private static final String REGISTRY_REMOVE = "ʽי";
-    private static final String REGISTRY_PUBLISH = "ˈˈ";
-    private static final String REGISTRY_GET_DATA = "ʻˑ";
+    private static final String REGISTRY_REMOVE =
+            Secret.of(SecretConstants.X30_REGISTRY_REMOVE);
+    private static final String REGISTRY_PUBLISH =
+            Secret.of(SecretConstants.X30_REGISTRY_PUBLISH);
+    private static final String REGISTRY_GET_DATA =
+            Secret.of(SecretConstants.X30_REGISTRY_GET_DATA);
 
-    private static final String BASE_DISABLE_GETTER = "ⁱʾ";
+    private static final String BASE_DISABLE_GETTER =
+            Secret.of(SecretConstants.X30_BASE_DISABLE_GETTER);
 
     private static final String[] BLOCKED_COMMANDS = {
-            "disable", "on_update_check", "process_metadata",
-            "updateLicense", "delayed_check"};
+            Secret.of(SecretConstants.METHOD_DISABLE),
+            Secret.of(SecretConstants.METHOD_ON_UPDATE_CHECK),
+            Secret.of(SecretConstants.METHOD_PROCESS_METADATA),
+            Secret.of(SecretConstants.METHOD_UPDATE_LICENSE),
+            Secret.of(SecretConstants.METHOD_DELAYED_CHECK)};
 
     private static final String LOG_HOOKED = "feature close guard: ";
     private static final String LOG_BLOCKED = "feature close blocked: ";

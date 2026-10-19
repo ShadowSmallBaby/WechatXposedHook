@@ -50,47 +50,54 @@ public final class X3GuardBypass implements HookCallback {
     private static final String[] DISABLE_FEATURES = {
             Secret.of(SecretConstants.X30_DISABLE_FEATURES),
             Secret.of(SecretConstants.X30_DISABLE_FEATURES_V207),
-            "ʿᴵ"};
+            Secret.of(SecretConstants.X30_GUARD_DISABLE_EXTRA)};
 
     /** 授权/有效期判定的布尔方法。 */
-    private static final String[] TRUE_METHODS = {
-            "ﾞˈ", "ʻᴵ", "ʻﹳ", "ᵢˎ", "ⁱʻ", "ʼˏ"};
+    private static final String[] TRUE_METHODS =
+            Secret.of(SecretConstants.X30_TRUE_METHODS).split(",");
 
     private static final String LOG_TRUE = "X3 validity forced: ";
 
     /** 核心设置页的菜单构建入口。 */
-    private static final String UI_CLASS = "c.ˏᴵ.ʻᵔ";
-    private static final String UI_OPTIONS = "ٴˋ";
-    private static final String UI_KEYWORDS = "ᵔˑ";
-    private static final String UI_GATE = "ﾞʿ";
-    private static final String UI_ADAPTER = "c.ˆﾞ.ˋʼ";
-    private static final String ADAPTER_GROUPS = "ﾞʿ";
-    private static final String ADAPTER_ITEMS = "ˋʼ";
+    private static final String UI_CLASS = Secret.of(SecretConstants.X30_UI_CLASS);
+    private static final String UI_OPTIONS = Secret.of(SecretConstants.X30_UI_OPTIONS);
+    private static final String UI_KEYWORDS = Secret.of(SecretConstants.X30_UI_KEYWORDS);
+    private static final String UI_GATE = Secret.of(SecretConstants.X30_UI_GATE);
+    private static final String UI_ADAPTER = Secret.of(SecretConstants.X30_UI_ADAPTER);
+    private static final String ADAPTER_GROUPS = Secret.of(SecretConstants.X30_ADAPTER_GROUPS);
+    private static final String ADAPTER_ITEMS = Secret.of(SecretConstants.X30_ADAPTER_ITEMS);
     private static final String LOG_UI = "X3 settings menu forced: ";
     private static final String LOG_EMPTY = "menu empty update blocked: ";
-    private static final String CORE_DATA = "c.ˏᵎ.ٴˑ";
-    private static final String CORE_DATA_GET = "ˋʼ";
+    private static final String CORE_DATA = Secret.of(SecretConstants.X30_CORE_DATA_CLASS);
+    private static final String CORE_DATA_GET = Secret.of(SecretConstants.X30_CORE_DATA_GET);
     private static final String LOG_CORE_DATA = "core getData: ";
     private static final String LOG_REBUILD = "menu rebuild triggered: ";
-    private static final String FEATURE_MANAGER = "c.ˎﹳ.ʾᐧ";
-    private static final String FEATURE_UNLOAD = "ⁱʽ";
+    private static final String FEATURE_MANAGER = Secret.of(SecretConstants.X30_FEATURE_MANAGER);
+    private static final String FEATURE_UNLOAD = Secret.of(SecretConstants.X30_FEATURE_UNLOAD);
     /** 单个功能卸载入口。 */
-    private static final String FEATURE_UNLOAD_ONE = "ʼˋ";
-    private static final String FEATURE_LOAD_ONE = "ˏـ";
-    private static final String FEATURE_LOAD_CLASS = "ᴵʻ";
-    private static final String FEATURE_LOAD_DEX = "ᵎי";
-    private static final String UNLOAD_HANDLER = "c.ˎﹳ.ⁱˋ";
-    private static final String UNLOAD_HANDLER_CALL = "ⁱˋ";
-    private static final String SETTINGS_WRAPPER = "c.ˏᵎ.ʾʻ";
-    private static final String SETTINGS_BOOL = "ᐧᵎ";
-    private static final String REGISTRATION = "registration";
+    private static final String FEATURE_UNLOAD_ONE =
+            Secret.of(SecretConstants.X30_FEATURE_UNLOAD_ONE);
+    private static final String FEATURE_LOAD_ONE =
+            Secret.of(SecretConstants.X30_FEATURE_LOAD_ONE);
+    private static final String FEATURE_LOAD_CLASS =
+            Secret.of(SecretConstants.X30_FEATURE_LOAD_CLASS);
+    private static final String FEATURE_LOAD_DEX =
+            Secret.of(SecretConstants.X30_FEATURE_LOAD_DEX);
+    private static final String UNLOAD_HANDLER = Secret.of(SecretConstants.X30_UNLOAD_HANDLER);
+    private static final String UNLOAD_HANDLER_CALL =
+            Secret.of(SecretConstants.X30_UNLOAD_HANDLER_CALL);
+    private static final String SETTINGS_WRAPPER =
+            Secret.of(SecretConstants.X30_SETTINGS_WRAPPER);
+    private static final String SETTINGS_BOOL = Secret.of(SecretConstants.X30_SETTINGS_BOOL);
+    private static final String REGISTRATION = Secret.of(SecretConstants.X30_REGISTRATION);
     private static final String LOG_REGISTRATION = "registration forced";
     private static final String LOG_UNLOAD = "feature unload blocked";
     private static final ThreadLocal<Boolean> MENU_BUILDING =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
     private static final String LOG_UNLOAD_CMD = "unloadFeature command blocked";
     private static volatile java.lang.ref.WeakReference<Object> UI_INSTANCE;
-    private static final String PARAMS_FILE_METHOD = "ᵔˋ";
+    private static final String PARAMS_FILE_METHOD =
+            Secret.of(SecretConstants.X30_PARAMS_FILE_METHOD);
     private static final String LOG_PARAMS_FILE = "params file path: ";
 
     private static final String WRAPPER = Secret.of(SecretConstants.X30_BRIDGE_WRAPPER);
@@ -158,9 +165,15 @@ public final class X3GuardBypass implements HookCallback {
         }
         hookFeatureManager(framework, classLoader);
         hookSettingsWrapper(framework, classLoader);
-        hookMenuTrue(framework, classLoader, "c.ˏᵎ.ˑᵎ", "ᴵـ");
-        hookMenuTrue(framework, classLoader, "c.ˏᵎ.ʾﹳ", "יʾ");
-        hookMenuTrue(framework, classLoader, "c.ˏᵎ.ˎ", "ʾʽ");
+        hookMenuTrue(framework, classLoader,
+                Secret.of(SecretConstants.X30_MENU_CLASS_1),
+                Secret.of(SecretConstants.X30_MENU_METHOD_1));
+        hookMenuTrue(framework, classLoader,
+                Secret.of(SecretConstants.X30_MENU_CLASS_2),
+                Secret.of(SecretConstants.X30_MENU_METHOD_2));
+        hookMenuTrue(framework, classLoader,
+                Secret.of(SecretConstants.X30_MENU_CLASS_3),
+                Secret.of(SecretConstants.X30_MENU_METHOD_3));
         hookMenuResource(framework, classLoader);
         if (BuildConfig.DEBUG) {
             hookManagerProbe(framework, classLoader);
@@ -204,13 +217,15 @@ public final class X3GuardBypass implements HookCallback {
             return;
         }
         try {
-            Class<?> target = framework.findClassIfExists("c.ˊﹶ.ˉˎ", classLoader);
+            Class<?> target = framework.findClassIfExists(
+                    Secret.of(SecretConstants.X30_MENU_RESOURCE_CLASS), classLoader);
             if (target == null) {
                 return;
             }
             for (Method method : target.getDeclaredMethods()) {
                 Class<?>[] types = method.getParameterTypes();
-                if ("יʾ".equals(method.getName()) && types.length == 1
+                if (Secret.of(SecretConstants.X30_MENU_RESOURCE_METHOD).equals(method.getName())
+                        && types.length == 1
                         && types[0] == String.class && method.getReturnType() == String.class) {
                     framework.hookMethod(method, new MenuResourceGuard());
                     ModuleLogger.log("menu resource hooked");
@@ -369,7 +384,8 @@ public final class X3GuardBypass implements HookCallback {
             }
             // 观察组件自身的卸载入口（仅调试构建）。
             if (BuildConfig.DEBUG) {
-                Class<?> feature = framework.findClassIfExists("c.ˎﹳ.ᵢʼ", classLoader);
+                Class<?> feature = framework.findClassIfExists(
+                        Secret.of(SecretConstants.X30_COMPONENT_UNLOAD_CLASS), classLoader);
                 if (feature != null) {
                     for (Method method : feature.getDeclaredMethods()) {
                         if (UNLOAD_HANDLER_CALL.equals(method.getName())
@@ -404,9 +420,9 @@ public final class X3GuardBypass implements HookCallback {
                             continue;
                         }
                         java.lang.reflect.Method keywords =
-                                uiClass.getDeclaredMethod("ᵔˑ");
+                                uiClass.getDeclaredMethod(UI_KEYWORDS);
                         java.lang.reflect.Method options =
-                                uiClass.getDeclaredMethod("ٴˋ");
+                                uiClass.getDeclaredMethod(UI_OPTIONS);
                         keywords.setAccessible(true);
                         options.setAccessible(true);
                         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
@@ -435,9 +451,10 @@ public final class X3GuardBypass implements HookCallback {
             Thread thread = new Thread(() -> {
                 try {
                     Thread.sleep(12000);
-                    Object instance = target.getDeclaredMethod("ˊﹶ").invoke(null);
+                    Object instance = target.getDeclaredMethod(
+                            Secret.of(SecretConstants.X30_CORE_DATA_INSTANCE_METHOD)).invoke(null);
                     java.lang.reflect.Method get =
-                            target.getDeclaredMethod("ˋʼ", String.class, Object[].class);
+                            target.getDeclaredMethod(CORE_DATA_GET, String.class, Object[].class);
                     get.setAccessible(true);
                     for (String channel : new String[]{"settings.options", "settings.keywords"}) {
                         Object result = get.invoke(instance, channel, new Object[0]);
@@ -553,7 +570,8 @@ public final class X3GuardBypass implements HookCallback {
             } else if (contains(SET_DISABLE, name)) {
                 framework.hookMethod(method, new SetDisable());
                 count++;
-            } else if ("יˑ".equals(name) && method.getParameterCount() == 1
+            } else if (Secret.of(SecretConstants.X30_UPDATE_INIT_METHOD).equals(name)
+                    && method.getParameterCount() == 1
                     && method.getParameterTypes()[0] == android.content.Context.class) {
                 framework.hookMethod(method, new NoOp(name));
                 count++;
@@ -596,12 +614,12 @@ public final class X3GuardBypass implements HookCallback {
             return;
         }
         Class<?> type = target.getClass();
-        setField(type, target, "ᵢʼ", Boolean.TRUE);
-        setField(type, target, "ⁱי", Boolean.TRUE);
-        setField(type, target, "ʿᵢ", Boolean.TRUE);
-        setField(type, target, "ˏـ", Boolean.TRUE);
-        setField(type, target, "ˉˆ", 0);
-        setField(type, target, "ᵎי", 0);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_1), Boolean.TRUE);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_2), Boolean.TRUE);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_3), Boolean.TRUE);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_4), Boolean.TRUE);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_5), 0);
+        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_6), 0);
     }
 
     private static void setField(Class<?> type, Object target, String name, Object value) {
@@ -831,7 +849,8 @@ public final class X3GuardBypass implements HookCallback {
             String name = "?";
             if (self != null) {
                 try {
-                    Method method = self.getClass().getDeclaredMethod("ﾞʿ");
+                    Method method = self.getClass().getDeclaredMethod(
+                            Secret.of(SecretConstants.X30_COMPONENT_NAME_METHOD));
                     method.setAccessible(true);
                     name = String.valueOf(method.invoke(self));
                 } catch (Throwable ignored) {
@@ -1057,7 +1076,8 @@ public final class X3GuardBypass implements HookCallback {
             Object self = param.thisObject();
             forceFlags(self);
             if (self != null) {
-                setField(self.getClass(), self, "ˏـ", Boolean.TRUE);
+                setField(self.getClass(), self,
+                        Secret.of(SecretConstants.X30_FORCE_FLAG_4), Boolean.TRUE);
             }
             if (LOGGED.compareAndSet(false, true)) {
                 ModuleLogger.log("X3 invalid state forced valid");
