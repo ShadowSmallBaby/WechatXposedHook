@@ -7,7 +7,7 @@
 - 启动时接管微X的授权校验，功能菜单直接可用
 - 内置功能包：检测到功能文件缺失时自动补齐
 - 自动写入授权数据库，换账号也能用
-- 屏蔽小程序对宿主版本的检测，避免反复提示升级
+- 屏蔽小程序与通话中的宿主版本检测，避免反复提示升级
 - 同时支持经典 Xposed 与现代 LibXposed 两种入口
 - 同时支持微X模块 2.44 与 X 3.0
 - 一个 APK 同时包含 `arm64-v8a` 与 `armeabi-v7a`，64 位 / 32 位微信都能用
@@ -59,6 +59,42 @@ WeXposedHook-legacy-wx3.0-v1.1.apk
 3. 在 LSPosed / EdXposed 中启用本模块，作用域勾选「微信」。
 4. 强制停止微信后重新打开（必要时重启手机）。
 5. 首次启动会自动补齐功能包并写入授权数据；若功能菜单仍为空，再重启一次微信。
+
+## 手动修改版本伪装
+
+模块首次启动时会在微信数据目录生成版本伪装文件，默认值为 `8.0.79`：
+
+| 微X版本 | 文件路径 |
+|---|---|
+| 微X模块 2.44 | `/data/data/com.tencent.mm/files/WechatXposed/wxh_client_version` |
+| X 3.0 | `/data/data/com.tencent.mm/files/X/wxh_client_version` |
+
+文件内容是一行版本号，例如：
+
+```text
+8.0.79
+```
+
+需要手动调整时：
+
+1. 先启动一次微信，让模块生成该文件。
+2. 使用 root 文件管理器或 adb 修改文件内容；建议保持与微信 `files` 目录相同的属主，权限为 `644`。
+3. 强制停止微信，再重新打开。
+
+adb 示例（微X 2.44）：
+
+```bash
+adb shell su -c 'echo 8.0.79 > /data/data/com.tencent.mm/files/WechatXposed/wxh_client_version'
+adb shell su -c 'chmod 644 /data/data/com.tencent.mm/files/WechatXposed/wxh_client_version'
+```
+
+X 3.0 把路径换成 `files/X/wxh_client_version` 即可。
+
+注意：
+
+- 建议只写 `8.0.x` 形式的版本号，不要加入其它说明文字。
+- 删除该文件后，下次启动会自动恢复默认值 `8.0.79`。
+- 修改后必须强停微信；仅返回桌面或切换账号不一定重新读取。
 
 ## 兼容性
 

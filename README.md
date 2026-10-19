@@ -191,9 +191,12 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
    `feature loaded: base 525 / donation 71 / themes 113`);只有库是由微X 校验回调触发补写时,
    微X 已经读过库,才需要再重启一次。
 5. `HostVersionSpoof` 在微信主进程与小程序进程(`:appbrand0` / `:appbrand1`)里伪装宿主版本:
-   把启动小程序的 CGI 请求里的 `libVersion` 报成 9999,并把官方升级页的跳转 URL 清空,
-   让检测宿主版本的小程序不再要求升级。微信的类名是混淆的,所以不写死类名,
-   而是用自写的 dex 解析器(`DexStrings`,零第三方依赖)按字符串常量反查目标类。
+   `private_openUrl` 只用于识别升级页并触发版本更新;主进程在 `LauncherUI.onResume` 时把
+   `c64.xe.g` 设为版本文件里的客户端版本(默认 8.0.79,可手动修改),文件位于
+   `files/X/wxh_client_version`(3.0)或 `files/WechatXposed/wxh_client_version`(2.44)。
+   启动约 30 秒后还会主动请求一次官方升级页(24 小时内不重复;失败时由错误页触发重试),
+   减少用户看到升级页的概率。微信的类名是混淆的,所以不写死类名,而是用自写的 dex 解析器
+   (`DexStrings`,零第三方依赖)按字符串常量反查目标类。
 
 包名说明:混淆包 `a`/`b`/`c` 的类名互相遮蔽,无法直接编译,
 故整体语义化为 `loader`(dex 加载拦截与识别)/ `license`(授权库生成与写入)/

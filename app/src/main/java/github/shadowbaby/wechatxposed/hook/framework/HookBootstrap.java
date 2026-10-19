@@ -54,7 +54,7 @@ public final class HookBootstrap {
             return;
         }
         if (isAppBrandProcess(processName)) {
-            installHostVersionSpoof(framework, classLoader, sourceDir);
+            installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, false);
             return;
         }
         if (WECHAT_PACKAGE.equals(processName)) {
@@ -69,14 +69,14 @@ public final class HookBootstrap {
             SignatureVerifyBypass.install(framework);
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
-            installHostVersionSpoof(framework, classLoader, sourceDir);
+            installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, true);
         }
     }
 
     private static void installHostVersionSpoof(HookFramework framework, ClassLoader classLoader,
-            String sourceDir) {
+            String sourceDir, String dataDir, boolean mainProcess) {
         try {
-            HostVersionSpoof.install(framework, classLoader, sourceDir);
+            HostVersionSpoof.install(framework, classLoader, sourceDir, dataDir, mainProcess);
         } catch (Throwable error) {
             framework.log(error);
         }

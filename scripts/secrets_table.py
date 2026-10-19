@@ -205,10 +205,8 @@ SECRETS = {
     "FEATURE_PAYLOAD": "wx6_2.44.zip",
 
     # HostVersionSpoof / DexPaths
-    "LAUNCH_ANCHOR_CGI": "MicroMsg.AppBrand.CgiLaunchWxaApp|func:1122",
-    "LAUNCH_ANCHOR_CTOR": (
-        "<init> cgiHash[%d], username[%s] appId[%s] sync[%b] sessionId[%s] instanceId[%s] "
-        "libVersion[%d], source:%s, launchMode:%d, migrate:%b, fallback:%b"),
+    "CLIENT_VERSION_CLASS": "c64.xe",
+    "CLIENT_VERSION_FIELD": "g",
     "OPEN_URL_ANCHOR_MAIN": "private_openUrl",
     "OPEN_URL_ANCHOR_APPID": "geta8key_open_webview_appid",
     "OPEN_URL_ANCHOR_STYLE": "open_custom_style_url",
