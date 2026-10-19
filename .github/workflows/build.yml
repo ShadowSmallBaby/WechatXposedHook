@@ -108,7 +108,17 @@ jobs:
       - name: Collect release assets
         run: |
           test -f app/build/generated/featurepacks/wx244/wx6_2.44.zip
+          test -f app/build/generated/featurepacks/wx244-ext/wx6_2.44_ext.zip
           test -f app/build/generated/featurepacks/wx30/x7_3.0.zip
+          test -f app/build/generated/featurepacks/wx30-ext/x7_3.0_ext.zip
+          test "$(unzip -Z1 app/build/generated/featurepacks/wx244/wx6_2.44.zip | wc -l)" -eq 26
+          test "$(unzip -Z1 app/build/generated/featurepacks/wx244-ext/wx6_2.44_ext.zip | wc -l)" -eq 3
+          test "$(unzip -Z1 app/build/generated/featurepacks/wx30/x7_3.0.zip | wc -l)" -eq 26
+          test "$(unzip -Z1 app/build/generated/featurepacks/wx30-ext/x7_3.0_ext.zip | wc -l)" -eq 3
+          ! unzip -Z1 app/build/generated/featurepacks/wx244/wx6_2.44.zip \
+              | grep -qE '^(257f23e0175be13dec231373679bedc|ec38a2b5b262d9c72f75edacb8875cfe|ee06cd8f9beaf915a27b8bad9e8c2f)$'
+          ! unzip -Z1 app/build/generated/featurepacks/wx30/x7_3.0.zip \
+              | grep -qE '^(257f23e0175be13dec231373679bedc|ec38a2b5b262d9c72f75edacb8875cfe|ee06cd8f9beaf915a27b8bad9e8c2f)$'
           mkdir -p dist/public dist/core
           for apk in app/build/outputs/apk/*/release/WeXposedHook-*.apk; do
             case "$apk" in
