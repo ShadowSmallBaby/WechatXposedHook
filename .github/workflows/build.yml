@@ -30,7 +30,6 @@ jobs:
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "platforms;android-37.0"
-          "$SDKMANAGER" "ndk;28.2.13676358"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -65,12 +64,6 @@ jobs:
             echo "No signing secrets found; release APKs will be debug-signed."
           fi
 
-      - name: Restore native libraries
-        uses: actions/cache@v4
-        with:
-          path: app/src/main/jniLibs
-          key: native-${{ runner.os }}-${{ hashFiles('app/src/main/jni/**', 'app/build.gradle') }}
-
       - name: Prepare feature secrets
         if: github.repository == 'ShadowSmallBaby/WechatXposedHookCore'
         env:
@@ -84,7 +77,29 @@ jobs:
             echo "WXH_SECRETS_B64=$SB"
           } >> "$GITHUB_ENV"
 
+      - name: Compute native cache key
+        id: native-key
+        run: echo "key=$(printf '%s' "$WXH_MASTER_KEY" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore native libraries
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: native-${{ runner.os }}-${{ steps.native-key.outputs.key }}-${{ hashFiles('app/src/main/jni/**', 'app/build.gradle') }}
+
+      - name: Install Android NDK
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" -path '*/cmdline-tools/*/bin/sdkmanager' -type f | sort | tail -1)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;28.2.13676358"
+
       - name: Build native libraries
+        if: steps.native-cache.outputs.cache-hit != 'true'
         run: ./gradlew buildNativeSecret --console=plain
 
       - name: Build all release variants

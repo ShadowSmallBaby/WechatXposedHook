@@ -5,7 +5,6 @@ on:
     branches: [ main ]
     paths:
       - 'app/src/main/jni/**'
-      - 'app/build.gradle'
   workflow_dispatch:
 
 permissions:
@@ -35,12 +34,6 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "ndk;28.2.13676358"
 
-      - name: Cache native libraries
-        uses: actions/cache@v4
-        with:
-          path: app/src/main/jniLibs
-          key: native-${{ runner.os }}-${{ hashFiles('app/src/main/jni/**', 'app/build.gradle') }}
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -60,3 +53,12 @@ jobs:
           ./gradlew buildNativeSecret --console=plain
           ls -l app/src/main/jniLibs/arm64-v8a/libwexhook.so \
                 app/src/main/jniLibs/armeabi-v7a/libwexhook.so
+
+      - name: Upload native libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-libs
+          path: |
+            app/src/main/jniLibs/arm64-v8a/libwexhook.so
+            app/src/main/jniLibs/armeabi-v7a/libwexhook.so
+          if-no-files-found: error
