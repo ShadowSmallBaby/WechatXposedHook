@@ -95,6 +95,7 @@ SECRETS = {
     "X30_COMPONENT_UNLOAD_CLASS": "c.ˎﹳ.ᵢʼ",
     "X30_CORE_DATA_INSTANCE_METHOD": "ˊﹶ",
     "X30_UPDATE_INIT_METHOD": "יˑ",
+    "X30_BASE_UPDATE_TASK": "c.ˏᵎ.ᵢᵔ$ʾʻ",
     "X30_COMPONENT_NAME_METHOD": "ﾞʿ",
     "X30_FORCE_FLAG_1": "ᵢʼ",
     "X30_FORCE_FLAG_2": "ⁱי",
@@ -203,6 +204,16 @@ SECRETS = {
     # FeaturePackRestorer
     "FEATURE_DIR": "wx6_2.44",
     "FEATURE_PAYLOAD": "wx6_2.44.zip",
+    "SELF_SIGN_PUBLIC_KEY": (
+        "-----BEGIN PUBLIC KEY-----\n"
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlqFTDs271XTnRh5sHUwU\n"
+        "OH5kfFdc1ndpMcN4JS2esQn8z5OqQ+h13Y/bvrgXG7IFB+3kSO3uBdAQj9vkjuDj\n"
+        "oyMcvcXpmZqFV3LPB8bKjAWAcQ5giahOxzt74rBBYXhpf9UD4TeezosiDqlD4p0J\n"
+        "nb0IIQbhCg+6diSn8QA+6YfkkhjuPq90O2U7I4a/zZhQrhn5Y2audGwOp4D2idfR\n"
+        "a6mxI0wwyQdlVzUKjnXvtxoe+CrtUlJFyntHscJxSfymJoHecMqPt6Dgjo+aJKVS\n"
+        "LJ2lxKl0LS0aRTXa4ANUzf4719KeWdmH0zGm7j3oV7PE76LONmIBUzUMLQn1EJBV\n"
+        "swIDAQAB\n"
+        "-----END PUBLIC KEY-----\n"),
 
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS": "c64.xe",

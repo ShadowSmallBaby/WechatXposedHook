@@ -116,7 +116,8 @@ public final class X3GuardBypass implements HookCallback {
     private static final String LOG_HOOKED = "X3 guard hooked: ";
     private static final String LOG_SKIPPED = "X3 params apply skipped: ";
     private static final String LOG_PARAMS = "X3 params: ";
-    private static final String BASE_UPDATE_TASK = "c.ˏᵎ.ᵢᵔ$ʾʻ";
+    private static final String BASE_UPDATE_TASK =
+            Secret.of(SecretConstants.X30_BASE_UPDATE_TASK);
     private static final String BASE_UPDATE_DONE = "onPostExecute";
 
     private static final int LOG_LIMIT = 600;
