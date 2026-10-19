@@ -98,6 +98,11 @@ public final class LegacyFramework implements HookFramework {
         }
 
         @Override
+        public Object result() {
+            return param.getResult();
+        }
+
+        @Override
         public boolean hasThrowable() {
             return param.hasThrowable();
         }

@@ -1196,7 +1196,7 @@ fn   = 0x22dc8
 XposedInit.handleLoadPackage(lpparam)
   └─ 只认主进程(packageName == processName == com.tencent.mm)
        └─ StartupCheck.run(lpparam.appInfo.dataDir, StartupCheck.readLoginAccount(dataDir))
-       ├─ FeaturePackRestorer.ensureOnce(files/)      按清单补齐 30 个功能包文件
+       ├─ FeaturePackRestorer.ensureOnce(files/)      按清单补齐对应版本的功能包文件
             └─ LicenseInstaller.ensure(databases/..., 账号)  补齐授权库
 ```
 
@@ -1209,15 +1209,15 @@ XposedInit.handleLoadPackage(lpparam)
 另外实测:清空整个目录后 microX 只会按数据库里的版本行补下 12 个文件,凑不齐原来的 30 个
 (它按版本判断"要不要下载",不是按文件在不在);而且它下回来的 4 个文件与本地这套**内容不同**
 (同名文件是另一批版本,`d61f837c…` 那组甚至连名字都换成了内容指纹 `9816b5df…`)。
-所以整套 30 个文件(含三组 `_c` / `_s`)都内置进 APK,缺哪个补哪个:
+所以整套载荷都内置进 APK（2.44 当前清单 24 个，3.0 为 26 个）,缺哪个补哪个:
 
 | 项 | 值 |
 |---|---|
-| 载荷内容 | `files/wx6_2.44` 的整套 30 个文件(文件名为内容指纹),打成不压缩的 zip |
-| 打进 APK 的位置 | `app/src/main/assets/wx6_2.44.zip`,随仓库入库、原样打进 assets(APK 约 3.0 MB) |
+| 载荷内容 | 对应版本运行时目录的整套文件（2.44 24 个 / 3.0 26 个，文件名为内容指纹）,构建时打成不压缩的 zip |
+| 打进 APK 的位置 | 由 `scripts/build_release_packs.py` 生成到 `app/build/generated/featurepacks/`,再作为 flavor assets 打进对应 APK |
 | 读取方式 | 模块是 LSPosed 按路径加载的独立 APK,只能自己按路径读 assets:路径取 `initZygote` 的 `StartupParam.modulePath`,用 `ZipFile` 取出 zip 再解包 |
 | 路径失效时 | LSPosed 记的路径是它上次扫描的安装位置,重装 APK 后目录会变、要到下次重启框架才刷新;文件不存在时按包名在 `/data/app` 下重找一次 |
-| 判据 | 30 个文件在不在、大小对不对(名字即指纹,大小不符按缺失处理),缺哪个补哪个 |
+| 判据 | 对应版本的 24/26 个文件在不在、大小对不对(名字即指纹,大小不符按缺失处理),缺哪个补哪个 |
 
 **为什么是文件级检测,而不是追微X 的失败事件**:清理发生在微X 自己的启动线程里(见 5b),
 等它的异常或删除动作出现再反应就晚了,而且它删文件、清状态都不报错;
@@ -1346,7 +1346,7 @@ private_openUrl 形如 `oa.u(jsapi/l, JSONObject, int)`,JSONObject 是第 2 个�
 | `LicenseDatabase` | 建表、补齐 10 行、`user_version = 1`;写前备份 `.bak`;写入策略见下 |
 | `LicenseInstaller` | 按定好的账号写入/补齐 `databases/FKZ_WX_DATA`;同一个账号只写一次,失败不记、下次再试 |
 | `StartupCheck` | 启动自检入口:定 `dataDir`、跑功能包自检、把账号递给 `LicenseInstaller`(见 3.7) |
-| `FeaturePackRestorer` | 30 个功能包文件的文件级自检与补写,载荷是 APK 里的 `assets/wx6_2.44.zip` |
+| `FeaturePackRestorer` | 按版本补齐功能包（2.44 24 个 / 3.0 26 个）,载荷是 APK 内置的 zip |
 
 账号来源有两处:启动时读微信 prefs 里的 `login_weixin_username`(最早、不需要 Context),
 微X 校验时交来的 msgId 132 `expectedUser` / 功能查询 `userId` 才是权威值

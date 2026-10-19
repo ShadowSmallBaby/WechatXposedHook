@@ -3,7 +3,12 @@ package github.shadowbaby.wechatxposed.hook.loader;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.support.FeatureCloseGuard;
 import github.shadowbaby.wechatxposed.hook.support.WxComponentHooks;
+import github.shadowbaby.wechatxposed.hook.support.X3ComponentHooks;
+import github.shadowbaby.wechatxposed.hook.support.X3GuardBypass;
+import github.shadowbaby.wechatxposed.hook.support.X3LicenseBypass;
+import github.shadowbaby.wechatxposed.hook.support.X3SettingsBypass;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -51,7 +56,32 @@ public final class InMemoryDexLoadHook implements HookCallback {
 
     @Override
     public void after(HookParam param) {
+        DexDumper.maybeDump(param);
         if (mode != DEX_LOADER || !(param.thisObject() instanceof ClassLoader hostClassLoader)) {
+            return;
+        }
+
+        FeatureCloseGuard.probe(framework, hostClassLoader);
+
+        boolean x3Class = X3ComponentHooks.matches(framework, hostClassLoader);
+        boolean x3Dex = X3ComponentHooks.matchesDex(param);
+        boolean licDex = X3LicenseBypass.matchesDex(param);
+        boolean guardDex = X3GuardBypass.matchesDex(param);
+        boolean settingsDex = X3SettingsBypass.matchesDex(param);
+        ModuleLogger.log("dex probe: x3class=" + x3Class + " x3dex=" + x3Dex
+                + " licdex=" + licDex + " guarddex=" + guardDex
+                + " settingsdex=" + settingsDex);
+        if (licDex) {
+            X3LicenseBypass.install(framework, hostClassLoader);
+        }
+        if (guardDex) {
+            X3GuardBypass.install(framework, hostClassLoader);
+        }
+        if (settingsDex) {
+            X3SettingsBypass.install(framework, hostClassLoader);
+        }
+        if (x3Class || x3Dex) {
+            X3ComponentHooks.inject(framework, hostClassLoader);
             return;
         }
 

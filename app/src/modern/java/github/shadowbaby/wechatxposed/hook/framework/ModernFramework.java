@@ -153,6 +153,11 @@ public final class ModernFramework implements HookFramework {
         }
 
         @Override
+        public Object result() {
+            return replaced ? replacement : result;
+        }
+
+        @Override
         public boolean hasThrowable() {
             return throwable != null;
         }
