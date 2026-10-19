@@ -198,7 +198,6 @@ jobs:
             echo "- 现代包若提示「该模块需要更新的 Xposed 版本 102」，改用 **legacy** 包。"
             echo "- 作用域勾选 **微信**。"
             echo "- 环境要求：Android 8.0+、微信 8.0.49、微X模块 2.44 / X 3.0。"
-            echo "- 公开仓 Release 提供公开版；核心仓 Release 提供对应的 \`-full\` 完整版。"
             echo
             prev=$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)
             if [ -n "$prev" ]; then
