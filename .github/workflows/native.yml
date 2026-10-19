@@ -1,0 +1,62 @@
+name: Build native libraries
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/src/main/jni/**'
+      - 'app/build.gradle'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Android NDK
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" -path '*/cmdline-tools/*/bin/sdkmanager' -type f | sort | tail -1)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;28.2.13676358"
+
+      - name: Cache native libraries
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs
+          key: native-${{ runner.os }}-${{ hashFiles('app/src/main/jni/**', 'app/build.gradle') }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Check master key
+        env:
+          MK: ${{ secrets.WXH_MASTER_KEY }}
+        run: |
+          if [ -z "$MK" ]; then echo "::error::缺少 secret WXH_MASTER_KEY"; exit 1; fi
+
+      - name: Build native libraries
+        env:
+          WXH_MASTER_KEY: ${{ secrets.WXH_MASTER_KEY }}
+        run: |
+          ./gradlew buildNativeSecret --console=plain
+          ls -l app/src/main/jniLibs/arm64-v8a/libwexhook.so \
+                app/src/main/jniLibs/armeabi-v7a/libwexhook.so

@@ -1,6 +1,6 @@
 # WeXposedHook
 
-针对 WeXposed(微X模块)2.44 的 Xposed 模块。挂住微X把功能 dex 解密进内存的时机,
+针对 WeXposed(微X模块 2.44) 与 X 3.0 的 Xposed 模块。挂住微X把功能 dex 解密进内存的时机,
 接管它的授权校验入口,并对功能包文件、授权数据库做逆向与验证。
 
 本仓库同时包含**可编译的模块源码**与**完整逆向分析资料**。
@@ -9,7 +9,7 @@
 
 ```
 WeXposedHook/
-├── .github/workflows/        CI:构建 legacy + modern 两个 APK
+├── .github/workflows/        CI:构建 8 个 APK,并按公开/完整版分发
 ├── app/                      Android 模块源码(Gradle 工程)
 │   ├── src/main/jni/         native 源码(敏感常量解码 + 授权加密;只在内部仓)
 │   └── 代码结构说明.md        源码组织 / 命名约定 / 字符串池对照
@@ -23,7 +23,7 @@ WeXposedHook/
 ├── tests/license-data/      授权库生成的 Java/Python 对照
 ├── tests/dex-probe/          类名常量能否从真 dex 解析出来(点号 vs 斜杠)
 ├── tests/dex-strings/        dex 常量池解析器与 Python 参考实现逐行对照
-├── tests/file-restore/       功能包 30 个文件的补齐逻辑(设备上跑真代码)
+├── tests/file-restore/       功能包补齐逻辑(2.44 24 个 / 3.0 26 个,设备上跑真代码)
 ├── tests/license-crypto/     授权加密链路(同一份 .inc 与 Python 参考实现对照)
 ├── tests/secret-encoding/    敏感常量密文与脚本明文逐项对照
 ├── data/                     分析样本:APK / tar / 部署脚本 / 授权库(不入库)
@@ -35,22 +35,35 @@ WeXposedHook/
 需要 JDK 17 与 Android SDK 37(AGP 9.4.1 要求 Gradle 9.6+;wrapper 已锁定版本):
 
 ```powershell
-./gradlew assembleLegacyRelease assembleModernRelease
+./gradlew assembleRelease
 ```
 
-产物是两个包(两种 Xposed API 各一个,功能相同,按框架版本二选一安装):
+产物按「框架 × 微X版本 × 公开/完整」组合，共 8 个 APK：
 
-| 包 | 适用框架 | 入口描述符 |
-|---|---|---|
-| `app/build/outputs/apk/legacy/release/app-legacy-release.apk` | 经典 Xposed / 旧 LSPosed / EdXposed(API < 102) | `assets/xposed_init` |
-| `app/build/outputs/apk/modern/release/app-modern-release.apk` | 现代 LibXposed,LSPosed **API ≥ 102** | `META-INF/xposed/*` |
+| 维度 | 取值 |
+|---|---|
+| 框架 | `legacy`（经典 Xposed / API < 102）、`modern`（LibXposed API ≥ 102） |
+| 微X版本 | `wx2.44`、`wx3.0` |
+| 版本 | 公开版（无后缀）、完整版（`-full`） |
 
-两个包都只含自己那份 so,且每个 so 同时带 `arm64-v8a` 与 `armeabi-v7a` 两种 ABI
-(微信 8.0.49 的 64 位版本跑 arm64-v8a,32 位版本跑 armeabi-v7a,同一个 APK 都能覆盖)。
-现代包若提示「该模块需要更新的 Xposed 版本 102」,改用 legacy 包。
+文件名格式：
 
-> 内置载荷(功能包目录的 30 个文件,见「模块做的事」第 4 条)就在仓库里:
-> `app/src/main/assets/wx6_2.44.zip`,构建时原样打进 assets,单包约 3.0 MB。
+```
+WeXposedHook-{modern|legacy}-wx{2.44|3.0}-v{version}.apk
+WeXposedHook-{modern|legacy}-wx{2.44|3.0}-v{version}-full.apk
+```
+
+输出目录：
+
+```
+app/build/outputs/apk/<framework><wx><edition>/release/
+```
+
+每个 APK 只内置对应微X版本的一份功能包；完整版与公开版只在授权功能编码上有差异。
+两个 ABI 仍同时打包在同一个 APK 中。
+
+> 功能包 zip 不再入库，构建前由 `generateFeaturePacks` 从 `xmetadata` 生成到
+> `app/build/generated/featurepacks/wx244/` 与 `wx30/`。
 
 > 本机默认 JDK 25 的 class 文件版本(69)不被当前 Gradle 支持,需显式指定 JDK 17:
 > `JAVA_HOME=<JDK17 路径> ./gradlew assembleLegacyRelease assembleModernRelease`
@@ -183,9 +196,9 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
 3. `WxComponentHooks` 对每个 dex 注入 hook,`CallMethodBypassHook` 拦截
    `WxJniCoreBridge.CallMethod`,按 `bypassMode` 伪造授权校验结果与功能列表。
 4. `XposedInit.handleLoadPackage` 在微信主进程启动时跑一次启动自检:
-   - `FeaturePackRestorer` 按清单检查 `files/wx6_2.44` 里的 30 个文件(文件名是内容指纹,
-     大小对不上也算缺失),缺哪个就从 APK 的内置载荷(`assets/wx6_2.44.zip`)补写——
-     微X 判定未授权时会自己删掉其中一部分;
+   - `FeaturePackRestorer` 按 APK 版本检查对应运行时目录(2.44 24 个 / 3.0 26 个文件,
+     文件名是内容指纹,大小对不上也算缺失),缺哪个就从 APK 的内置载荷补写——
+     载荷由构建脚本从 `xmetadata/` 生成;微X 判定未授权时会自己删掉其中一部分;
    - `LicenseInstaller` 按账号补齐 `databases/FKZ_WX_DATA`:10 行内容、表结构与 SQL 都由
      `libwexhook.so` 生成/提供,Java 只负责调度,不再依赖设备上的 shell 脚本。账号先读微信 prefs 里的
     `login_weixin_username`,微X 校验时再把权威账号交过来补一次。

@@ -53,10 +53,30 @@ android {
         }
     }
 
-    flavorDimensions 'framework'
+    flavorDimensions 'framework', 'wx', 'edition'
     productFlavors {
         legacy { dimension 'framework' }
         modern { dimension 'framework' }
+        wx244 {
+            dimension 'wx'
+            buildConfigField 'String', 'WX_PACK', '"wx6_2.44"'
+        }
+        wx30 {
+            dimension 'wx'
+            buildConfigField 'String', 'WX_PACK', '"x7_3.0"'
+        }
+        publicEdition {
+            dimension 'edition'
+            buildConfigField 'boolean', 'FULL_EDITION', 'false'
+        }
+        fullEdition {
+            dimension 'edition'
+            buildConfigField 'boolean', 'FULL_EDITION', 'true'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     sourceSets {
