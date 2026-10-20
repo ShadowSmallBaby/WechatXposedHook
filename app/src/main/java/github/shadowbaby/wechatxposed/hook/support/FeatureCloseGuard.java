@@ -390,7 +390,8 @@ public final class FeatureCloseGuard {
         @Override
         public void before(HookParam param) {
             String command = String.valueOf(param.arg(0));
-            if (command.contains(TRANSFER_SCENE_COMMAND)) {
+            // 只拦详情页这一个场景；聊天卡片的金额伪装走消息渲染链路，不受影响。
+            if (TRANSFER_SCENE_COMMAND.equals(command)) {
                 ModuleLogger.log(LOG_PUBLISH_BLOCKED + command + " -> " + className);
                 param.setResult(null);
                 return;

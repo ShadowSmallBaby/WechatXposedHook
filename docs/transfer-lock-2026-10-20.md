@@ -39,16 +39,19 @@ SQLiteCursor.getCount -> sqlite3_step`。
 
 ## 最终方案
 
-在 `FeatureCloseGuard.PublishGuard` 中拦截该命令：
+在 `FeatureCloseGuard.PublishGuard` 中拦截该命令（精确匹配，只作用于详情页）：
 
 ```java
 private static final String TRANSFER_SCENE_COMMAND = "on_RemittanceDetailUI_onSceneEnd";
 
-if (command.contains(TRANSFER_SCENE_COMMAND)) {
+if (TRANSFER_SCENE_COMMAND.equals(command)) {
     param.setResult(null);
     return;
 }
 ```
+
+拦截范围仅限转账详情页的 scene-end 广播：详情页显示真实金额、不触发 WCDB 查询；
+聊天卡片的金额伪装走另一条消息渲染链路，不受影响。
 
 效果：
 
