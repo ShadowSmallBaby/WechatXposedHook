@@ -368,6 +368,9 @@ public final class FeatureCloseGuard {
 
     private static final class PublishGuard implements HookCallback {
 
+        /** 伪造转账金额的 hook 命令：回调里会同步读 WCDB，转账详情页会卡住主线程。 */
+        private static final String TRANSFER_SCENE_COMMAND = "on_RemittanceDetailUI_onSceneEnd";
+
         private final String className;
 
         PublishGuard(String className) {
@@ -377,6 +380,11 @@ public final class FeatureCloseGuard {
         @Override
         public void before(HookParam param) {
             String command = String.valueOf(param.arg(0));
+            if (command.contains(TRANSFER_SCENE_COMMAND)) {
+                ModuleLogger.log(LOG_PUBLISH_BLOCKED + command + " -> " + className);
+                param.setResult(null);
+                return;
+            }
             if (blocked(command)) {
                 ModuleLogger.log(LOG_PUBLISH_BLOCKED + command + " -> " + className);
                 param.setResult(null);
