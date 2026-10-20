@@ -23,12 +23,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class HostVersionSpoof {
 
     /** 小程序启动 CGI 场景（WeChat 8.0.49）。 */
-    private static final String LAUNCH_SCENE_CLASS = "wx0.d";
+    private static final String LAUNCH_SCENE_CLASS =
+            Secret.of(SecretConstants.LAUNCH_SCENE_CLASS);
+
+    /** 启动 CGI 的场景回调方法（onGYNetEnd）。 */
+    private static final String LAUNCH_SCENE_CALLBACK =
+            Secret.of(SecretConstants.LAUNCH_SCENE_CALLBACK);
 
     /** ilink SDK 启动配置：appVersion 在建链时上报给服务端。 */
     private static final String ILINK_START_CONFIG =
-            "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder";
-    private static final String ILINK_SET_APP_VERSION = "setAppVersion";
+            Secret.of(SecretConstants.ILINK_START_CONFIG_CLASS);
+    private static final String ILINK_SET_APP_VERSION =
+            Secret.of(SecretConstants.ILINK_SET_APP_VERSION_METHOD);
 
     private static final int CLIENT_VERSION_HIGH_MASK = 0xFFFFFF00;
     private static final int CLIENT_VERSION_LOW_MASK = 0x000000FF;
@@ -85,7 +91,8 @@ public final class HostVersionSpoof {
                 });
             }
             for (Method method : target.getDeclaredMethods()) {
-                if ("f".equals(method.getName()) && method.getParameterCount() == 5) {
+                if (LAUNCH_SCENE_CALLBACK.equals(method.getName())
+                        && method.getParameterCount() == 5) {
                     framework.hookMethod(method, new HookCallback() {
                         @Override
                         public void after(HookParam param) {

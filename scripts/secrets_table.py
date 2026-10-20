@@ -235,6 +235,10 @@ SECRETS = {
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS": "c64.xe",
     "CLIENT_VERSION_FIELD": "g",
+    "LAUNCH_SCENE_CLASS": "wx0.d",
+    "LAUNCH_SCENE_CALLBACK": "f",
+    "ILINK_START_CONFIG_CLASS": "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder",
+    "ILINK_SET_APP_VERSION_METHOD": "setAppVersion",
     "UPGRADE_URL_1": "https://support.weixin.qq.com/update",
     "DEX_SUFFIX": ".dex",
     "DEX_PREFIX": "classes",
