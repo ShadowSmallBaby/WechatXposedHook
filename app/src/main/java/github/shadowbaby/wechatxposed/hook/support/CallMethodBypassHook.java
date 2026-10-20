@@ -2,6 +2,7 @@ package github.shadowbaby.wechatxposed.hook.support;
 
 import android.text.TextUtils;
 import android.util.Base64;
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -157,7 +158,12 @@ public final class CallMethodBypassHook implements HookCallback {
 
         if (Integer.valueOf(2).equals(queryType)) {
 
-            if (!REMOTE_COMMAND.equals(params[2])) {
+            String key = String.valueOf(params[2]);
+            if (BuildConfig.DEBUG && key.endsWith("_unlocked")) {
+                framework.log("unlock query: " + key);
+            }
+            if (!REMOTE_COMMAND.equals(params[2])
+                    && !EditionFeatures.isUnavailableExt(key)) {
                 param.setResult(Boolean.TRUE);
             }
             return;

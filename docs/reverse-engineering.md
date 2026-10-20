@@ -877,6 +877,8 @@ SELECT * FROM DATA WHERE ACCOUNT=? AND TAG=?
 - 段 0：`encode_blob("LIC:" + wxid)`（见下）
 - 段 1:单字符标记。参考库/最小库 = `f`(frozen,离线预置),真机在线授权后微X 会改写成 `T`(token,已在线校验)。仅 4533 是 `T`。此字符**不参与**我们自己 hook 的授权判定,是微X 的状态位。
 - 段 2:AES 密文。反汇编确认:`key = SHA-256(<当前 wxid> UTF-8 原文,非 hex)`、`AES/CBC/PKCS7Padding`、零 IV;解密后是授权/付费档位列表的 JSON 数组,**两个真实授权库(4533、722)明文都是 `[1]`**。
+  - 本项目**公开版**保持 `[1]`：不带 `sf/mf/af` 扩展包，对应的 `*_unlocked` 查询由 hook 层返回 false。
+  - 本项目**完整版**写 `[0,1,4]`：`0`/`4` 对应 `af_unlocked`/`mf_unlocked`，否则微X 会因「unlocked 为 true 但 LIC 缺 0/4」写入禁用代码 `0x329`。
 
 **⚠ 段 2 必须按当前 wxid 现算,不能照抄参考库字节**
 

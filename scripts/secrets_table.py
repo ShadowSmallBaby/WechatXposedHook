@@ -108,6 +108,10 @@ SECRETS = {
     "X30_ENTRY_THEMES": "com.android.xf.themes.Wrapper.Init",
     "X30_BASE_SETTINGS": "b.ⁱᵔ.ˈˈ",
     "X30_BASE_REGISTRY": "b.ʾᵢ.ʾᵢ",
+    "X30_INIT_GATE_CLASS": "b.ⁱᵔ.ˉˏ",
+    "X30_INIT_GATE_METHOD": "ˑٴ",
+    "X30_MENU_HIDDEN_METHOD": "ᵎˆ",
+    "X30_MENU_VISIBLE_METHOD": "ᵢˎ",
     "X30_REGISTRY_REMOVE": "ʽי",
     "X30_REGISTRY_PUBLISH": "ˈˈ",
     "X30_REGISTRY_GET_DATA": "ʻˑ",
@@ -136,12 +140,25 @@ SECRETS = {
     "CORE_POLLING_METHOD": "\u02cb\u1d4e",
     "CORE_LICENSE_CLASS": "c.\ufe76\u02c9.\u0640\u02cb",
     "CORE_LICENSE_METHOD": "\u0640\u02cb",
+    "CORE_DISABLE_SETTER": "\u02d1\u1d4e",
+    "CORE_DISABLE_GETTER": "\u02bb\u02d1",
+    "CORE_STATUS_CHECK": "\u2071\u1d62",
+    "CORE_VERIFIER_FACTORY": "\u1d4e\u0640",
+    # 2.44_5.41 \u65b0\u6838\u5fc3\uff08352186\uff09\u7684\u540c\u4e00\u7ec4\u65b9\u6cd5
+    "CORE_VERIFIER_CLASS_V2": "c.\u02bb\u02bb.\u0640\u02cb",
+    "CORE_DISABLE_SETTER_V2": "\u02c9\ufe76",
+    "CORE_DISABLE_GETTER_V2": "\u2071\u05d9",
+    "CORE_STATUS_CHECK_V2": "\u02bd\u02bd",
+    "CORE_VERIFIER_INSTANCE_V2": "\u02c9\u0674",
     "THEMES_ENTRY_CLASS": "\u1d54\u02cf.\u1427\u05d9",
     "THEMES_ENTRY_METHOD": "\u02cf\u02ca",
     "THEMES_HOOK_ARGUMENT_CLASS": "\u1d54\u02cf.\u2071\u05d9$\u02bf\u0674",
     "DONATION_ENTRY_CLASS": "\ufe76\u02ce.\u0640\u02c6",
     "DONATION_ENTRY_METHOD": "\u02bd\u02be",
     "DONATION_HOOK_ARGUMENT_CLASS": "\ufe76\u02ce.\u02bb\u02ce$\uff9e\u02cf",
+    # \u6350\u8d60 keycard \u5305\u662f\u5426\u53ef\u7528\u7684\u5224\u5b9a\uff1aL\u1d54\u02cf/\u1427\u05d9;->\u02bf\u0674(String,Object[])Z
+    "DONATION_REQUIRES_CLASS": "\u1d54\u02cf.\u1427\u05d9",
+    "DONATION_REQUIRES_METHOD": "\u02bf\u0674",
 
     # CallMethodBypassHook
     "VERIFIER_SERVICE": "verifier6",
@@ -189,10 +206,10 @@ SECRETS = {
         "\"fp_mf\":\"89\",\"fp_donation\":\"47\",\"fp_xv\":\"1f2\",\"fp_base\":\"20d\","
         "\"meta\":\"1902dffe702\",\"string\":\"18fe3f447ec\",\"h_p\":\"18eec2d7db3\","
         "\"lib\":\"9\",\"core\":\"cf\",\"apk\":\"42,2.2,821452f9\"}"),
-    "FP_VERSIONS": "{\"themes\":113,\"donation\":71,\"base\":525}",
+    "FP_VERSIONS": "{\"themes\":113,\"donation\":71,\"base\":525,\"vidurlparser\":30}",
     "FP": "themes",
-    "FP_ASYNC": "base,donation",
-    "LICENSE_FEATURE_SET": "[1]",
+    "FP_ASYNC": "base,vidurlparser,donation",
+    "LICENSE_FEATURE_SET": "[0,1,4]",
     "LICENSE_TAG": "LIC",
     "VERIFIER6_TAG": "verifier6",
 

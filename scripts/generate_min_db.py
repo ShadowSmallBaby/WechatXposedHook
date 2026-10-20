@@ -75,9 +75,9 @@ LATEST_VERSIONS = ('{"fp_themes":"71","fp_sf":"4b","fp_af":"ab","fp_vidurlparser
                    '"fp_mf":"89","fp_donation":"47","fp_xv":"1f2","fp_base":"20d",'
                    '"meta":"1902dffe702","string":"18fe3f447ec","h_p":"18eec2d7db3",'
                    '"lib":"9","core":"cf","apk":"42,2.2,821452f9"}')
-FP_VERSIONS = '{"themes":113,"donation":71,"base":525}'
+FP_VERSIONS = '{"themes":113,"donation":71,"base":525,"vidurlparser":30}'
 FP = 'themes'
-FP_ASYNC = 'base,donation'
+FP_ASYNC = 'base,vidurlparser,donation'
 
 # LIC 第 3 段(付费功能集合密文)。反汇编 getLicData:段 3 用 key = SHA-256(wxid)(UTF-8 原文,非 hex)做 AES/CBC/PKCS7Padding、零 IV 解密,再 new JSONArray 逐项 getInt。明文是 [1](授权档位);4533 与 722 两个真实授权库都解出 [1]。=> 必须按 *当前 wxid* 现算,不能照抄参考库字节:照抄后别的账号拿同一密文,用自己 wxid 派生的 key 解出来是乱码 -> JSONArray 抛异常 -> 无 VIP、无菜单。
 LIC_FEATURE_SET = "[1]"

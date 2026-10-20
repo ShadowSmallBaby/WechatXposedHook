@@ -119,6 +119,10 @@ NAMES = [
     "X30_ENTRY_THEMES",
     "X30_BASE_SETTINGS",
     "X30_BASE_REGISTRY",
+    "X30_INIT_GATE_CLASS",
+    "X30_INIT_GATE_METHOD",
+    "X30_MENU_HIDDEN_METHOD",
+    "X30_MENU_VISIBLE_METHOD",
     "X30_REGISTRY_REMOVE",
     "X30_REGISTRY_PUBLISH",
     "X30_REGISTRY_GET_DATA",
@@ -147,12 +151,23 @@ NAMES = [
     "CORE_POLLING_METHOD",
     "CORE_LICENSE_CLASS",
     "CORE_LICENSE_METHOD",
+    "CORE_DISABLE_SETTER",
+    "CORE_DISABLE_GETTER",
+    "CORE_STATUS_CHECK",
+    "CORE_VERIFIER_FACTORY",
+    "CORE_VERIFIER_CLASS_V2",
+    "CORE_DISABLE_SETTER_V2",
+    "CORE_DISABLE_GETTER_V2",
+    "CORE_STATUS_CHECK_V2",
+    "CORE_VERIFIER_INSTANCE_V2",
     "THEMES_ENTRY_CLASS",
     "THEMES_ENTRY_METHOD",
     "THEMES_HOOK_ARGUMENT_CLASS",
     "DONATION_ENTRY_CLASS",
     "DONATION_ENTRY_METHOD",
     "DONATION_HOOK_ARGUMENT_CLASS",
+    "DONATION_REQUIRES_CLASS",
+    "DONATION_REQUIRES_METHOD",
 
     # CallMethodBypassHook
     "VERIFIER_SERVICE",
@@ -322,6 +337,9 @@ def public_table(table: dict) -> dict:
     features = [item for item in result["FEATURES"].split(",")
                 if item not in ADVANCED_FEATURES]
     result["FEATURES"] = ",".join(features)
+    # 公开版不带 af/sf/mf 扩展包，授权功能集合保持 [1]；
+    # 对应的 *_unlocked 查询会在 hook 层按 edition 返回 false。
+    result["LICENSE_FEATURE_SET"] = "[1]"
     return result
 
 

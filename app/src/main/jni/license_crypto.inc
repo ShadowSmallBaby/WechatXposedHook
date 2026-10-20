@@ -29,7 +29,9 @@ static const uint8_t AES_KEY[32] = {
 };
 
 /* LIC 第 3 段解密后的明文:授权档位。 */
-static const char LICENSE_FEATURE_SET[] = "[1]";
+static const char LICENSE_FEATURE_SET[] = "[0,1,4]";
+/* 公开版不带扩展包，功能集合保持 [1]；native 两种都接受。 */
+static const char LICENSE_FEATURE_SET_LEGACY[] = "[1]";
 
 /* ---------------------------------------------------------------- SHA-256 */
 
@@ -481,7 +483,7 @@ static uint16_t *blob_decode(const char *packed, size_t length, size_t *out_leng
 
 /* --------------------------------------------------------- 校验辅助函数 */
 
-/* 段 3 的 key = SHA-256(账号);解开必须等于 "[1]"。 */
+/* 段 3 的 key = SHA-256(账号);公开版解出 "[1]"，完整版解出 "[0,1,4]"。 */
 static int check_segment3(const char *segment, const char *account, size_t account_length) {
     Sha256 sha;
     sha256_init(&sha);
@@ -504,7 +506,9 @@ static int check_segment3(const char *segment, const char *account, size_t accou
         memset(zero, 0, 16);
         aes256_decrypt_block(round_keys, state, zero);
         size_t expected_length = strlen(LICENSE_FEATURE_SET);
-        matches = memcmp(state, LICENSE_FEATURE_SET, expected_length) == 0;
+        matches = memcmp(state, LICENSE_FEATURE_SET, expected_length) == 0
+                || memcmp(state, LICENSE_FEATURE_SET_LEGACY,
+                          strlen(LICENSE_FEATURE_SET_LEGACY)) == 0;
     }
     free(raw);
     return matches;

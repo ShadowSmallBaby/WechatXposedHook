@@ -65,10 +65,9 @@ public final class X3LicenseBypass {
                     if (result == Boolean.TYPE || result == Boolean.class) {
                         framework.hookMethod(method, new BooleanCallback());
                         count++;
-                    } else if (result == ArrayList.class && method.getParameterCount() == 0) {
-                        framework.hookMethod(method, new EmptyListCallback());
-                        count++;
                     }
+                    // 不再清空 ArrayList 返回值：授权类里的列表方法也参与
+                    // 功能数据分发，置空会让设置菜单拿不到任何条目。
                 }
                 ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
                 if (LICENSE_CLASS.equals(className)) {

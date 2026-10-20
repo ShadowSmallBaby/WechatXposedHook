@@ -31,7 +31,19 @@ public final class FeatureCloseGuard {
     /** base 功能包的注册表/事件总线。 */
     private static final String BASE_REGISTRY = Secret.of(SecretConstants.X30_BASE_REGISTRY);
 
+    /** Wrapper.Init.init 的门禁：返回 true 会直接跳过 Context 保存。 */
+    private static final String INIT_GATE_CLASS = Secret.of(SecretConstants.X30_INIT_GATE_CLASS);
+
+    private static final String INIT_GATE_METHOD = Secret.of(SecretConstants.X30_INIT_GATE_METHOD);
+
+    private static final String LOG_INIT_GATE = "feature init gate: ";
+
     private static final String FINISH = "finish";
+
+    private static final String INIT = "init";
+
+    /** 微X 的 Wrapper.Init 从 objArr[2] 取 Context；为空时菜单构建会 NPE。 */
+    private static final String LOG_INIT_CONTEXT = "feature init context: ";
 
     private static final String PUBLISH_PREFIX = "publish";
 
@@ -91,17 +103,21 @@ public final class FeatureCloseGuard {
                     } else if (methodName.startsWith(PUBLISH_PREFIX)) {
                         framework.hookMethod(method, new PublishGuard(name));
                         count++;
-                    } else if ("getData".equals(methodName) && BuildConfig.DEBUG) {
+                    } else if ("getData".equals(methodName)) {
                         framework.hookMethod(method, new GetDataLogger());
                         count++;
-                    } else if ("init".equals(methodName) && BuildConfig.DEBUG) {
-                        framework.hookMethod(method, new InitLogger(name));
+                    } else if (INIT.equals(methodName)
+                            && method.getParameterCount() == 2
+                            && method.getParameterTypes()[0] == android.content.Context.class
+                            && method.getParameterTypes()[1] == Object[].class) {
+                        framework.hookMethod(method, new InitContextGuard(name));
                         count++;
                     }
                 }
                 ModuleLogger.log(LOG_HOOKED + name + " (" + count + " method(s))");
                 hookBaseSettings(framework, classLoader);
                 hookBaseRegistry(framework, classLoader);
+                hookInitGate(framework, classLoader);
             } catch (Throwable ignored) {
                 // 该类不在这个 loader 里，下一个 loader 再试
             }
@@ -142,6 +158,31 @@ public final class FeatureCloseGuard {
         }
     }
 
+    /** 放行 Wrapper.Init.init：门禁返回 false 才会保存 Context。 */
+    private static void hookInitGate(HookFramework framework, ClassLoader classLoader) {
+        String key = INIT_GATE_CLASS + "#" + INIT_GATE_METHOD + "@"
+                + System.identityHashCode(classLoader);
+        if (!DONE.add(key)) {
+            return;
+        }
+        try {
+            Class<?> target = framework.findClassIfExists(INIT_GATE_CLASS, classLoader);
+            if (target == null) {
+                return;
+            }
+            for (Method method : target.getDeclaredMethods()) {
+                if (INIT_GATE_METHOD.equals(method.getName())
+                        && method.getParameterCount() == 0
+                        && method.getReturnType() == Boolean.TYPE) {
+                    framework.hookMethod(method, new InitGate());
+                    ModuleLogger.log(LOG_INIT_GATE + "hooked");
+                }
+            }
+        } catch (Throwable ignored) {
+            // 版本不同就算了
+        }
+    }
+
     private static void hookBaseSettings(HookFramework framework, ClassLoader classLoader) {
         String key = BASE_SETTINGS + "@" + System.identityHashCode(classLoader);
         if (!DONE.add(key)) {
@@ -174,6 +215,64 @@ public final class FeatureCloseGuard {
             }
         }
         return false;
+    }
+
+    /**
+     * 微X 的 {@code Wrapper.Init.init(Context, Object[])} 把 {@code objArr[2]}
+     * 存进静态 Context；首次启动该槽位可能为 null，导致设置菜单构建时
+     * {@code Context.getResources()} 空指针。这里用 init 的第一个参数兜底。
+     */
+    private static final class InitContextGuard implements HookCallback {
+
+        private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
+
+        private final String className;
+
+        InitContextGuard(String className) {
+            this.className = className;
+        }
+
+        @Override
+        public void before(HookParam param) {
+            Object[] args = param.args();
+            if (args == null || args.length < 2 || !(args[1] instanceof Object[] values)) {
+                return;
+            }
+            if (values.length <= 2) {
+                return;
+            }
+            if (values[2] != null) {
+                if (LOGGED.add(className + ":ok")) {
+                    ModuleLogger.log(LOG_INIT_CONTEXT + "ok, " + className);
+                }
+                return;
+            }
+            Object context = args[0];
+            if (context == null) {
+                if (LOGGED.add(className + ":null")) {
+                    ModuleLogger.log(LOG_INIT_CONTEXT + "missing, " + className);
+                }
+                return;
+            }
+            values[2] = context;
+            if (LOGGED.add(className)) {
+                ModuleLogger.log(LOG_INIT_CONTEXT + "fixed, " + className);
+            }
+        }
+    }
+
+    /** 门禁为 true 时 Wrapper.Init.init 会在保存 Context 前返回。 */
+    private static final class InitGate implements HookCallback {
+
+        private static final AtomicInteger CALLS = new AtomicInteger();
+
+        @Override
+        public void before(HookParam param) {
+            if (CALLS.incrementAndGet() <= 3) {
+                ModuleLogger.log(LOG_INIT_GATE + "forced false");
+            }
+            param.setResult(Boolean.FALSE);
+        }
     }
 
     private static final class Noop implements HookCallback {

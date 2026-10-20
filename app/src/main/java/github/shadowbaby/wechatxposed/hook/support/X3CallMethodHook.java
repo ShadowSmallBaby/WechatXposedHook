@@ -70,9 +70,12 @@ public final class X3CallMethodHook implements HookCallback {
             if (msgId == MSG_FEATURE_QUERY) {
                 Object queryType = params[0];
                 if (Integer.valueOf(0).equals(queryType) || Integer.valueOf(2).equals(queryType)) {
-                    if (Integer.valueOf(2).equals(queryType)
-                            && REMOTE_COMMAND.equals(String.valueOf(params[2]))) {
-                        return;
+                    if (Integer.valueOf(2).equals(queryType)) {
+                        String key = String.valueOf(params[2]);
+                        if (REMOTE_COMMAND.equals(key)
+                                || EditionFeatures.isUnavailableExt(key)) {
+                            return;
+                        }
                     }
                     param.setResult(Boolean.TRUE);
                 } else if (Integer.valueOf(4).equals(queryType)) {

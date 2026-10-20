@@ -119,6 +119,10 @@ public final class X3GuardBypass implements HookCallback {
     private static final String BASE_UPDATE_TASK =
             Secret.of(SecretConstants.X30_BASE_UPDATE_TASK);
     private static final String BASE_UPDATE_DONE = "onPostExecute";
+    private static final String MENU_HIDDEN_METHOD =
+            Secret.of(SecretConstants.X30_MENU_HIDDEN_METHOD);
+    private static final String MENU_VISIBLE_METHOD =
+            Secret.of(SecretConstants.X30_MENU_VISIBLE_METHOD);
 
     private static final int LOG_LIMIT = 600;
 
@@ -568,7 +572,9 @@ public final class X3GuardBypass implements HookCallback {
             } else if (Secret.of(SecretConstants.X30_UPDATE_INIT_METHOD).equals(name)
                     && method.getParameterCount() == 1
                     && method.getParameterTypes()[0] == android.content.Context.class) {
-                framework.hookMethod(method, new NoOp(name));
+                // 这个 init 同时负责后续功能初始化，拦截会让 Wrapper.Init.init
+                // 不再被调用，设置菜单拿不到 Context。只记录，不阻断。
+                framework.hookMethod(method, new UpdateInitProbe(name));
                 count++;
             } else if (PARAMS_FILE_METHOD.equals(name)
                     && method.getParameterCount() == 0
@@ -584,6 +590,16 @@ public final class X3GuardBypass implements HookCallback {
                     || contains(DOWNLOAD_PARAMS, name) || contains(DOWNLOAD_CORE, name)
                     || contains(DISABLE_FEATURES, name)) {
                 framework.hookMethod(method, new NoOp(name));
+                count++;
+            } else if (MENU_HIDDEN_METHOD.equals(name)
+                    && method.getParameterCount() == 0
+                    && method.getReturnType() == Boolean.TYPE) {
+                framework.hookMethod(method, new ForcedBool(name, Boolean.FALSE));
+                count++;
+            } else if (MENU_VISIBLE_METHOD.equals(name)
+                    && method.getParameterCount() == 0
+                    && method.getReturnType() == Boolean.TYPE) {
+                framework.hookMethod(method, new ForcedBool(name, Boolean.TRUE));
                 count++;
             }
         }
@@ -1094,6 +1110,47 @@ public final class X3GuardBypass implements HookCallback {
                         + " from" + stack(new Throwable()));
             }
             param.setResult(null);
+        }
+    }
+
+    /** 观察核心 init，但让原方法继续执行。 */
+    private static final class UpdateInitProbe implements HookCallback {
+
+        private static final AtomicBoolean LOGGED = new AtomicBoolean();
+
+        private final String methodName;
+
+        UpdateInitProbe(String methodName) {
+            this.methodName = methodName;
+        }
+
+        @Override
+        public void before(HookParam param) {
+            if (LOGGED.compareAndSet(false, true)) {
+                ModuleLogger.log("X3 update init allowed: " + methodName);
+            }
+        }
+    }
+
+    /** 固定某个布尔查询的返回值。 */
+    private static final class ForcedBool implements HookCallback {
+
+        private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
+
+        private final String methodName;
+        private final Boolean value;
+
+        ForcedBool(String methodName, Boolean value) {
+            this.methodName = methodName;
+            this.value = value;
+        }
+
+        @Override
+        public void before(HookParam param) {
+            if (LOGGED.add(methodName + value)) {
+                ModuleLogger.log("X3 bool forced " + value + ": " + methodName);
+            }
+            param.setResult(value);
         }
     }
 

@@ -19,6 +19,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.JSONObject;
@@ -42,6 +43,24 @@ public final class HostVersionSpoof {
             Secret.of(SecretConstants.CLIENT_VERSION_CLASS);
     private static final String CLIENT_VERSION_FIELD =
             Secret.of(SecretConstants.CLIENT_VERSION_FIELD);
+
+    /**
+     * 需要临时还原 ClientVersion 的页面白名单。
+     *
+     * 以后遇到新的钱包/支付页面，只需要把类名加到这里，不用改 hook 逻辑。
+     * WalletBaseUI 覆盖所有子类；下面的具体页面用于非 WalletBaseUI 的入口。
+     */
+    private static final String[] WALLET_VERSION_CLASSES = {
+            "com.tencent.mm.wallet_core.ui.WalletBaseUI",
+            "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI",
+            "com.tencent.mm.plugin.remittance.ui.RemittanceUI",
+            "com.tencent.mm.plugin.remittance.ui.RemittanceResultUI",
+    };
+
+    private static final AtomicInteger WALLET_DEPTH = new AtomicInteger();
+
+    private static volatile int originalClientVersion;
+    private static volatile int spoofedClientVersion;
     private static final String UPGRADE_VERSION_FILE = "wxh_client_version";
     private static final long UPGRADE_VERSION_TTL_MS = 24L * 60L * 60L * 1000L;
     private static final long UPGRADE_VERSION_DELAY_MS = 30000L;
@@ -98,6 +117,7 @@ public final class HostVersionSpoof {
             }
             scheduleUpgradeVersion(framework, classLoader, seeded);
             hookClientVersionTrigger(framework, classLoader, LAUNCHER_UI);
+            hookWalletVersion(framework, classLoader);
         }
         try {
             List<byte[]> dexBytes = DexPaths.of(sourceDir);
@@ -142,11 +162,20 @@ public final class HostVersionSpoof {
             Field field = target.getDeclaredField(CLIENT_VERSION_FIELD);
             field.setAccessible(true);
             int old = field.getInt(null);
+            if (originalClientVersion == 0) {
+                originalClientVersion = old;
+            }
             int low = old & CLIENT_VERSION_LOW_MASK;
             int high = cachedClientVersion != 0
                     ? cachedClientVersion & CLIENT_VERSION_HIGH_MASK
                     : CLIENT_VERSION_DEFAULT_HIGH & CLIENT_VERSION_HIGH_MASK;
             int fake = high | low;
+            spoofedClientVersion = fake;
+            if (WALLET_DEPTH.get() > 0) {
+                // 钱包/转账页面存活期间保持原始版本。
+                clientVersionSet = true;
+                return;
+            }
             if (force && fake <= old) {
                 return;
             }
@@ -236,6 +265,107 @@ public final class HostVersionSpoof {
             }
         } catch (Throwable error) {
             ModuleLogger.log(error);
+        }
+    }
+
+    /**
+     * 钱包/转账页面存活期间把 ClientVersion 还原成真实值。
+     *
+     * 全局伪装是为了小程序/通话的低版本提示；但微信钱包的转账详情会拿这个
+     * 版本去请求 CGI，8.0.79 会让页面一直加载。这里只在这类 Activity 的
+     * onCreate ~ onDestroy 之间临时还原。
+     */
+    private static void hookWalletVersion(HookFramework framework, ClassLoader classLoader) {
+        for (String className : WALLET_VERSION_CLASSES) {
+            try {
+                Class<?> target = framework.findClassIfExists(className, classLoader);
+                if (target == null) {
+                    continue;
+                }
+                int count = 0;
+                for (Method method : target.getDeclaredMethods()) {
+                    if ("onCreate".equals(method.getName())
+                            && method.getParameterCount() == 1
+                            && method.getParameterTypes()[0] == android.os.Bundle.class) {
+                        framework.hookMethod(method,
+                                new WalletLifecycle(framework, classLoader, true));
+                        count++;
+                    } else if ("onDestroy".equals(method.getName())
+                            && method.getParameterCount() == 0) {
+                        framework.hookMethod(method,
+                                new WalletLifecycle(framework, classLoader, false));
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    ModuleLogger.log(LOG + "wallet version guard: " + className
+                            + " (" + count + " method(s))");
+                }
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
+            }
+        }
+    }
+
+    private static void writeClientVersion(HookFramework framework, ClassLoader classLoader,
+            int value) {
+        if (value == 0) {
+            return;
+        }
+        try {
+            Class<?> target = framework.findClassIfExists(CLIENT_VERSION_CLASS, classLoader);
+            if (target == null) {
+                return;
+            }
+            Field field = target.getDeclaredField(CLIENT_VERSION_FIELD);
+            field.setAccessible(true);
+            field.setInt(null, value);
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+        }
+    }
+
+    private static final class WalletLifecycle implements HookCallback {
+
+        private static final AtomicInteger LOGS = new AtomicInteger();
+
+        private final HookFramework framework;
+        private final ClassLoader classLoader;
+        private final boolean enter;
+
+        WalletLifecycle(HookFramework framework, ClassLoader classLoader, boolean enter) {
+            this.framework = framework;
+            this.classLoader = classLoader;
+            this.enter = enter;
+        }
+
+        @Override
+        public void before(HookParam param) {
+            if (!enter) {
+                return;
+            }
+            if (WALLET_DEPTH.incrementAndGet() == 1) {
+                writeClientVersion(framework, classLoader, originalClientVersion);
+                if (LOGS.incrementAndGet() <= 3) {
+                    ModuleLogger.log(LOG + "wallet original version: "
+                            + formatVersion(originalClientVersion));
+                }
+            }
+        }
+
+        @Override
+        public void after(HookParam param) {
+            if (enter) {
+                return;
+            }
+            if (WALLET_DEPTH.decrementAndGet() <= 0) {
+                WALLET_DEPTH.set(0);
+                writeClientVersion(framework, classLoader, spoofedClientVersion);
+                if (LOGS.incrementAndGet() <= 6) {
+                    ModuleLogger.log(LOG + "wallet spoof restored: "
+                            + formatVersion(spoofedClientVersion));
+                }
+            }
         }
     }
 
