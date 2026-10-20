@@ -235,11 +235,7 @@ SECRETS = {
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS": "c64.xe",
     "CLIENT_VERSION_FIELD": "g",
-    "OPEN_URL_ANCHOR_MAIN": "private_openUrl",
-    "OPEN_URL_ANCHOR_APPID": "geta8key_open_webview_appid",
-    "OPEN_URL_ANCHOR_STYLE": "open_custom_style_url",
     "UPGRADE_URL_1": "https://support.weixin.qq.com/update",
-    "UPGRADE_URL_2": "https://szsupport.weixin.qq.com/update",
     "DEX_SUFFIX": ".dex",
     "DEX_PREFIX": "classes",
 }

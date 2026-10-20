@@ -210,11 +210,7 @@ NAMES = [
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS",
     "CLIENT_VERSION_FIELD",
-    "OPEN_URL_ANCHOR_MAIN",
-    "OPEN_URL_ANCHOR_APPID",
-    "OPEN_URL_ANCHOR_STYLE",
     "UPGRADE_URL_1",
-    "UPGRADE_URL_2",
     "DEX_SUFFIX",
     "DEX_PREFIX",
 ]

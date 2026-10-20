@@ -22,7 +22,6 @@ WeXposedHook/
 ├── tests/hook-regression/    对照参考实现的行为回归(79 项检查)
 ├── tests/license-data/      授权库生成的 Java/Python 对照
 ├── tests/dex-probe/          类名常量能否从真 dex 解析出来(点号 vs 斜杠)
-├── tests/dex-strings/        dex 常量池解析器与 Python 参考实现逐行对照
 ├── tests/file-restore/       功能包补齐逻辑(2.44 24 个 / 3.0 26 个,设备上跑真代码)
 ├── tests/license-crypto/     授权加密链路(同一份 .inc 与 Python 参考实现对照)
 ├── tests/secret-encoding/    敏感常量密文与脚本明文逐项对照
@@ -195,12 +194,12 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
    `feature loaded: base 525 / donation 71 / themes 113`);只有库是由微X 校验回调触发补写时,
    微X 已经读过库,才需要再重启一次。
 5. `HostVersionSpoof` 在微信主进程与小程序进程(`:appbrand0` / `:appbrand1`)里伪装宿主版本:
-   `private_openUrl` 只用于识别升级页并触发版本更新;主进程在 `LauncherUI.onResume` 时把
-   `c64.xe.g` 设为版本文件里的客户端版本(默认 8.0.79,可手动修改),文件位于
-   `files/X/wxh_client_version`(3.0)或 `files/WechatXposed/wxh_client_version`(2.44)。
-   启动约 30 秒后还会主动请求一次官方升级页(24 小时内不重复;失败时由错误页触发重试),
-   减少用户看到升级页的概率。微信的类名是混淆的,所以不写死类名,而是用自写的 dex 解析器
-   (`DexStrings`,零第三方依赖)按字符串常量反查目标类。
+   主进程在 `LauncherUI.onResume` 时把 `c64.xe.g` 设为版本文件里的客户端版本
+   (默认 8.0.79,可手动修改),文件位于 `files/X/wxh_client_version`(3.0)或
+   `files/WechatXposed/wxh_client_version`(2.44)。进入钱包/转账页面
+   (`WalletBaseUI` 及白名单内的页面)时临时还原真实版本,退出后恢复。
+   启动约 30 秒后还会主动请求一次官方升级页(24 小时内不重复),
+   减少用户看到升级页的概率。
 
 包名说明:混淆包 `a`/`b`/`c` 的类名互相遮蔽,无法直接编译,
 故整体语义化为 `loader`(dex 加载拦截与识别)/ `license`(授权库生成与写入)/
@@ -340,13 +339,6 @@ java docs/StringPools.java
 
 ```powershell
 python -X utf8 tests/hook-regression/run.py --sdk <Android SDK> --jdk <JDK17>
-```
-
-`tests/dex-strings/` 在桌面 JVM 上直接跑 `DexStrings`,和一份独立的 Python 参考实现
-对照同一批 dex 的字符串反查结果。需要先从微信 base.apk 解出 dex(不入库):
-
-```powershell
-python -X utf8 tests/dex-strings/run.py --jdk <JDK17> --dex-dir <dex 目录>
 ```
 
 `tests/secret-encoding/` 把 `SecretConstants` 里的密文逐个解回来,和

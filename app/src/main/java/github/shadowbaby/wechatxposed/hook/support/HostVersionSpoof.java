@@ -18,22 +18,11 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.json.JSONObject;
 
 public final class HostVersionSpoof {
-
-    private static final String[] OPEN_URL_ANCHORS = {
-            Secret.of(SecretConstants.OPEN_URL_ANCHOR_MAIN),
-            Secret.of(SecretConstants.OPEN_URL_ANCHOR_APPID),
-            Secret.of(SecretConstants.OPEN_URL_ANCHOR_STYLE)};
-
-    private static final String[] UPGRADE_URLS = {
-            Secret.of(SecretConstants.UPGRADE_URL_1),
-            Secret.of(SecretConstants.UPGRADE_URL_2)};
 
     private static final int CLIENT_VERSION_HIGH_MASK = 0xFFFFFF00;
     private static final int CLIENT_VERSION_LOW_MASK = 0x000000FF;
@@ -71,8 +60,6 @@ public final class HostVersionSpoof {
             "\"bit64\"\\s*:\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
     private static final Pattern UPGRADE_TASK_HEX_PATTERN = Pattern.compile(
             "0x([0-9a-fA-F]{8})");
-    private static final String UPGRADE_ERROR_PAGE = "waerrpage";
-    private static final String UPGRADE_ERROR_TYPE = "type=upgrade";
     private static final String PLUGIN_DIR_WX244 = "WechatXposed";
     private static final String PLUGIN_DIR_WX30 = "X";
     private static final String LAUNCHER_UI = "com.tencent.mm.ui.LauncherUI";
@@ -87,14 +74,12 @@ public final class HostVersionSpoof {
     private static boolean installed;
 
     private static final String LOG = ModuleLogger.HOST_SPOOF_PREFIX;
-    private static final String LOG_NO_DEX = LOG + "no dex, skipped";
-    private static final String KEY_URL = "url";
 
     private HostVersionSpoof() {
     }
 
     public static synchronized void install(HookFramework framework, ClassLoader classLoader,
-            String sourceDir, String dataDir, boolean mainProcess) {
+            String dataDir, boolean mainProcess) {
         if (installed) {
             return;
         }
@@ -119,46 +104,6 @@ public final class HostVersionSpoof {
             hookClientVersionTrigger(framework, classLoader, LAUNCHER_UI);
             hookWalletVersion(framework, classLoader);
         }
-        scheduleOpenUrlScan(framework, classLoader, sourceDir);
-    }
-
-    /**
-     * dex 全量扫描会阻塞冷启动（实测 1.5s+），放到首页显示后再跑。
-     * 它只负责清理升级链接，晚几秒不影响版本/钱包 hook。
-     */
-    private static void scheduleOpenUrlScan(HookFramework framework, ClassLoader classLoader,
-            String sourceDir) {
-        Thread thread = new Thread(() -> {
-            try {
-                Thread.sleep(3000L);
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-            long start = android.os.SystemClock.elapsedRealtime();
-            try {
-                List<byte[]> dexBytes = DexPaths.of(sourceDir);
-                if (dexBytes.isEmpty()) {
-                    ModuleLogger.log(LOG_NO_DEX);
-                    return;
-                }
-                int methods = 0;
-                for (byte[] bytes : dexBytes) {
-                    DexStrings dex = DexStrings.open(bytes);
-                    if (dex == null) {
-                        continue;
-                    }
-                    methods += hookOpenUrl(framework, classLoader,
-                            dex.classesContaining(OPEN_URL_ANCHORS));
-                }
-                ModuleLogger.log(LOG + methods + " openUrl hooked ("
-                        + (android.os.SystemClock.elapsedRealtime() - start) + "ms)");
-            } catch (Throwable error) {
-                ModuleLogger.log(error);
-            }
-        }, "wxh-openurl");
-        thread.setDaemon(true);
-        thread.start();
     }
 
     private static synchronized void setClientVersion(HookFramework framework,
@@ -207,13 +152,6 @@ public final class HostVersionSpoof {
                     + old + " -> " + fake);
         } catch (Throwable error) {
             ModuleLogger.log(error);
-        }
-    }
-
-    private static void triggerUpgradeVersion(HookFramework framework, ClassLoader classLoader) {
-        File file = upgradeVersionFile;
-        if (file != null) {
-            startUpgradeFetch(framework, classLoader, file, 0L);
         }
     }
 
@@ -562,56 +500,4 @@ public final class HostVersionSpoof {
     }
 
 
-    private static int hookOpenUrl(HookFramework framework, ClassLoader classLoader,
-            List<String> classes) {
-        int count = 0;
-        for (String name : classes) {
-            Class<?> target = framework.findClassIfExists(name, classLoader);
-            if (target == null) {
-                continue;
-            }
-            for (Method method : target.getDeclaredMethods()) {
-                if (!isOpenUrlSignature(method)) {
-                    continue;
-                }
-                framework.hookMethod(method, new HookCallback() {
-                    @Override
-                    public void before(HookParam param) {
-                        if (isUpgradeError(param)) {
-                            triggerUpgradeVersion(framework, classLoader);
-                        }
-                    }
-                });
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private static boolean isOpenUrlSignature(Method method) {
-        Class<?>[] parameters = method.getParameterTypes();
-        return parameters.length == 3
-                && "org.json.JSONObject".equals(parameters[1].getName())
-                && parameters[2] == Integer.TYPE
-                && method.getReturnType() == Void.TYPE;
-    }
-
-    private static boolean isUpgradeError(HookParam param) {
-        if (!(param.arg(1) instanceof JSONObject json)) {
-            return false;
-        }
-        String url = json.optString(KEY_URL);
-        return !url.isEmpty() && (url.contains(UPGRADE_ERROR_PAGE)
-                || url.contains(UPGRADE_ERROR_TYPE) || isUpgradeUrl(url));
-    }
-
-    private static boolean isUpgradeUrl(String url) {
-        for (String upgrade : UPGRADE_URLS) {
-            if (url.equals(upgrade) || url.startsWith(upgrade + "/")
-                    || url.startsWith(upgrade + "?") || url.startsWith(upgrade + "#")) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

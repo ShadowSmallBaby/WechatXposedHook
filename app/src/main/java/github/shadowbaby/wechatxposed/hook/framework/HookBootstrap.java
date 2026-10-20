@@ -56,7 +56,7 @@ public final class HookBootstrap {
         }
         if (isAppBrandProcess(processName)) {
             installPackIntegrity(framework, new File(dataDir));
-            installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, false);
+            installHostVersionSpoof(framework, classLoader, dataDir, false);
             return;
         }
         if (WECHAT_PACKAGE.equals(processName)) {
@@ -77,7 +77,7 @@ public final class HookBootstrap {
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
             long t4 = android.os.SystemClock.elapsedRealtime();
-            installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, true);
+            installHostVersionSpoof(framework, classLoader, dataDir, true);
             long t5 = android.os.SystemClock.elapsedRealtime();
             framework.log("perf: startup=" + (t1 - t0) + "ms, integrity=" + (t2 - t1)
                     + "ms, signature=" + (t3 - t2) + "ms, guard=" + (t4 - t3)
@@ -94,9 +94,9 @@ public final class HookBootstrap {
     }
 
     private static void installHostVersionSpoof(HookFramework framework, ClassLoader classLoader,
-            String sourceDir, String dataDir, boolean mainProcess) {
+            String dataDir, boolean mainProcess) {
         try {
-            HostVersionSpoof.install(framework, classLoader, sourceDir, dataDir, mainProcess);
+            HostVersionSpoof.install(framework, classLoader, dataDir, mainProcess);
         } catch (Throwable error) {
             framework.log(error);
         }

@@ -1287,6 +1287,9 @@ WeXposedHook-> license db: wxid_... -> /data/user/0/com.tencent.mm/databases/FKZ
 
 目标进程是微信主进程与 `:appbrand0` / `:appbrand1`(小程序跑在后者)。
 
+> v1.3 起已移除 openUrl dex 全量扫描与 `DexStrings` / `DexPaths`；
+> 升级提示改由全局 ClientVersion 伪装处理。以下为历史记录。
+
 #### 为什么不用 DexKit
 
 WeKit 用 DexKit 在运行时按字符串特征反查混淆类。实测把 DexKit 2.2.0 引进来会带 4 个 ABI 的
