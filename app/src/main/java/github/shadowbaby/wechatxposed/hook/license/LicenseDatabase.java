@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
 public final class LicenseDatabase {
 
@@ -89,7 +90,13 @@ public final class LicenseDatabase {
 
     public static Result ensure(File databaseFile, String account) throws IOException {
         Structure structure = structure();
+        List<LicenseData.Row> rows = LicenseData.rows(account);
         boolean created = !databaseFile.exists();
+        if (!created && completeReadOnly(databaseFile, account, rows, structure)) {
+            // 库已完整时走纯只读路径：不备份、不开写连接、不执行 CREATE/setVersion。
+            // 微X 的转账 hook 会在主线程读同一个库, 启动阶段少一个写事务就少一次锁竞争。
+            return new Result(false, 0, 0, rows.size());
+        }
         if (!created) {
             backup(databaseFile, structure.backupSuffix);
         }
@@ -103,7 +110,7 @@ public final class LicenseDatabase {
             int inserted = 0;
             int refreshed = 0;
             int kept = 0;
-            for (LicenseData.Row row : LicenseData.rows(account)) {
+            for (LicenseData.Row row : rows) {
                 String stored = storedValue(database, account, row.tag, structure);
                 if (isCritical(structure, row.tag)) {
                     if (stored != null && isUsable(row.tag, stored, account, structure)) {
@@ -155,9 +162,32 @@ public final class LicenseDatabase {
                 : LicenseData.isUsableVerifier6(stored, account);
     }
 
+    /**
+     * 只读检查库是否已经完整。完整时 ensure 不再写库,
+     * 避免和微X 在主线程读取同一个库时抢锁。
+     */
+    private static boolean completeReadOnly(File databaseFile, String account,
+                                            List<LicenseData.Row> rows, Structure structure) {
+        try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
+                databaseFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY)) {
+            for (LicenseData.Row row : rows) {
+                String stored = storedValue(database, account, row.tag, structure);
+                if (stored == null) {
+                    return false;
+                }
+                if (isCritical(structure, row.tag)
+                        && !isUsable(row.tag, stored, account, structure)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private static String storedValue(SQLiteDatabase database, String account, String tag,
-                                      Structure structure) {
-        try (Cursor cursor = database.query(structure.tableData,
+                                      Structure structure) {        try (Cursor cursor = database.query(structure.tableData,
                 new String[]{structure.columnValue}, structure.selection,
                 new String[]{account, tag}, null, null, null)) {
             return cursor.moveToFirst() ? cursor.getString(0) : null;
