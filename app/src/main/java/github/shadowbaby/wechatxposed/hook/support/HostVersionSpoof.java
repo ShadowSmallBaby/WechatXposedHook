@@ -1,276 +1,207 @@
 package github.shadowbaby.wechatxposed.hook.support;
 
-import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+/**
+ * 宿主版本伪装（最小窗口 + 参数级）。
+ *
+ * 1. 小程序：启动 CGI 和随后的资源准备请求都在发送时读取全局 ClientVersion，
+ *    Java 层没有可参数级替换的入口，所以只在启动后的 5 秒窗口内临时改高，
+ *    watchdog 兜底还原。窗口外不影响公众号/钱包。
+ * 2. 通话：ilink SDK 启动配置的 appVersion 是参数级的，只替换该参数，
+ *    全局字段完全不动。
+ */
 public final class HostVersionSpoof {
+
+    /** 小程序启动 CGI 场景（WeChat 8.0.49）。 */
+    private static final String LAUNCH_SCENE_CLASS = "wx0.d";
+
+    /** ilink SDK 启动配置：appVersion 在建链时上报给服务端。 */
+    private static final String ILINK_START_CONFIG =
+            "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder";
+    private static final String ILINK_SET_APP_VERSION = "setAppVersion";
 
     private static final int CLIENT_VERSION_HIGH_MASK = 0xFFFFFF00;
     private static final int CLIENT_VERSION_LOW_MASK = 0x000000FF;
-    private static final int CLIENT_VERSION_BASE_8 = 0x28000000;
-    private static final int CLIENT_VERSION_DEFAULT_HIGH = 0x28004F00;
+    private static final int SPOOF_CLIENT_VERSION_HIGH = 0x28004F00;
+
+    /** 启动请求的兜底上限。 */
+    private static final long LAUNCH_WINDOW_MS = 10000L;
+
+    /** 启动 CGI 回调后再保留的收尾时间。 */
+    private static final long LAUNCH_GRACE_MS = 1500L;
+
     private static final String CLIENT_VERSION_CLASS =
             Secret.of(SecretConstants.CLIENT_VERSION_CLASS);
     private static final String CLIENT_VERSION_FIELD =
             Secret.of(SecretConstants.CLIENT_VERSION_FIELD);
 
-    /**
-     * 需要临时还原 ClientVersion 的页面白名单。
-     *
-     * 以后遇到新的钱包/支付页面，只需要把类名加到这里，不用改 hook 逻辑。
-     * WalletBaseUI 覆盖所有子类；下面的具体页面用于非 WalletBaseUI 的入口。
-     */
-    private static final String[] WALLET_VERSION_CLASSES = {
-            "com.tencent.mm.wallet_core.ui.WalletBaseUI",
-            "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI",
-            "com.tencent.mm.plugin.remittance.ui.RemittanceUI",
-            "com.tencent.mm.plugin.remittance.ui.RemittanceResultUI",
-            // 三方 App（美团等）调起微信支付后真正显示订单的页面，父类为 MMActivity，
-            // 不继承 WalletBaseUI。入口 WXPayEntryActivity 没有声明 onDestroy，
-            // 挂它会让生命周期计数只增不减，所以只挂这一层。
-            "com.tencent.mm.plugin.wallet_index.ui.OrderHandlerUI",
-    };
+    private static final ThreadLocal<Boolean> INTERNAL =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private static final AtomicInteger LOGS = new AtomicInteger();
 
-    private static final AtomicInteger WALLET_DEPTH = new AtomicInteger();
-
-    private static volatile int originalClientVersion;
+    private static volatile boolean installed;
+    private static volatile int realClientVersion;
     private static volatile int spoofedClientVersion;
-    private static final String UPGRADE_VERSION_FILE = "wxh_client_version";
-    private static final long UPGRADE_VERSION_TTL_MS = 24L * 60L * 60L * 1000L;
-    private static final long UPGRADE_VERSION_DELAY_MS = 30000L;
-    private static final String UPGRADE_VERSION_PAGE = "/?scene=miniprogram";
-    private static final Pattern UPGRADE_VERSION_PATTERN = Pattern.compile(
-            "\"andrVersion\"\\s*:\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
-    private static final Pattern UPGRADE_TASK_PATTERN = Pattern.compile(
-            "\"bit64\"\\s*:\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
-    private static final Pattern UPGRADE_TASK_HEX_PATTERN = Pattern.compile(
-            "0x([0-9a-fA-F]{8})");
-    private static final String PLUGIN_DIR_WX244 = "WechatXposed";
-    private static final String PLUGIN_DIR_WX30 = "X";
-    private static final String LAUNCHER_UI = "com.tencent.mm.ui.LauncherUI";
-    private static final String UPGRADE_USER_AGENT =
-            "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Version/4.0 Chrome/120 Mobile Safari/537.36 MicroMessenger/8.0.49";
-    private static volatile boolean clientVersionSet;
-    private static volatile boolean upgradeVersionStarted;
-    private static File upgradeVersionFile;
-    private static volatile int cachedClientVersion;
-
-    private static boolean installed;
-
-    private static final String LOG = ModuleLogger.HOST_SPOOF_PREFIX;
+    private static volatile boolean spoofing;
+    private static volatile long spoofUntil;
 
     private HostVersionSpoof() {
     }
 
     public static synchronized void install(HookFramework framework, ClassLoader classLoader,
             String dataDir, boolean mainProcess) {
-        if (installed) {
+        if (installed || !mainProcess) {
             return;
         }
         installed = true;
-        if (mainProcess && dataDir != null) {
-            String pluginDir = BuildConfig.WX_PACK.startsWith("wx6")
-                    ? PLUGIN_DIR_WX244 : PLUGIN_DIR_WX30;
-            upgradeVersionFile = new File(new File(dataDir, "files"),
-                    pluginDir + "/" + UPGRADE_VERSION_FILE);
-            ModuleLogger.log(LOG + "version file: " + upgradeVersionFile);
-            cachedClientVersion = readCachedVersion(upgradeVersionFile);
-            boolean seeded = false;
-            if (cachedClientVersion == 0) {
-                cachedClientVersion = CLIENT_VERSION_DEFAULT_HIGH;
-                writeCachedVersion(upgradeVersionFile, cachedClientVersion);
-                seeded = true;
-                ModuleLogger.log(LOG + "default version: " + formatVersion(cachedClientVersion));
-            } else {
-                ModuleLogger.log(LOG + "cached version: " + formatVersion(cachedClientVersion));
-            }
-            scheduleUpgradeVersion(framework, classLoader, seeded);
-            hookClientVersionTrigger(framework, classLoader, LAUNCHER_UI);
-            hookWalletVersion(framework, classLoader);
-        }
+        startWatchdog(framework, classLoader);
+        hookLaunchScene(framework, classLoader);
+        hookIlinkStartConfig(framework, classLoader);
     }
 
-    private static synchronized void setClientVersion(HookFramework framework,
-            ClassLoader classLoader) {
-        applyClientVersion(framework, classLoader, false);
-    }
-
-    private static synchronized void refreshClientVersion(HookFramework framework,
-            ClassLoader classLoader) {
-        applyClientVersion(framework, classLoader, true);
-    }
-
-    private static void applyClientVersion(HookFramework framework, ClassLoader classLoader,
-            boolean force) {
-        if (clientVersionSet && !force) {
-            return;
-        }
+    private static void hookLaunchScene(HookFramework framework, ClassLoader classLoader) {
         try {
-            Class<?> target = framework.findClassIfExists(CLIENT_VERSION_CLASS, classLoader);
+            Class<?> target = framework.findClassIfExists(LAUNCH_SCENE_CLASS, classLoader);
             if (target == null) {
+                ModuleLogger.debug("version window: launch scene not found");
                 return;
             }
-            Field field = target.getDeclaredField(CLIENT_VERSION_FIELD);
-            field.setAccessible(true);
-            int old = field.getInt(null);
-            if (originalClientVersion == 0) {
-                originalClientVersion = old;
+            for (Constructor<?> constructor : target.getDeclaredConstructors()) {
+                framework.hookMethod(constructor, new HookCallback() {
+                    @Override
+                    public void before(HookParam param) {
+                        openWindow(framework, classLoader);
+                    }
+                });
             }
-            int low = old & CLIENT_VERSION_LOW_MASK;
-            int high = cachedClientVersion != 0
-                    ? cachedClientVersion & CLIENT_VERSION_HIGH_MASK
-                    : CLIENT_VERSION_DEFAULT_HIGH & CLIENT_VERSION_HIGH_MASK;
-            int fake = high | low;
-            spoofedClientVersion = fake;
-            if (WALLET_DEPTH.get() > 0) {
-                // 钱包/转账页面存活期间保持原始版本。
-                clientVersionSet = true;
-                return;
+            for (Method method : target.getDeclaredMethods()) {
+                if ("f".equals(method.getName()) && method.getParameterCount() == 5) {
+                    framework.hookMethod(method, new HookCallback() {
+                        @Override
+                        public void after(HookParam param) {
+                            shortenWindow();
+                        }
+                    });
+                }
             }
-            if (force && fake <= old) {
-                return;
-            }
-            field.setInt(null, fake);
-            clientVersionSet = true;
-            ModuleLogger.log(LOG + (force ? "client version refresh: " : "client version: ")
-                    + old + " -> " + fake);
+            ModuleLogger.debug("version window: launch scene hooked");
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
     }
 
-    private static void scheduleUpgradeVersion(HookFramework framework, ClassLoader classLoader,
-            boolean force) {
-        File file = upgradeVersionFile;
-        if (file == null) {
-            return;
-        }
-        if (!force) {
-            long age = System.currentTimeMillis() - file.lastModified();
-            if (age < UPGRADE_VERSION_TTL_MS
-                    && (cachedClientVersion & CLIENT_VERSION_HIGH_MASK)
-                    >= CLIENT_VERSION_DEFAULT_HIGH) {
+    private static void hookIlinkStartConfig(HookFramework framework, ClassLoader classLoader) {
+        try {
+            Class<?> target = framework.findClassIfExists(ILINK_START_CONFIG, classLoader);
+            if (target == null) {
+                ModuleLogger.debug("version window: ilink config not found");
                 return;
             }
-        }
-        startUpgradeFetch(framework, classLoader, file, UPGRADE_VERSION_DELAY_MS);
-    }
-
-    private static void startUpgradeFetch(HookFramework framework, ClassLoader classLoader,
-            File file, long delayMs) {
-        Thread thread = new Thread(() -> {
-            if (delayMs > 0) {
-                try {
-                    Thread.sleep(delayMs);
-                } catch (InterruptedException ignored) {
-                    return;
+            for (Method method : target.getDeclaredMethods()) {
+                if (ILINK_SET_APP_VERSION.equals(method.getName())
+                        && method.getParameterCount() == 1
+                        && method.getParameterTypes()[0] == Integer.TYPE) {
+                    framework.hookMethod(method, new AppVersion(framework, classLoader));
+                    ModuleLogger.debug("version window: ilink appVersion hooked");
                 }
             }
-            if (!beginUpgradeFetch()) {
-                return;
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+        }
+    }
+
+    private static void startWatchdog(HookFramework framework, ClassLoader classLoader) {
+        Thread thread = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                if (spoofing && System.currentTimeMillis() > spoofUntil) {
+                    closeWindow(framework, classLoader, "watchdog");
+                }
             }
-            fetchUpgradeVersion(framework, classLoader, file);
-        }, "wxh-upgrade");
+        }, "wxh-version-window");
         thread.setDaemon(true);
         thread.start();
     }
 
-    private static synchronized boolean beginUpgradeFetch() {
-        if (upgradeVersionStarted) {
+    private static synchronized void openWindow(HookFramework framework, ClassLoader classLoader) {
+        if (!ensureVersions(framework, classLoader)) {
+            return;
+        }
+        long until = System.currentTimeMillis() + LAUNCH_WINDOW_MS;
+        if (until > spoofUntil) {
+            spoofUntil = until;
+        }
+        if (!spoofing) {
+            spoofing = true;
+            writeClientVersion(framework, classLoader, spoofedClientVersion);
+            ModuleLogger.debug("version window open(launch)");
+        }
+    }
+
+    /** 启动 CGI 回调后只保留收尾时间，避免固定等满上限。 */
+    private static synchronized void shortenWindow() {
+        if (!spoofing) {
+            return;
+        }
+        long grace = System.currentTimeMillis() + LAUNCH_GRACE_MS;
+        if (grace < spoofUntil) {
+            spoofUntil = grace;
+            ModuleLogger.debug("version window grace(" + LAUNCH_GRACE_MS + "ms)");
+        }
+    }
+
+    private static synchronized void closeWindow(HookFramework framework, ClassLoader classLoader,
+            String reason) {
+        if (!spoofing) {
+            return;
+        }
+        spoofing = false;
+        writeClientVersion(framework, classLoader, realClientVersion);
+        ModuleLogger.debug("version window close(" + reason + ")");
+    }
+
+    private static synchronized boolean ensureVersions(HookFramework framework,
+            ClassLoader classLoader) {
+        if (realClientVersion != 0) {
+            return true;
+        }
+        int real = readClientVersion(framework, classLoader);
+        if (real == 0) {
             return false;
         }
-        upgradeVersionStarted = true;
+        realClientVersion = real;
+        spoofedClientVersion = (SPOOF_CLIENT_VERSION_HIGH & CLIENT_VERSION_HIGH_MASK)
+                | (real & CLIENT_VERSION_LOW_MASK);
         return true;
     }
 
-    private static synchronized void endUpgradeFetch() {
-        upgradeVersionStarted = false;
-    }
-
-    private static void hookClientVersionTrigger(HookFramework framework, ClassLoader classLoader,
-            String className) {
+    private static int readClientVersion(HookFramework framework, ClassLoader classLoader) {
         try {
-            Class<?> target = framework.findClassIfExists(className, classLoader);
+            Class<?> target = framework.findClassIfExists(CLIENT_VERSION_CLASS, classLoader);
             if (target == null) {
-                return;
+                return 0;
             }
-            for (Method method : target.getDeclaredMethods()) {
-                if (!"onResume".equals(method.getName())) {
-                    continue;
-                }
-                framework.hookMethod(method, new HookCallback() {
-                    @Override
-                    public void before(HookParam param) {
-                        setClientVersion(framework, classLoader);
-                    }
-                });
-                String simple = className.substring(className.lastIndexOf('.') + 1);
-                ModuleLogger.log(LOG + simple + " version trigger hooked");
-            }
+            Field field = target.getDeclaredField(CLIENT_VERSION_FIELD);
+            field.setAccessible(true);
+            return field.getInt(null);
         } catch (Throwable error) {
             ModuleLogger.log(error);
-        }
-    }
-
-    /**
-     * 钱包/转账页面存活期间把 ClientVersion 还原成真实值。
-     *
-     * 全局伪装是为了小程序/通话的低版本提示；但微信钱包的转账详情会拿这个
-     * 版本去请求 CGI，8.0.79 会让页面一直加载。这里只在这类 Activity 的
-     * onCreate ~ onDestroy 之间临时还原。
-     */
-    private static void hookWalletVersion(HookFramework framework, ClassLoader classLoader) {
-        for (String className : WALLET_VERSION_CLASSES) {
-            try {
-                Class<?> target = framework.findClassIfExists(className, classLoader);
-                if (target == null) {
-                    continue;
-                }
-                Method onCreate = null;
-                Method onDestroy = null;
-                for (Method method : target.getDeclaredMethods()) {
-                    if ("onCreate".equals(method.getName())
-                            && method.getParameterCount() == 1
-                            && method.getParameterTypes()[0] == android.os.Bundle.class) {
-                        onCreate = method;
-                    } else if ("onDestroy".equals(method.getName())
-                            && method.getParameterCount() == 0) {
-                        onDestroy = method;
-                    }
-                }
-                if (onCreate == null || onDestroy == null) {
-                    // 只挂到一半会让生命周期计数只增不减, 之后全局伪装再也写不回去。
-                    ModuleLogger.log(LOG + "wallet version guard skipped: " + className
-                            + " (onCreate=" + (onCreate != null)
-                            + ", onDestroy=" + (onDestroy != null) + ")");
-                    continue;
-                }
-                framework.hookMethod(onCreate, new WalletLifecycle(framework, classLoader, true));
-                framework.hookMethod(onDestroy, new WalletLifecycle(framework, classLoader, false));
-                ModuleLogger.log(LOG + "wallet version guard: " + className + " (2 method(s))");
-            } catch (Throwable error) {
-                ModuleLogger.log(error);
-            }
+            return 0;
         }
     }
 
@@ -292,223 +223,43 @@ public final class HostVersionSpoof {
         }
     }
 
-    private static final class WalletLifecycle implements HookCallback {
-
-        private static final AtomicInteger LOGS = new AtomicInteger();
+    /** 只替换 ilink 启动配置里的 appVersion 参数。 */
+    private static final class AppVersion implements HookCallback {
 
         private final HookFramework framework;
         private final ClassLoader classLoader;
-        private final boolean enter;
 
-        WalletLifecycle(HookFramework framework, ClassLoader classLoader, boolean enter) {
+        AppVersion(HookFramework framework, ClassLoader classLoader) {
             this.framework = framework;
             this.classLoader = classLoader;
-            this.enter = enter;
         }
 
         @Override
         public void before(HookParam param) {
-            if (!enter) {
+            if (Boolean.TRUE.equals(INTERNAL.get())) {
                 return;
             }
-            if (WALLET_DEPTH.incrementAndGet() == 1) {
-                writeClientVersion(framework, classLoader, originalClientVersion);
-                if (LOGS.incrementAndGet() <= 3) {
-                    // 冷启动直接进支付页时 LauncherUI.onResume 还没跑过,
-                    // originalClientVersion 仍是 0, 此时字段保持微信自己的值。
-                    ModuleLogger.log(LOG + "wallet original version: "
-                            + (originalClientVersion == 0
-                            ? "untouched" : formatVersion(originalClientVersion)));
-                }
-            }
-        }
-
-        @Override
-        public void after(HookParam param) {
-            if (enter) {
+            if (!ensureVersions(framework, classLoader)) {
                 return;
             }
-            if (WALLET_DEPTH.decrementAndGet() <= 0) {
-                WALLET_DEPTH.set(0);
-                writeClientVersion(framework, classLoader, spoofedClientVersion);
-                if (LOGS.incrementAndGet() <= 6) {
-                    ModuleLogger.log(LOG + "wallet spoof restored: "
-                            + (spoofedClientVersion == 0
-                            ? "untouched" : formatVersion(spoofedClientVersion)));
-                }
+            Object value = param.arg(0);
+            if (!(value instanceof Integer version) || version != realClientVersion) {
+                return;
             }
-        }
-    }
-
-    private static void fetchUpgradeVersion(HookFramework framework, ClassLoader classLoader,
-            File file) {
-        boolean success = false;
-        try {
-            String url = Secret.of(SecretConstants.UPGRADE_URL_1) + UPGRADE_VERSION_PAGE;
-            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-            connection.setRequestProperty("User-Agent", UPGRADE_USER_AGENT);
-            connection.setRequestProperty("Accept-Encoding", "identity");
             try {
-                int code = connection.getResponseCode();
-                if (code != HttpURLConnection.HTTP_OK) {
-                    ModuleLogger.log(LOG + "upgrade page: http " + code);
-                    return;
+                INTERNAL.set(Boolean.TRUE);
+                Object result = framework.callMethod(param.thisObject(),
+                        ILINK_SET_APP_VERSION, spoofedClientVersion);
+                param.setResult(result);
+                if (LOGS.incrementAndGet() <= 3) {
+                    ModuleLogger.log("version window: ilink appVersion -> 0x"
+                            + Integer.toHexString(spoofedClientVersion));
                 }
-                InputStream input = connection.getInputStream();
-                if ("gzip".equalsIgnoreCase(connection.getContentEncoding())) {
-                    input = new java.util.zip.GZIPInputStream(input);
-                }
-                String body = readBody(input);
-                String version = match(body, UPGRADE_VERSION_PATTERN);
-                String task = match(body, UPGRADE_TASK_PATTERN);
-                int high = parseUpgradeVersion(version, task);
-                if (high == 0) {
-                    ModuleLogger.log(LOG + "upgrade page: no version");
-                    return;
-                }
-                ModuleLogger.log(LOG + "upgrade version: " + version + " -> " + formatVersion(high));
-                if (high > (cachedClientVersion & CLIENT_VERSION_HIGH_MASK)) {
-                    cachedClientVersion = high;
-                    writeCachedVersion(file, high);
-                    refreshClientVersion(framework, classLoader);
-                }
-                if (!file.setLastModified(System.currentTimeMillis())) {
-                    ModuleLogger.log(LOG + "upgrade page: touch failed");
-                }
-                success = true;
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
             } finally {
-                connection.disconnect();
-            }
-        } catch (Throwable error) {
-            ModuleLogger.log(error);
-        } finally {
-            if (!success) {
-                endUpgradeFetch();
+                INTERNAL.set(Boolean.FALSE);
             }
         }
     }
-
-    private static String readBody(InputStream input) throws Exception {
-        StringBuilder body = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(input, StandardCharsets.UTF_8))) {
-            char[] buffer = new char[4096];
-            int count;
-            while ((count = reader.read(buffer)) != -1 && body.length() < 262144) {
-                body.append(buffer, 0, count);
-            }
-        }
-        return body.toString();
-    }
-
-    private static String match(String body, Pattern pattern) {
-        Matcher matcher = pattern.matcher(body);
-        return matcher.find() ? matcher.group(1) : null;
-    }
-
-    // 升级页版本只取 major/minor/patch 三个字节, 低字节保留当前客户端后缀; 不扩展到 255。
-    private static int parseUpgradeVersion(String version, String task) {
-        if (task != null) {
-            Matcher matcher = UPGRADE_TASK_HEX_PATTERN.matcher(task);
-            if (matcher.find()) {
-                return parsePackedHigh(matcher.group(1));
-            }
-        }
-        return parseVersionHigh(version);
-    }
-
-    private static int parsePackedHigh(String digits) {
-        try {
-            int high = (int) (Long.parseLong(digits, 16) & CLIENT_VERSION_HIGH_MASK);
-            return isVersion8(high) ? high : 0;
-        } catch (NumberFormatException ignored) {
-            return 0;
-        }
-    }
-
-    private static int parseVersionHigh(String version) {
-        if (version == null) {
-            return 0;
-        }
-        String[] parts = version.split("\\.");
-        if (parts.length < 3) {
-            return 0;
-        }
-        try {
-            int major = Integer.parseInt(parts[0].trim());
-            int minor = Integer.parseInt(parts[1].trim());
-            int patch = Integer.parseInt(parts[2].trim());
-            if (major == 8) {
-                return CLIENT_VERSION_BASE_8 | (minor << 16) | (patch << 8);
-            }
-        } catch (NumberFormatException ignored) {
-
-        }
-        return 0;
-    }
-
-    private static boolean isVersion8(int high) {
-        return (high & 0xFF000000) == CLIENT_VERSION_BASE_8;
-    }
-
-    private static String formatVersion(int high) {
-        int minor = (high >> 16) & 0xFF;
-        int patch = (high >> 8) & 0xFF;
-        return "8." + minor + "." + patch;
-    }
-
-    private static int readCachedVersion(File file) {
-        if (file == null || !file.exists()) {
-            return 0;
-        }
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-            return parseCachedVersion(reader.readLine());
-        } catch (Throwable error) {
-            ModuleLogger.log(error);
-            return 0;
-        }
-    }
-
-    private static int parseCachedVersion(String value) {
-        if (value == null) {
-            return 0;
-        }
-        String text = value.trim();
-        if (text.startsWith("﻿")) {
-            text = text.substring(1).trim();
-        }
-        if (text.isEmpty()) {
-            return 0;
-        }
-        if (text.startsWith("0x") || text.startsWith("0X")) {
-            return parsePackedHigh(text.substring(2));
-        }
-        return parseVersionHigh(text);
-    }
-
-    private static void writeCachedVersion(File file, int high) {
-        try {
-            File parent = file.getParentFile();
-            if (parent != null && !parent.exists()) {
-                parent.mkdirs();
-            }
-            File temp = parent == null
-                    ? new File(file.getPath() + ".tmp")
-                    : new File(parent, file.getName() + ".tmp");
-            try (FileOutputStream out = new FileOutputStream(temp)) {
-                out.write((formatVersion(high) + "\n").getBytes(StandardCharsets.UTF_8));
-            }
-            if (!temp.renameTo(file)) {
-                file.delete();
-                temp.renameTo(file);
-            }
-        } catch (Throwable error) {
-            ModuleLogger.log(error);
-        }
-    }
-
-
 }
