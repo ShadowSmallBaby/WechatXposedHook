@@ -44,6 +44,10 @@ public final class HostVersionSpoof {
             "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI",
             "com.tencent.mm.plugin.remittance.ui.RemittanceUI",
             "com.tencent.mm.plugin.remittance.ui.RemittanceResultUI",
+            // 三方 App（美团等）调起微信支付后真正显示订单的页面，父类为 MMActivity，
+            // 不继承 WalletBaseUI。入口 WXPayEntryActivity 没有声明 onDestroy，
+            // 挂它会让生命周期计数只增不减，所以只挂这一层。
+            "com.tencent.mm.plugin.wallet_index.ui.OrderHandlerUI",
     };
 
     private static final AtomicInteger WALLET_DEPTH = new AtomicInteger();
@@ -242,25 +246,28 @@ public final class HostVersionSpoof {
                 if (target == null) {
                     continue;
                 }
-                int count = 0;
+                Method onCreate = null;
+                Method onDestroy = null;
                 for (Method method : target.getDeclaredMethods()) {
                     if ("onCreate".equals(method.getName())
                             && method.getParameterCount() == 1
                             && method.getParameterTypes()[0] == android.os.Bundle.class) {
-                        framework.hookMethod(method,
-                                new WalletLifecycle(framework, classLoader, true));
-                        count++;
+                        onCreate = method;
                     } else if ("onDestroy".equals(method.getName())
                             && method.getParameterCount() == 0) {
-                        framework.hookMethod(method,
-                                new WalletLifecycle(framework, classLoader, false));
-                        count++;
+                        onDestroy = method;
                     }
                 }
-                if (count > 0) {
-                    ModuleLogger.log(LOG + "wallet version guard: " + className
-                            + " (" + count + " method(s))");
+                if (onCreate == null || onDestroy == null) {
+                    // 只挂到一半会让生命周期计数只增不减, 之后全局伪装再也写不回去。
+                    ModuleLogger.log(LOG + "wallet version guard skipped: " + className
+                            + " (onCreate=" + (onCreate != null)
+                            + ", onDestroy=" + (onDestroy != null) + ")");
+                    continue;
                 }
+                framework.hookMethod(onCreate, new WalletLifecycle(framework, classLoader, true));
+                framework.hookMethod(onDestroy, new WalletLifecycle(framework, classLoader, false));
+                ModuleLogger.log(LOG + "wallet version guard: " + className + " (2 method(s))");
             } catch (Throwable error) {
                 ModuleLogger.log(error);
             }
@@ -307,8 +314,11 @@ public final class HostVersionSpoof {
             if (WALLET_DEPTH.incrementAndGet() == 1) {
                 writeClientVersion(framework, classLoader, originalClientVersion);
                 if (LOGS.incrementAndGet() <= 3) {
+                    // 冷启动直接进支付页时 LauncherUI.onResume 还没跑过,
+                    // originalClientVersion 仍是 0, 此时字段保持微信自己的值。
                     ModuleLogger.log(LOG + "wallet original version: "
-                            + formatVersion(originalClientVersion));
+                            + (originalClientVersion == 0
+                            ? "untouched" : formatVersion(originalClientVersion)));
                 }
             }
         }
@@ -323,7 +333,8 @@ public final class HostVersionSpoof {
                 writeClientVersion(framework, classLoader, spoofedClientVersion);
                 if (LOGS.incrementAndGet() <= 6) {
                     ModuleLogger.log(LOG + "wallet spoof restored: "
-                            + formatVersion(spoofedClientVersion));
+                            + (spoofedClientVersion == 0
+                            ? "untouched" : formatVersion(spoofedClientVersion)));
                 }
             }
         }
