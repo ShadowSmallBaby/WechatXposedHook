@@ -119,7 +119,6 @@ public final class WxComponentHooks {
         framework.hookMethod(framework.findClass(THEMES_ENTRY_CLASS, classLoader), THEMES_ENTRY_METHOD,
                 new Class<?>[]{String.class, hookArgument},
                 new InMemoryDexLoadHook(framework, InMemoryDexLoadHook.THEMES_HANDSHAKE));
-        installDonationRequires(framework, classLoader);
     }
 
     private void hookDonation(HookFramework framework, ClassLoader classLoader) {
@@ -132,10 +131,9 @@ public final class WxComponentHooks {
     }
 
     /**
-     * 组件 ID 与入口清单存在历史错位：Themes 组件拿到的是 DonationDex 的 loader，
-     * 反之亦然。两处都探测一次，谁拿到 donation 的 loader 谁安装。
+     * donation loader 里安装 sf/mf/af 的放行。
      *
-     * 只有完整版才内置 sf/mf/af 扩展包，公开版跳过。
+     * 只有完整版才内置这三个扩展包，公开版跳过。
      */
     private void installDonationRequires(HookFramework framework, ClassLoader classLoader) {
         if (!BuildConfig.FULL_EDITION) {

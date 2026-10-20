@@ -32,14 +32,14 @@ public final class InMemoryDexLoadHook implements HookCallback {
     private static final String[] COMPONENT_ENTRY_CLASSES = {
             Secret.of(SecretConstants.COMPONENT_BASE),
             Secret.of(SecretConstants.COMPONENT_CORE),
-            Secret.of(SecretConstants.COMPONENT_DONATION),
-            Secret.of(SecretConstants.COMPONENT_THEMES)};
+            Secret.of(SecretConstants.COMPONENT_THEMES),
+            Secret.of(SecretConstants.COMPONENT_DONATION)};
 
     private static final String[] COMPONENT_NAMES = {
             Secret.of(SecretConstants.COMPONENT_NAME_BASE),
             Secret.of(SecretConstants.COMPONENT_NAME_CORE),
-            Secret.of(SecretConstants.COMPONENT_NAME_DONATION),
-            Secret.of(SecretConstants.COMPONENT_NAME_THEMES)};
+            Secret.of(SecretConstants.COMPONENT_NAME_THEMES),
+            Secret.of(SecretConstants.COMPONENT_NAME_DONATION)};
 
     private static final String ON_UPDATE_CHECK = Secret.of(SecretConstants.METHOD_ON_UPDATE_CHECK);
     private static final String DISABLE = Secret.of(SecretConstants.METHOD_DISABLE);
