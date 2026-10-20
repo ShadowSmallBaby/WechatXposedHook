@@ -86,7 +86,7 @@ public final class X3ComponentHooks {
             X3GuardBypass.install(framework, classLoader);
             X3SettingsBypass.install(framework, classLoader);
         } catch (Throwable error) {
-            ModuleLogger.log(LOG_FAILED);
+            ModuleLogger.debug(LOG_FAILED);
             ModuleLogger.log(error);
         }
     }
@@ -95,7 +95,7 @@ public final class X3ComponentHooks {
         try {
             Class<?> bridge = framework.findClassIfExists(className, classLoader);
             if (bridge == null) {
-                ModuleLogger.log(LOG_NOT_FOUND + className);
+                ModuleLogger.debug(LOG_NOT_FOUND + className);
                 return;
             }
             framework.hookMethod(
@@ -103,9 +103,9 @@ public final class X3ComponentHooks {
                     CALL_METHOD,
                     new Class<?>[]{Integer.TYPE, Object[].class},
                     new X3CallMethodHook());
-            ModuleLogger.log(LOG_HOOKED + className + "." + CALL_METHOD);
+            ModuleLogger.debug(LOG_HOOKED + className + "." + CALL_METHOD);
         } catch (Throwable error) {
-            ModuleLogger.log(LOG_FAILED + ": " + className);
+            ModuleLogger.debug(LOG_FAILED + ": " + className);
             ModuleLogger.log(error);
         }
     }

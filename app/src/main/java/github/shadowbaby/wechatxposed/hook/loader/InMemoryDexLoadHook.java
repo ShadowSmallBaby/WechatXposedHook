@@ -71,7 +71,7 @@ public final class InMemoryDexLoadHook implements HookCallback {
         boolean licDex = X3LicenseBypass.matchesDex(param);
         boolean guardDex = X3GuardBypass.matchesDex(param);
         boolean settingsDex = X3SettingsBypass.matchesDex(param);
-        ModuleLogger.log("dex probe: x3class=" + x3Class + " x3dex=" + x3Dex
+        ModuleLogger.debug("dex probe: x3class=" + x3Class + " x3dex=" + x3Dex
                 + " licdex=" + licDex + " guarddex=" + guardDex
                 + " settingsdex=" + settingsDex);
         if (licDex) {
@@ -91,7 +91,7 @@ public final class InMemoryDexLoadHook implements HookCallback {
         synchronized (WxComponentHooks.class) {
             ArrayList<WxComponentHooks> pending = WxComponentRegistry.WX_COMPONENTS;
             if (pending.isEmpty()) {
-                framework.log(ALL_DEX_HOOKED);
+                ModuleLogger.debug(ALL_DEX_HOOKED);
                 return;
             }
             Iterator<WxComponentHooks> iterator = pending.iterator();
@@ -99,13 +99,13 @@ public final class InMemoryDexLoadHook implements HookCallback {
                 WxComponentHooks component = iterator.next();
                 if (framework.findClassIfExists(
                         COMPONENT_ENTRY_CLASSES[component.componentId], hostClassLoader) == null) {
-                    framework.log(IGNORED_NON_MODULE_DEX);
+                    ModuleLogger.debug(IGNORED_NON_MODULE_DEX);
                     continue;
                 }
-                framework.log(LOG_FOUND + COMPONENT_NAMES[component.componentId]
+                ModuleLogger.debug(LOG_FOUND + COMPONENT_NAMES[component.componentId]
                         + LOG_ENABLE_SUFFIX + Boolean.TRUE);
                 component.inject(framework, hostClassLoader);
-                framework.log(COMPONENT_NAMES[component.componentId] + LOG_HOOK_SUCCEEDED_SUFFIX);
+                ModuleLogger.debug(COMPONENT_NAMES[component.componentId] + LOG_HOOK_SUCCEEDED_SUFFIX);
                 iterator.remove();
             }
         }

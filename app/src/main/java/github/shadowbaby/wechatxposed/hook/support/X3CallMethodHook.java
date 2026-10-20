@@ -42,16 +42,16 @@ public final class X3CallMethodHook implements HookCallback {
             int call = CALLS.incrementAndGet();
             Object[] params = (Object[]) param.arg(1);
             if (SEEN.add(msgId)) {
-                ModuleLogger.log("X3 msg new: " + msgId
+                ModuleLogger.debug("X3 msg new: " + msgId
                         + " args=" + java.util.Arrays.toString(params));
             } else if (call <= 3) {
-                ModuleLogger.log("X3 call #" + call + " msg=" + msgId);
+                ModuleLogger.debug("X3 call #" + call + " msg=" + msgId);
             }
 
             // 130 的 param 是版本握手，返回本机支持的版本。
             if (msgId == MSG_VERIFY_RESULT) {
                 if (ACTION_PARAM.equals(String.valueOf(params[0]))) {
-                    ModuleLogger.log("X3 130 param -> " + MIN_SUPPORTED_VERSION
+                    ModuleLogger.debug("X3 130 param -> " + MIN_SUPPORTED_VERSION
                             + " args=" + java.util.Arrays.toString(params));
                     param.setResult(MIN_SUPPORTED_VERSION);
                 } else if (VERIFIER_SERVICE.equals(String.valueOf(params[0]))) {

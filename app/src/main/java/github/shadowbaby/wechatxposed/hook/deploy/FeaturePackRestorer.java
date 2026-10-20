@@ -148,7 +148,7 @@ public abstract class FeaturePackRestorer {
         }
         checked = true;
         if (new File(filesDir, SKIP_MARKER).isFile()) {
-            ModuleLogger.log(LOG_SKIPPED);
+            ModuleLogger.debug(LOG_SKIPPED);
             return;
         }
         for (Pack pack : PACKS) {
@@ -188,7 +188,7 @@ public abstract class FeaturePackRestorer {
             }
             List<String> missing = missingFiles(directory, pack);
             if (missing.isEmpty()) {
-                ModuleLogger.log("feature packs[" + pack.name + "]: all "
+                ModuleLogger.debug("feature packs[" + pack.name + "]: all "
                         + pack.names.length + " intact");
                 return;
             }

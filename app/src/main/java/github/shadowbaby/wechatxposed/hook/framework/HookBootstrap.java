@@ -6,6 +6,7 @@ import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
 import github.shadowbaby.wechatxposed.hook.loader.DexClassLoaderHook;
 import github.shadowbaby.wechatxposed.hook.loader.DexDumper;
 import github.shadowbaby.wechatxposed.hook.loader.InMemoryDexLoadHook;
+import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.support.HostVersionSpoof;
@@ -41,7 +42,7 @@ public final class HookBootstrap {
                 Class<?> loader = framework.findClassIfExists(name, null);
                 if (loader != null) {
                     framework.hookConstructors(loader, hook);
-                    framework.log("dex loader hooked: " + name);
+                    ModuleLogger.debug("dex loader hooked: " + name);
                 }
             } catch (Throwable error) {
                 framework.log(error);
@@ -79,7 +80,7 @@ public final class HookBootstrap {
             long t4 = android.os.SystemClock.elapsedRealtime();
             installHostVersionSpoof(framework, classLoader, dataDir, true);
             long t5 = android.os.SystemClock.elapsedRealtime();
-            framework.log("perf: startup=" + (t1 - t0) + "ms, integrity=" + (t2 - t1)
+            ModuleLogger.debug("perf: startup=" + (t1 - t0) + "ms, integrity=" + (t2 - t1)
                     + "ms, signature=" + (t3 - t2) + "ms, guard=" + (t4 - t3)
                     + "ms, spoof=" + (t5 - t4) + "ms, total=" + (t5 - t0) + "ms");
         }

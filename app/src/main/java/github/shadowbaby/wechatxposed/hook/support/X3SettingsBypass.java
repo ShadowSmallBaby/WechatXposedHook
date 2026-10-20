@@ -60,7 +60,7 @@ public final class X3SettingsBypass {
                     framework.hookMethod(method, new Callback(method.getReturnType()));
                     count++;
                 }
-                ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                ModuleLogger.debug(LOG_HOOKED + className + " (" + count + " method(s))");
                 if (SETTINGS_CLASS.equals(className)) {
                     PackIntegrity.onOldCoreDetected("settings " + className);
                 }
@@ -139,7 +139,7 @@ public final class X3SettingsBypass {
                     } else if (returnType == String.class) {
                         param.setResult("");
                     }
-                    ModuleLogger.log("X3 setting bypass: " + key);
+                    ModuleLogger.debug("X3 setting bypass: " + key);
                 } else if ("valid".equals(key) || "s_valid".equals(key)) {
                     if (returnType == Boolean.TYPE || returnType == Boolean.class) {
                         param.setResult(Boolean.TRUE);

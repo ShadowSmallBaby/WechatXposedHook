@@ -155,7 +155,7 @@ public final class X3GuardBypass implements HookCallback {
             try {
                 Class<?> target = Class.forName(className, false, classLoader);
                 int count = hookAll(framework, target);
-                ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                ModuleLogger.debug(LOG_HOOKED + className + " (" + count + " method(s))");
                 if (UPDATE_CLASS.equals(className)) {
                     PackIntegrity.onOldCoreDetected("update " + className);
                 }
@@ -211,7 +211,7 @@ public final class X3GuardBypass implements HookCallback {
                     }
                 }
             }
-            ModuleLogger.log("manager probe hooked: " + count + " method(s)");
+            ModuleLogger.debug("manager probe hooked: " + count + " method(s)");
         } catch (Throwable ignored) {
             // 忽略
         }
@@ -233,7 +233,7 @@ public final class X3GuardBypass implements HookCallback {
                 if (methodName.equals(method.getName()) && method.getParameterCount() == 0
                         && isBoolean(method.getReturnType())) {
                     framework.hookMethod(method, new MenuBuildTrue());
-                    ModuleLogger.log("menu condition hooked: " + className + "." + methodName);
+                    ModuleLogger.debug("menu condition hooked: " + className + "." + methodName);
                 }
             }
         } catch (Throwable ignored) {
@@ -302,7 +302,7 @@ public final class X3GuardBypass implements HookCallback {
                         && types[0] == String.class
                         && isBoolean(method.getReturnType())) {
                     framework.hookMethod(method, new RegistrationGuard());
-                    ModuleLogger.log("settings wrapper hooked: "
+                    ModuleLogger.debug("settings wrapper hooked: "
                             + SETTINGS_WRAPPER + "." + SETTINGS_BOOL);
                 }
             }
@@ -327,13 +327,13 @@ public final class X3GuardBypass implements HookCallback {
                 Class<?>[] types = method.getParameterTypes();
                 if (FEATURE_UNLOAD.equals(methodName) && types.length == 0) {
                     framework.hookMethod(method, new UnloadGuard());
-                    ModuleLogger.log("feature manager hooked: "
+                    ModuleLogger.debug("feature manager hooked: "
                             + FEATURE_MANAGER + "." + FEATURE_UNLOAD);
                 } else if (FEATURE_UNLOAD_ONE.equals(methodName) && types.length == 2
                         && types[0] == String.class && types[1] == String.class) {
                     // 拦截单功能卸载，避免捐赠/基础组件被移出注册表。
                     framework.hookMethod(method, new NamedUnloadGuard());
-                    ModuleLogger.log("feature manager hooked: "
+                    ModuleLogger.debug("feature manager hooked: "
                             + FEATURE_MANAGER + "." + FEATURE_UNLOAD_ONE);
                 } else if (FEATURE_LOAD_ONE.equals(methodName) && types.length == 1
                         && types[0] == String.class) {
@@ -359,7 +359,7 @@ public final class X3GuardBypass implements HookCallback {
                     if (UNLOAD_HANDLER_CALL.equals(method.getName()) && types.length == 1
                             && types[0] == Object[].class) {
                         framework.hookMethod(method, new UnloadCommandGuard());
-                        ModuleLogger.log("unloadFeature handler hooked: " + UNLOAD_HANDLER);
+                        ModuleLogger.debug("unloadFeature handler hooked: " + UNLOAD_HANDLER);
                     }
                 }
             }
@@ -410,7 +410,7 @@ public final class X3GuardBypass implements HookCallback {
                             try {
                                 keywords.invoke(instance);
                                 options.invoke(instance);
-                                ModuleLogger.log(LOG_REBUILD + "settings");
+                                ModuleLogger.debug(LOG_REBUILD + "settings");
                             } catch (Throwable error) {
                                 ModuleLogger.log(error);
                             }
@@ -469,7 +469,7 @@ public final class X3GuardBypass implements HookCallback {
                 if (CORE_DATA_GET.equals(method.getName()) && types.length == 2
                         && types[0] == String.class) {
                     framework.hookMethod(method, new CoreDataLogger());
-                    ModuleLogger.log(LOG_CORE_DATA + "hook installed");
+                    ModuleLogger.debug(LOG_CORE_DATA + "hook installed");
                     scheduleDataProbe(target);
                     return;
                 }
@@ -511,7 +511,7 @@ public final class X3GuardBypass implements HookCallback {
                 }
             }
             if (count > 0) {
-                ModuleLogger.log(LOG_UI + UI_CLASS + " (" + count + " method(s))");
+                ModuleLogger.debug(LOG_UI + UI_CLASS + " (" + count + " method(s))");
                 scheduleMenuRebuild(target);
             }
         } catch (Throwable ignored) {
@@ -535,7 +535,7 @@ public final class X3GuardBypass implements HookCallback {
             }
             framework.hookMethod(target, methodName,
                     new Class<?>[]{Integer.TYPE, Object[].class}, new Handshake());
-            ModuleLogger.log("X3 handshake hooked: " + className + "." + methodName);
+            ModuleLogger.debug("X3 handshake hooked: " + className + "." + methodName);
         } catch (Throwable error) {
             ModuleLogger.log("X3 handshake hook failed: " + className + " " + error);
         }
@@ -551,7 +551,7 @@ public final class X3GuardBypass implements HookCallback {
                 if (BASE_UPDATE_DONE.equals(method.getName())
                         && method.getParameterCount() == 1) {
                     framework.hookMethod(method, new NoOp("base update done"));
-                    ModuleLogger.log("base update callback hooked");
+                    ModuleLogger.debug("base update callback hooked");
                 }
             }
         } catch (Throwable ignored) {
@@ -784,7 +784,7 @@ public final class X3GuardBypass implements HookCallback {
                 setField(self.getClass(), self, UI_GATE, Boolean.TRUE);
             }
             if (LOGGED.add(methodName)) {
-                ModuleLogger.log(LOG_UI + methodName);
+                ModuleLogger.debug(LOG_UI + methodName);
             }
         }
 
@@ -839,7 +839,7 @@ public final class X3GuardBypass implements HookCallback {
                 return;
             }
             if (LOGGED.add(name)) {
-                ModuleLogger.log("feature unload blocked: " + name);
+                ModuleLogger.debug("feature unload blocked: " + name);
             }
             param.setResult(null);
         }
@@ -868,7 +868,7 @@ public final class X3GuardBypass implements HookCallback {
                     // 名字取不到就只记栈
                 }
             }
-            ModuleLogger.log("component unload: " + name + " from" + stack(new Throwable()));
+            ModuleLogger.debug("component unload: " + name + " from" + stack(new Throwable()));
         }
     }
 
@@ -956,7 +956,7 @@ public final class X3GuardBypass implements HookCallback {
                 return;
             }
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("menu build condition forced");
+                ModuleLogger.debug("menu build condition forced");
             }
             param.setResult(Boolean.TRUE);
         }
@@ -975,7 +975,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.add(name)) {
-                ModuleLogger.log("forced true: " + name);
+                ModuleLogger.debug("forced true: " + name);
             }
             param.setResult(Boolean.TRUE);
         }
@@ -1014,7 +1014,7 @@ public final class X3GuardBypass implements HookCallback {
                 return;
             }
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log(LOG_REGISTRATION);
+                ModuleLogger.debug(LOG_REGISTRATION);
             }
             param.setResult(Boolean.TRUE);
         }
@@ -1027,7 +1027,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log(LOG_UNLOAD_CMD);
+                ModuleLogger.debug(LOG_UNLOAD_CMD);
             }
             param.setResult(null);
         }
@@ -1040,7 +1040,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("params verify path entered");
+                ModuleLogger.debug("params verify path entered");
             }
         }
     }
@@ -1061,7 +1061,7 @@ public final class X3GuardBypass implements HookCallback {
                         Secret.of(SecretConstants.X30_FORCE_FLAG_4), Boolean.TRUE);
             }
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("X3 invalid state forced valid");
+                ModuleLogger.debug("X3 invalid state forced valid");
             }
             param.setResult(null);
         }
@@ -1074,7 +1074,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("X3 success flags forced");
+                ModuleLogger.debug("X3 success flags forced");
             }
             param.setResult(null);
         }
@@ -1093,7 +1093,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.add(methodName)) {
-                ModuleLogger.log(LOG_TRUE + methodName);
+                ModuleLogger.debug(LOG_TRUE + methodName);
             }
             param.setResult(Boolean.TRUE);
         }
@@ -1106,7 +1106,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("X3 disable code ignored: " + param.arg(0)
+                ModuleLogger.debug("X3 disable code ignored: " + param.arg(0)
                         + " from" + stack(new Throwable()));
             }
             param.setResult(null);
@@ -1127,7 +1127,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.log("X3 update init allowed: " + methodName);
+                ModuleLogger.debug("X3 update init allowed: " + methodName);
             }
         }
     }
@@ -1148,7 +1148,7 @@ public final class X3GuardBypass implements HookCallback {
         @Override
         public void before(HookParam param) {
             if (LOGGED.add(methodName + value)) {
-                ModuleLogger.log("X3 bool forced " + value + ": " + methodName);
+                ModuleLogger.debug("X3 bool forced " + value + ": " + methodName);
             }
             param.setResult(value);
         }
@@ -1164,7 +1164,7 @@ public final class X3GuardBypass implements HookCallback {
 
         @Override
         public void before(HookParam param) {
-            ModuleLogger.log("X3 update blocked: " + methodName);
+            ModuleLogger.debug("X3 update blocked: " + methodName);
             param.setResult(null);
         }
     }
@@ -1181,14 +1181,14 @@ public final class X3GuardBypass implements HookCallback {
                 Object[] args = param.arg(1) instanceof Object[] values ? values : null;
                 int call = CALLS.incrementAndGet();
                 if (call <= 5) {
-                    ModuleLogger.log("X3 wrapper call #" + call + " msg=" + msg
+                    ModuleLogger.debug("X3 wrapper call #" + call + " msg=" + msg
                             + " args=" + java.util.Arrays.toString(args));
                 }
                 if (!Integer.valueOf(MSG_PARAM).equals(msg) || args == null || args.length == 0) {
                     return;
                 }
                 if (ACTION_PARAM.equals(String.valueOf(args[0]))) {
-                    ModuleLogger.log("X3 handshake 130 -> " + MIN_SUPPORTED_VERSION
+                    ModuleLogger.debug("X3 handshake 130 -> " + MIN_SUPPORTED_VERSION
                             + " args=" + java.util.Arrays.toString(args));
                     param.setResult(MIN_SUPPORTED_VERSION);
                 }
@@ -1209,7 +1209,7 @@ public final class X3GuardBypass implements HookCallback {
                 if (!Boolean.TRUE.equals(flag)) {
                     // params 失败回调：跳过禁用功能/关闭组件的逻辑。
                     if (LOGGED_FAILURE.compareAndSet(false, true)) {
-                        ModuleLogger.log("X3 params failure skipped");
+                        ModuleLogger.debug("X3 params failure skipped");
                     }
                     param.setResult(null);
                     return;
@@ -1217,7 +1217,7 @@ public final class X3GuardBypass implements HookCallback {
                 Object params = param.arg(1);
                 byte[] blob = blobOf(params);
                 if (LOGGED_PARAMS.compareAndSet(false, true)) {
-                    ModuleLogger.log(LOG_PARAMS + "flag=" + param.arg(0)
+                    ModuleLogger.debug(LOG_PARAMS + "flag=" + param.arg(0)
                             + " blob=" + (blob == null ? "null" : blob.length));
                 }
                 if (blob == null) {
@@ -1225,11 +1225,11 @@ public final class X3GuardBypass implements HookCallback {
                 }
                 String text = new String(blob, StandardCharsets.UTF_8);
                 if (LOGGED_PARAMS.compareAndSet(false, true)) {
-                    ModuleLogger.log(LOG_PARAMS + abbreviate(text));
+                    ModuleLogger.debug(LOG_PARAMS + abbreviate(text));
                 }
                 String danger = dangerousKey(text);
                 if (danger != null) {
-                    ModuleLogger.log(LOG_SKIPPED + danger);
+                    ModuleLogger.debug(LOG_SKIPPED + danger);
                     param.setResult(null);
                 }
             } catch (Throwable error) {

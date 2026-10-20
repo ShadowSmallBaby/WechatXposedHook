@@ -38,7 +38,7 @@ public final class NoticeSuppressor {
             framework.hookMethod(textView, "setText",
                     new Class<?>[]{CharSequence.class, TextView.BufferType.class}, callback);
             installed = true;
-            ModuleLogger.log("notice suppressor installed");
+            ModuleLogger.debug("notice suppressor installed");
         } catch (Throwable error) {
             framework.log(error);
         }

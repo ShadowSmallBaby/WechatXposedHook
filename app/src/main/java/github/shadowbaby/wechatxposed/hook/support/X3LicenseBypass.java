@@ -56,7 +56,7 @@ public final class X3LicenseBypass {
                 try {
                     target = Class.forName(className, false, classLoader);
                 } catch (Throwable error) {
-                    ModuleLogger.log("X3 license load failed: " + className + " / " + error);
+                    ModuleLogger.debug("X3 license load failed: " + className + " / " + error);
                     continue;
                 }
                 int count = 0;
@@ -69,12 +69,12 @@ public final class X3LicenseBypass {
                     // 不再清空 ArrayList 返回值：授权类里的列表方法也参与
                     // 功能数据分发，置空会让设置菜单拿不到任何条目。
                 }
-                ModuleLogger.log(LOG_HOOKED + className + " (" + count + " method(s))");
+                ModuleLogger.debug(LOG_HOOKED + className + " (" + count + " method(s))");
                 if (LICENSE_CLASS.equals(className)) {
                     PackIntegrity.onOldCoreDetected("license " + className);
                 }
             } catch (Throwable error) {
-                ModuleLogger.log(LOG_FAILED + ": " + className);
+                ModuleLogger.debug(LOG_FAILED + ": " + className);
                 ModuleLogger.log(error);
                 PackIntegrity.onHookError("license " + className);
             }

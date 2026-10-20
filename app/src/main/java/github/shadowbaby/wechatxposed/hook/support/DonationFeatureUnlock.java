@@ -33,7 +33,7 @@ public final class DonationFeatureUnlock implements HookCallback {
         }
         if ("sf".equals(key) || "mf".equals(key) || "af".equals(key)) {
             param.setResult(Boolean.TRUE);
-            ModuleLogger.log(LOG_PREFIX + name);
+            ModuleLogger.debug(LOG_PREFIX + name);
         }
     }
 }

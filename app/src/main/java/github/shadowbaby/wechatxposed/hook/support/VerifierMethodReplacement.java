@@ -26,15 +26,15 @@ public final class VerifierMethodReplacement implements HookCallback {
     public void before(HookParam param) {
         switch (replacementMode) {
             case POLLING_VERIFIER -> {
-                ModuleLogger.log(POLLING_VERIFIER_MESSAGE);
+                ModuleLogger.debug(POLLING_VERIFIER_MESSAGE);
                 param.setResult(null);
             }
             case CHECK_API_REQUEST -> {
-                ModuleLogger.log(CHECK_API_REQUEST_MESSAGE);
+                ModuleLogger.debug(CHECK_API_REQUEST_MESSAGE);
                 param.setResult(null);
             }
             default -> {
-                ModuleLogger.log(UPDATED_TIPS_MESSAGE);
+                ModuleLogger.debug(UPDATED_TIPS_MESSAGE);
                 param.setResult(Boolean.FALSE);
             }
         }

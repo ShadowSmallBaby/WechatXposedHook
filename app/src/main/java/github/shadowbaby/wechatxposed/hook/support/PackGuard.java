@@ -41,7 +41,7 @@ public final class PackGuard {
             }
             framework.hookMethod(fileClass, "delete", new Class<?>[]{}, new Callback());
             installed = true;
-            ModuleLogger.log("pack guard installed: File.delete");
+            ModuleLogger.debug("pack guard installed: File.delete");
         } catch (Throwable error) {
             framework.log(error);
         }

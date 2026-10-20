@@ -34,7 +34,7 @@ public final class DexClassLoaderHook implements HookCallback {
             boolean guard = X3GuardBypass.matchesClass(framework, loader);
             boolean settings = X3SettingsBypass.matchesClass(framework, loader);
             boolean component = X3ComponentHooks.matches(framework, loader);
-            ModuleLogger.log("dex loader: " + path
+            ModuleLogger.debug("dex loader: " + path
                     + " lic=" + license + " guard=" + guard
                     + " settings=" + settings + " component=" + component);
             if (component) {

@@ -33,7 +33,7 @@ public abstract class StartupCheck {
         long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
         long license = android.os.SystemClock.elapsedRealtime();
-        github.shadowbaby.wechatxposed.hook.loader.ModuleLogger.log(
+        github.shadowbaby.wechatxposed.hook.loader.ModuleLogger.debug(
                 "perf: packs=" + (packs - start) + "ms, license=" + (license - packs) + "ms");
     }
 

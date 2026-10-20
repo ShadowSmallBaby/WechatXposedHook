@@ -24,7 +24,7 @@ public final class LicenseInstaller {
         try {
             LicenseDatabase.Result result = LicenseDatabase.ensure(database, account);
             installedAccount = account;
-            ModuleLogger.log(describe(account, database, result));
+            ModuleLogger.debug(describe(account, database, result));
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }

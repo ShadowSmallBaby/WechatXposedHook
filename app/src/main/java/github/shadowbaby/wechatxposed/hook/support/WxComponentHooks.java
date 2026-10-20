@@ -4,6 +4,7 @@ import android.content.Context;
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.loader.InMemoryDexLoadHook;
+import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.lang.reflect.Field;
@@ -153,7 +154,7 @@ public final class WxComponentHooks {
                         new Class<?>[]{String.class, Object[].class},
                         new DonationFeatureUnlock());
                 donationRequiresHooked = true;
-                framework.log("donation requires hooked: " + DONATION_REQUIRES_CLASS
+                ModuleLogger.debug("donation requires hooked: " + DONATION_REQUIRES_CLASS
                         + "." + DONATION_REQUIRES_METHOD);
             } catch (Throwable error) {
                 framework.log(error);

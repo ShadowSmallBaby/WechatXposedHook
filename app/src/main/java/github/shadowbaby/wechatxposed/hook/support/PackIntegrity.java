@@ -73,7 +73,7 @@ public final class PackIntegrity {
             check("startup");
         }
         hook(framework);
-        ModuleLogger.log(LOG + "installed: " + packDir);
+        ModuleLogger.debug(LOG + "installed: " + packDir);
     }
 
     public static boolean isRepairing() {
@@ -263,7 +263,7 @@ public final class PackIntegrity {
             return;
         }
         if (matchesDir(table)) {
-            ModuleLogger.log(LOG + "check " + reason + ": intact (" + table.size() + ")");
+            ModuleLogger.debug(LOG + "check " + reason + ": intact (" + table.size() + ")");
             return;
         }
         ModuleLogger.log(LOG + "check " + reason + ": mismatch, replacing directory");

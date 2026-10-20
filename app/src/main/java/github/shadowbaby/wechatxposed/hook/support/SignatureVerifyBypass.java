@@ -72,7 +72,7 @@ public final class SignatureVerifyBypass implements HookCallback {
             framework.hookMethod(signature, "verify",
                     new Class<?>[]{byte[].class, Integer.TYPE, Integer.TYPE}, callback);
             installed = true;
-            ModuleLogger.log(LOG_INSTALLED);
+            ModuleLogger.debug(LOG_INSTALLED);
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
@@ -101,12 +101,12 @@ public final class SignatureVerifyBypass implements HookCallback {
             byte[] signature = signatureOf(param);
             if (data != null && signature != null && verify(key, data, signature)) {
                 param.setResult(Boolean.TRUE);
-                ModuleLogger.log(LOG_SELF_SIGN);
+                ModuleLogger.debug(LOG_SELF_SIGN);
                 return;
             }
             // 微X 还有非功能包的 SHA1withRSA 校验，保持原有放行行为。
             param.setResult(Boolean.TRUE);
-            ModuleLogger.log(LOG_FALLBACK);
+            ModuleLogger.debug(LOG_FALLBACK);
         } catch (Throwable error) {
             param.setResult(Boolean.TRUE);
         }

@@ -114,7 +114,7 @@ public final class FeatureCloseGuard {
                         count++;
                     }
                 }
-                ModuleLogger.log(LOG_HOOKED + name + " (" + count + " method(s))");
+                ModuleLogger.debug(LOG_HOOKED + name + " (" + count + " method(s))");
                 hookBaseSettings(framework, classLoader);
                 hookBaseRegistry(framework, classLoader);
                 hookInitGate(framework, classLoader);
@@ -152,7 +152,7 @@ public final class FeatureCloseGuard {
                     count++;
                 }
             }
-            ModuleLogger.log(LOG_HOOKED + BASE_REGISTRY + " (" + count + " method(s))");
+            ModuleLogger.debug(LOG_HOOKED + BASE_REGISTRY + " (" + count + " method(s))");
         } catch (Throwable ignored) {
             // 忽略，事件仍会从 entry.publish 走
         }
@@ -175,7 +175,7 @@ public final class FeatureCloseGuard {
                         && method.getParameterCount() == 0
                         && method.getReturnType() == Boolean.TYPE) {
                     framework.hookMethod(method, new InitGate());
-                    ModuleLogger.log(LOG_INIT_GATE + "hooked");
+                    ModuleLogger.debug(LOG_INIT_GATE + "hooked");
                 }
             }
         } catch (Throwable ignored) {
@@ -199,7 +199,7 @@ public final class FeatureCloseGuard {
                         && method.getParameterTypes()[0] == String.class
                         && (method.getReturnType() == Boolean.TYPE
                                 || method.getReturnType() == Boolean.class)) {
-                    framework.hookMethod(method, new Noop(LOG_DISABLE_GET, Boolean.FALSE));
+                    framework.hookMethod(method, new Noop(LOG_DISABLE_GET, Boolean.FALSE, true));
                 }
             }
         } catch (Throwable ignored) {
@@ -243,20 +243,20 @@ public final class FeatureCloseGuard {
             }
             if (values[2] != null) {
                 if (LOGGED.add(className + ":ok")) {
-                    ModuleLogger.log(LOG_INIT_CONTEXT + "ok, " + className);
+                    ModuleLogger.debug(LOG_INIT_CONTEXT + "ok, " + className);
                 }
                 return;
             }
             Object context = args[0];
             if (context == null) {
                 if (LOGGED.add(className + ":null")) {
-                    ModuleLogger.log(LOG_INIT_CONTEXT + "missing, " + className);
+                    ModuleLogger.debug(LOG_INIT_CONTEXT + "missing, " + className);
                 }
                 return;
             }
             values[2] = context;
             if (LOGGED.add(className)) {
-                ModuleLogger.log(LOG_INIT_CONTEXT + "fixed, " + className);
+                ModuleLogger.debug(LOG_INIT_CONTEXT + "fixed, " + className);
             }
         }
     }
@@ -269,7 +269,7 @@ public final class FeatureCloseGuard {
         @Override
         public void before(HookParam param) {
             if (CALLS.incrementAndGet() <= 3) {
-                ModuleLogger.log(LOG_INIT_GATE + "forced false");
+                ModuleLogger.debug(LOG_INIT_GATE + "forced false");
             }
             param.setResult(Boolean.FALSE);
         }
@@ -279,15 +279,25 @@ public final class FeatureCloseGuard {
 
         private final String message;
         private final Object result;
+        private final boolean debugOnly;
 
         Noop(String message, Object result) {
+            this(message, result, false);
+        }
+
+        Noop(String message, Object result, boolean debugOnly) {
             this.message = message;
             this.result = result;
+            this.debugOnly = debugOnly;
         }
 
         @Override
         public void before(HookParam param) {
-            ModuleLogger.log(message);
+            if (debugOnly) {
+                ModuleLogger.debug(message);
+            } else {
+                ModuleLogger.log(message);
+            }
             param.setResult(result);
         }
     }
@@ -306,7 +316,7 @@ public final class FeatureCloseGuard {
             if (value.length() > 160) {
                 value = value.substring(0, 160);
             }
-            ModuleLogger.log(prefix + value);
+            ModuleLogger.debug(prefix + value);
         }
     }
 
@@ -320,12 +330,12 @@ public final class FeatureCloseGuard {
 
         @Override
         public void before(HookParam param) {
-            ModuleLogger.log("feature init: " + className);
+            ModuleLogger.debug("feature init: " + className);
         }
 
         @Override
         public void after(HookParam param) {
-            ModuleLogger.log("feature init result: " + className + " -> " + param.result());
+            ModuleLogger.debug("feature init result: " + className + " -> " + param.result());
         }
     }
 
@@ -343,7 +353,7 @@ public final class FeatureCloseGuard {
             if (!interesting(param) && CALLS.incrementAndGet() > LIMIT) {
                 return;
             }
-            ModuleLogger.log("feature getData: " + param.arg(0));
+            ModuleLogger.debug("feature getData: " + param.arg(0));
         }
 
         @Override
@@ -361,7 +371,7 @@ public final class FeatureCloseGuard {
                     first = first.substring(0, 120);
                 }
             }
-            ModuleLogger.log("feature getData result: " + param.arg(0)
+            ModuleLogger.debug("feature getData result: " + param.arg(0)
                     + " size=" + size + " first=" + first);
         }
     }
@@ -395,7 +405,7 @@ public final class FeatureCloseGuard {
                     || lower.contains("close") || lower.contains("stop")
                     || lower.contains("unload");
             if (interesting || PUBLISH_LOGS.incrementAndGet() <= LOG_LIMIT) {
-                ModuleLogger.log(LOG_PUBLISH + command + " -> " + className);
+                ModuleLogger.debug(LOG_PUBLISH + command + " -> " + className);
             }
         }
     }
