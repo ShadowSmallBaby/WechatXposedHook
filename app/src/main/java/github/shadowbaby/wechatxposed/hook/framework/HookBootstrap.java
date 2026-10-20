@@ -61,6 +61,7 @@ public final class HookBootstrap {
         }
         if (WECHAT_PACKAGE.equals(processName)) {
             File data = new File(dataDir);
+            long t0 = android.os.SystemClock.elapsedRealtime();
             if (BuildConfig.DEBUG) {
                 File dumpMarker = new File(data, "files/" + DexDumper.MARKER);
                 if (dumpMarker.exists()) {
@@ -68,11 +69,19 @@ public final class HookBootstrap {
                 }
             }
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
+            long t1 = android.os.SystemClock.elapsedRealtime();
             installPackIntegrity(framework, data);
+            long t2 = android.os.SystemClock.elapsedRealtime();
             SignatureVerifyBypass.install(framework);
+            long t3 = android.os.SystemClock.elapsedRealtime();
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
+            long t4 = android.os.SystemClock.elapsedRealtime();
             installHostVersionSpoof(framework, classLoader, sourceDir, dataDir, true);
+            long t5 = android.os.SystemClock.elapsedRealtime();
+            framework.log("perf: startup=" + (t1 - t0) + "ms, integrity=" + (t2 - t1)
+                    + "ms, signature=" + (t3 - t2) + "ms, guard=" + (t4 - t3)
+                    + "ms, spoof=" + (t5 - t4) + "ms, total=" + (t5 - t0) + "ms");
         }
     }
 

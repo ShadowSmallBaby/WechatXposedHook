@@ -28,8 +28,13 @@ public abstract class StartupCheck {
 
     public static void run(File dataDir, String account) {
         weChatData = dataDir;
+        long start = android.os.SystemClock.elapsedRealtime();
         FeaturePackRestorer.ensureOnce(new File(dataDir, FILES_DIR));
+        long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
+        long license = android.os.SystemClock.elapsedRealtime();
+        github.shadowbaby.wechatxposed.hook.loader.ModuleLogger.log(
+                "perf: packs=" + (packs - start) + "ms, license=" + (license - packs) + "ms");
     }
 
     public static void ensureLicense(String account) {

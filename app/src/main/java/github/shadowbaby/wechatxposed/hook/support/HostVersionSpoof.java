@@ -119,24 +119,46 @@ public final class HostVersionSpoof {
             hookClientVersionTrigger(framework, classLoader, LAUNCHER_UI);
             hookWalletVersion(framework, classLoader);
         }
-        try {
-            List<byte[]> dexBytes = DexPaths.of(sourceDir);
-            if (dexBytes.isEmpty()) {
-                ModuleLogger.log(LOG_NO_DEX);
+        scheduleOpenUrlScan(framework, classLoader, sourceDir);
+    }
+
+    /**
+     * dex 全量扫描会阻塞冷启动（实测 1.5s+），放到首页显示后再跑。
+     * 它只负责清理升级链接，晚几秒不影响版本/钱包 hook。
+     */
+    private static void scheduleOpenUrlScan(HookFramework framework, ClassLoader classLoader,
+            String sourceDir) {
+        Thread thread = new Thread(() -> {
+            try {
+                Thread.sleep(3000L);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
                 return;
             }
-            int methods = 0;
-            for (byte[] bytes : dexBytes) {
-                DexStrings dex = DexStrings.open(bytes);
-                if (dex == null) {
-                    continue;
+            long start = android.os.SystemClock.elapsedRealtime();
+            try {
+                List<byte[]> dexBytes = DexPaths.of(sourceDir);
+                if (dexBytes.isEmpty()) {
+                    ModuleLogger.log(LOG_NO_DEX);
+                    return;
                 }
-                methods += hookOpenUrl(framework, classLoader, dex.classesContaining(OPEN_URL_ANCHORS));
+                int methods = 0;
+                for (byte[] bytes : dexBytes) {
+                    DexStrings dex = DexStrings.open(bytes);
+                    if (dex == null) {
+                        continue;
+                    }
+                    methods += hookOpenUrl(framework, classLoader,
+                            dex.classesContaining(OPEN_URL_ANCHORS));
+                }
+                ModuleLogger.log(LOG + methods + " openUrl hooked ("
+                        + (android.os.SystemClock.elapsedRealtime() - start) + "ms)");
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
             }
-            ModuleLogger.log(LOG + methods + " openUrl hooked");
-        } catch (Throwable error) {
-            ModuleLogger.log(error);
-        }
+        }, "wxh-openurl");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private static synchronized void setClientVersion(HookFramework framework,
