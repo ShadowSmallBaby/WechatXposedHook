@@ -12,62 +12,76 @@ import sys
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from runtime_names import BRIDGE, CORE, UTILITY, runtime
+
 ROOT = Path(__file__).resolve().parents[1]
 
 COMMON = [
-    ("r/fp/base", "14e777717682cce8a53cfcb34a22d65"),
-    ("r/fp/donation", "a89eaf67dc796cb3af54d94fac0198b"),
-    ("r/fp/themes", "802766a4a4bd401c145a57463274d4dd"),
-    ("r/L", "36a76b97b96b5d46742bb4bcd2ff24d"),
-    ("LD64", "dc7be70f1898d3a58965a919740f97"),
-    ("D", "534a9729a0c461cbd7a4379978fb742"),
-    ("H_p", "62a4e566b714ea1c4349923c9ea6c35"),
-    ("M", "69691c7bdcc3ce6d5d8a1361f22d4ac"),
-    ("S", "5dbc98dcc983a7728bd82d1a47546e"),
-    ("Xmd", "739440c5d87b2b8095b99f9d2a1bbf9"),
-    ("pr/P", "44c29edb103a2872f519adc9afdaaa"),
-    ("pr/P_8049", "6d6586c9c5458ecfc98981b52ee662de"),
+    ("r/fp/base", runtime("base")),
+    ("r/fp/donation", runtime("donation")),
+    ("r/fp/themes", runtime("themes")),
+    ("r/L", BRIDGE),
+    ("LD64", UTILITY["LD64"]),
+    ("D", UTILITY["D"]),
+    ("H_p", UTILITY["H_p"]),
+    ("M", UTILITY["M"]),
+    ("S", UTILITY["S"]),
+    ("Xmd", UTILITY["Xmd"]),
+    ("pr/P", UTILITY["pr/P"]),
+    ("pr/P_8049", UTILITY["pr/P_8049"]),
 ]
 
 SIDECARS = {
-    "base": "14e777717682cce8a53cfcb34a22d65",
-    "L": "36a76b97b96b5d46742bb4bcd2ff24d",
-    "themes": "802766a4a4bd401c145a57463274d4dd",
-    "donation": "a89eaf67dc796cb3af54d94fac0198b",
-    "C": "d61f837cad1d412f80b84d143e1257",
-    "vidurlparser": "df4e6fd144fab2389ece8cb79eaa8f",
+    "base": runtime("base"),
+    "L": BRIDGE,
+    "themes": runtime("themes"),
+    "donation": runtime("donation"),
+    "C": CORE,
+    "vidurlparser": runtime("vidurlparser"),
 }
 
-# X 3.0 按当前 xmetadata 角色打包：d61f8 主核心 + vidurlparser(df4e6) + 功能资源。
+# X 3.0：主核心 + vidurlparser + 功能资源。
 X30_BASE = list(COMMON) + [
-    ("r/fp/vidurlparser", "df4e6fd144fab2389ece8cb79eaa8f"),
+    ("r/fp/vidurlparser", runtime("vidurlparser")),
 ]
+# 扩展包两套命名：MD5("FP_<role>") 与 MD5("<role>")。
 X30_EXT = [
-    ("r/fp/sf", "257f23e0175be13dec231373679bedc"),
-    ("r/fp/mf", "ec38a2b5b262d9c72f75edacb8875cfe"),
-    ("r/fp/af", "ee06cd8f9beaf915a27b8bad9e8c2f"),
+    ("r/fp/sf", runtime("sf")),
+    ("r/fp/sf", runtime("sf", False)),
+    ("r/fp/mf", runtime("mf")),
+    ("r/fp/mf", runtime("mf", False)),
+    ("r/fp/af", runtime("af")),
+    ("r/fp/af", runtime("af", False)),
 ]
 X30_SIDECARS = dict(SIDECARS)
 
 WX6_BASE = [
-    ("r/fp/base", "14e777717682cce8a53cfcb34a22d65"),
-    ("r/fp/donation", "a89eaf67dc796cb3af54d94fac0198b"),
-    ("r/fp/themes", "802766a4a4bd401c145a57463274d4dd"),
-    ("r/L", "36a76b97b96b5d46742bb4bcd2ff24d"),
-    ("LD64", "dc7be70f1898d3a58965a919740f97"),
-    ("D", "534a9729a0c461cbd7a4379978fb742"),
-    ("H_p", "62a4e566b714ea1c4349923c9ea6c35"),
-    ("M", "69691c7bdcc3ce6d5d8a1361f22d4ac"),
-    ("S", "5dbc98dcc983a7728bd82d1a47546e"),
-    ("Xmd", "739440c5d87b2b8095b99f9d2a1bbf9"),
-    ("pr/P", "44c29edb103a2872f519adc9afdaaa"),
-    ("pr/P_8049", "6d6586c9c5458ecfc98981b52ee662de"),
-    ("r/fp/vidurlparser", "df4e6fd144fab2389ece8cb79eaa8f"),
+    ("r/fp/base", runtime("base")),
+    ("r/fp/donation", runtime("donation")),
+    ("r/fp/themes", runtime("themes")),
+    ("r/L", BRIDGE),
+    ("LD64", UTILITY["LD64"]),
+    ("D", UTILITY["D"]),
+    ("H_p", UTILITY["H_p"]),
+    ("M", UTILITY["M"]),
+    ("S", UTILITY["S"]),
+    ("Xmd", UTILITY["Xmd"]),
+    ("pr/P", UTILITY["pr/P"]),
+    ("pr/P_8049", UTILITY["pr/P_8049"]),
+    ("r/fp/vidurlparser", runtime("vidurlparser")),
 ]
 WX6_EXT = [
+    # 高级包专用命名（非 MD5(FP_x) 规则，保留厂商固定值）
     ("r/fp/sf", "257f23e0175be13dec231373679bedc"),
+    ("r/fp/sf", runtime("sf")),
+    ("r/fp/sf", runtime("sf", False)),
     ("r/fp/mf", "ec38a2b5b262d9c72f75edacb8875cfe"),
+    ("r/fp/mf", runtime("mf")),
+    ("r/fp/mf", runtime("mf", False)),
     ("r/fp/af", "ee06cd8f9beaf915a27b8bad9e8c2f"),
+    ("r/fp/af", runtime("af")),
+    ("r/fp/af", runtime("af", False)),
 ]
 WX6_SIDECARS = dict(SIDECARS)
 
@@ -103,18 +117,32 @@ def add(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
 def build(product: str, zip_name: str, core_source: str | None, flavor: str,
           common: list[tuple[str, str]], sidecars: dict[str, str],
           output_root: Path) -> Path:
-    source = ROOT / "xmetadata" / product
+    # data/xmetadata 是完整远程仓副本；根目录 xmetadata 是旧裁剪副本。
+    # X 3.0 用项目仓 xmetadata/wx7（与 117 模块匹配的旧版）；
+    # 2.44 继续用 data/xmetadata 的完整远程仓。
+    source = ROOT / "data" / "xmetadata" / product
+    if product == "wx7" and (ROOT / "xmetadata" / product).is_dir():
+        source = ROOT / "xmetadata" / product
+    elif not source.is_dir():
+        source = ROOT / "xmetadata" / product
     entries = list(common)
     if core_source is not None:
-        entries.append((core_source, "d61f837cad1d412f80b84d143e1257"))
+        entries.append((core_source, CORE))
     output_dir = output_root / flavor
     output_dir.mkdir(parents=True, exist_ok=True)
     target = output_dir / zip_name
+    # 扩展包运行时保留 32B SHA-256 前缀；基础包去掉前缀后落盘。
+    # X 3.0 运行时与 restorer 期望 body（无 32B 前缀）；2.44 保持原行为。
+    keep_prefix = zip_name.endswith("_ext.zip") and product == "wx6"
     with zipfile.ZipFile(target, "w") as archive:
         for rel, runtime in entries:
-            add(archive, runtime, body(source / rel))
+            path = source / rel
+            add(archive, runtime, path.read_bytes() if keep_prefix else body(path))
         for folder, suffix in (("cfg", "_c"), ("sig", "_s")):
-            for path in sorted((source / folder).iterdir()):
+            folder_path = source / folder
+            if not folder_path.is_dir():
+                continue
+            for path in sorted(folder_path.iterdir()):
                 if not path.is_file():
                     continue
                 runtime = sidecars.get(path.name)
@@ -127,7 +155,32 @@ def build(product: str, zip_name: str, core_source: str | None, flavor: str,
     return target
 
 
+def check_names() -> None:
+    expected = {
+        "sf": "aa894d53fa41c9b675eec6f80331085",
+        "mf": "665c7b62836222d48164bc1c5f93fb2",
+        "af": "3e9bf1b973f6b1617f4f6df9a88f39d",
+        "base": "14e777717682cce8a53cfcb34a22d65",
+        "themes": "802766a4a4bd401c145a57463274d4dd",
+        "donation": "a89eaf67dc796cb3af54d94fac0198b",
+        "vidurlparser": "df4e6fd144fab2389ece8cb79eaa8f",
+    }
+    for role, name in expected.items():
+        actual = runtime(role)
+        if actual != name:
+            raise SystemExit(f"运行时命名规则不匹配: {role} {actual} != {name}")
+    if CORE != "d61f837cad1d412f80b84d143e1257":
+        raise SystemExit(f"core 运行名不匹配: {CORE}")
+    for role, name in (("sf", "60d31eb37595dd44584be5ef363283e3"),
+                       ("mf", "ea81aa7df47d74c6737bf98fabf3ff82"),
+                       ("af", "f0357a3f154bc2ffe2bff55055457068")):
+        actual = runtime(role, prefixed=False)
+        if actual != name:
+            raise SystemExit(f"别名命名不匹配: {role} {actual} != {name}")
+
+
 def main(argv=None) -> int:
+    check_names()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="生成运行时功能包 zip")

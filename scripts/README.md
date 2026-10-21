@@ -2,6 +2,41 @@
 
 逆向、分析与生成脚本。全部只依赖 Python 标准库；产物写到 `build/`（已忽略）。
 
+## dex_inspect.py（通用结构检查）
+
+分析任意壳 / 功能 dex 的工具，不绑定微X。`stats` / `diff` 自带最小 dex 解析器，
+直接读二进制；`dump` 调用 Android SDK 的 `dexdump`；`class` / `summary` / `locate`
+读取 dexdump 文本，不再解析二进制。
+
+| 子命令 | 作用 |
+|---|---|
+| `stats <dex...>` | 类/方法/字符串规模、非 ASCII 类名占比、包分布、关键类命中 |
+| `diff <a.dex> <b.dex>` | 两个 dex 的类清单差异 |
+| `dump <dex> -o out.txt` | 调用 `dexdump -d` 生成反汇编文本 |
+| `class <dump> 'Lx/foo/;' --inner` | 提取指定类（可含内部类）的段落 |
+| `summary <dump> <前缀>` | 按包前缀汇总方法、字符串、调用目标（自动去重计数） |
+| `locate <dump> <行号...>` | 按 dump 行号回溯所属类与方法 |
+
+```bash
+# stats / diff 可以直接吃 APK，自动展开 classes*.dex
+python scripts/dex_inspect.py stats data/refs/X_3.0.apk
+python scripts/dex_inspect.py diff data/refs/微X模块_2.44.apk data/refs/微不x模块2.44.apk
+
+# 也可以先解出单个 dex
+python -c "import zipfile;open('build/classes.dex','wb').write(zipfile.ZipFile('data/refs/X_3.0.apk').read('classes.dex'))"
+python scripts/dex_inspect.py stats build/classes.dex
+python scripts/dex_inspect.py dump build/classes.dex -o build/classes.smali.txt
+python scripts/dex_inspect.py class build/classes.smali.txt 'Lcom/android/x/XposedInit;'
+python scripts/dex_inspect.py summary build/classes.smali.txt com/android/x
+python scripts/dex_inspect.py locate build/classes.smali.txt 30096
+```
+
+`dexdump` 的查找顺序：`--dexdump` 参数 → `ANDROID_HOME` / `ANDROID_SDK_ROOT` →
+仓库根 `local.properties` 的 `sdk.dir` → `PATH` → `build-tools/` 里版本最高的一个。
+
+用这套工具得到的 2.44 / 3.0 壳对比和第三方整合包拆解见
+`docs/reverse-engineering.md` §7、§8。
+
 ## 微X 字符串怎么解
 
 微X 的字符串不是明文，也不是简单 XOR：
@@ -330,14 +365,19 @@ body 大小/哈希/类型。
 | wx6 | 215 | 210 | 5 |
 | wx7 | 180 | 178 | 2 |
 
-## X 3.0 适配（进行中）
+## X 3.0 适配（2026-10-22 已跑通）
 
 已实现：
 
 - `DexDumper`：微信数据目录存在标记 `files/wxh_dump_dex` 时，把
   `InMemoryDexClassLoader` 传入的 dex 落到 `files/dex_dump/`。
 - `FeaturePackRestorer`：每个 APK 只携带对应版本的载荷；2.44 为 24 个文件，
-  3.0 为 26 个文件。构建时由 `build_release_packs.py` 生成 zip 并打进 assets。
+  3.0 为 26 基础 + 6 扩展。`build_release_packs.py` 从项目仓 `xmetadata/wx7`
+  生成 zip 并打进 assets（X30 自动去 32B 前缀，`cfg/`→`_c`，`sig/`→`_s`）。
+- `build_x30_min.py`：从项目仓生成 32 文件 / 4,292,161B 的最小运行目录，
+  并输出 `x7_3.0.zip` / `x7_3.0_ext.zip`。
+- `runtime_names.py`：运行文件名的确定性规则
+  （`trim(MD5("FP_<role>"))` / `trim(MD5("<role>"))`，core=`MD5("C")`）。
 - `X3ComponentHooks`：识别 `com.android.xc.Wrapper.HookWrapper`，hook
   `com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object` 与
   `com.android.x.xposed.hook.WxCoreLoader.CallMethod`。
@@ -352,17 +392,23 @@ body 大小/哈希/类型。
 | 包名 / 入口 | `cn.android.x` / `com.android.x.XposedInit` |
 | 组件入口 | `com.android.xc.Wrapper.HookWrapper` |
 | native 桥 | `com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object` |
-| 功能包目录 | `files/x7_3.0`（26 文件） |
+| 功能包目录 | `files/x7_3.0`（26 基础 + 6 扩展） |
 | 授权库 | 仍是 `FKZ_WX_DATA`，表 `DATA(_ID,ACCOUNT,TAG,TYPE,VALUE,DATA BLOB)` |
 
-当前仍未完全通过：X 3.0 菜单显示
-`Disabled error code: 00322`，说明还有一层 params/verifier 检查（字符串
-`params verification failed!` / `verifier expired` / `getDisabledCode`）。
-下一步需要 hook 3.0 的设置/参数检查或补齐 3.0 的 params 数据。
+当前结果：
+
+- 可用组合：`cn.android.x` 3.0 (117) 单开 + 项目仓最小集 + 项目自动建库；
+- `com.android.xf.{af,sf,mf,base,themes,vidurlparser,donation}.Wrapper.Init`
+  全部初始化，`X: Module loaded successfully!`，菜单 `3.0_5.42 [VIP][专业]`；
+- 旧的 `Disabled error code: 00322` 由旧 DB/包组合导致；使用项目仓
+  `370042` 核心 + 自动建库后不再出现；
+- 干净环境：`files/wxh_clean_env` → `CleanEnvironment` 重命名旧目录/DB，
+  restorer 恢复 26+6、`LicenseInstaller` 创建 DB、X3 成功；
+- 详细链路见 `docs/extension-pack-chain.md` 第 11-13 节。
 
 ## collect_full_pack.py
 
-把当前版本的运行时功能包文件（2.44 24 个 / 3.0 26 个）「全量」收集到一个目录，并生成 `manifest.json`
+把当前版本的运行时功能包文件（2.44 24 个 / 3.0 26 基础 + 6 扩展）「全量」收集到一个目录，并生成 `manifest.json`
 （来源、字节数、sha256、类型、用途）。默认优先 zip，28/28 后其余来源只校验。
 
 ```bash
@@ -376,7 +422,7 @@ python scripts/collect_full_pack.py --dir <adb pull 下来的 wx6_2.44 目录>
 
 ## verify_featurepack.py
 
-按 `FeaturePackRestorer.java` 当前版本的文件名清单（2.44 24 个 / 3.0 26 个）与字节数校验功能包，并比对
+按 `FeaturePackRestorer.java` 当前版本的文件名清单（2.44 24 个 / 3.0 26 基础 + 6 扩展）与字节数校验功能包，并比对
 zip / tar / APK assets / 设备目录是否同源。
 
 ```bash

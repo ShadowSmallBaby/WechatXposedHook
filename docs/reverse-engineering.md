@@ -1,7 +1,9 @@
 # WeXposedHook 与微X模块逆向分析报告
 
-> 分析对象：`WxModuleHook-1.2_3.apk`(本项目改名前的那版构建)、`微X模块_2.44.apk`、`FKZ_WX_DATA*`、`wx6_2.44.tar`
-> 工具：TTDeDroid（jadx 1.4.7 / baksmali 2.5.2）、自写 XOR/字符串池解码器、cryptography（AES/RSA）
+> 分析对象：`WxModuleHook-1.2_3.apk`(本项目改名前的那版构建)、`微X模块_2.44.apk`、`X_3.0.apk`、
+> `微不x模块2.44.apk`（第三方整合包）、`FKZ_WX_DATA*`、`wx6_2.44.tar`
+> 工具：TTDeDroid（jadx 1.4.7 / baksmali 2.5.2）、Android SDK `dexdump` 36.1.0、`readelf`、
+> 自写 XOR/字符串池解码器、cryptography（AES/RSA）
 > 用途：学习 Xposed hook 技术与授权体系设计，评估隐私风险
 
 ---
@@ -102,7 +104,7 @@ decode(seed, pool):
 | `_c` | 校验/配置块（599 字节，同套加密头） |
 | `_s` | RSA-2048 签名块（256 字节） |
 
-文件名与 `LatestVersions` JSON 里的 `fp_base/fp_core/fp_donation/fp_themes` 等指纹对应（防篡改校验；`fp_sf/fp_af/fp_vidurlparser/fp_mf/fp_xv` 等是其他非 dex 资源）。
+运行文件名是确定性哈希：`trim(MD5("FP_<role>"))` 或 `trim(MD5("<role>"))`，core 为 `MD5("C")`；`LatestVersions` 里的 `fp_*` 是版本号/指纹，不直接决定文件名。详细映射、`_c` 密码表与自签边界见 `docs/extension-pack-chain.md` 第 12 节 / 4.1。
 
 ### 1.5 解密字符串的提取方法与证据基础
 
@@ -1441,3 +1443,241 @@ WeXposedHook **不定义新的数据库密钥**，也不修改 FKZ_WX_DATA 的�
 
 - 原始仓库（现仅更新配置与 release）：`https://github.com/fkzhang/WechatUnrecalled`
 - 服务端配置备份：`https://github.com/LRFP-Team/WX-Configuration-Backups`
+
+---
+
+## 七、壳架构对比：微X 2.44 vs X 3.0（实测）
+
+> 方法：`dexdump -d` 反汇编两个 APK 的 `classes.dex`；`readelf` 对比 `assets/dc7be70f…`（arm64）
+> 与 `assets/74fab57f…`（arm32）。数据采集于 2026-10-21。
+> 复现：`python scripts/dex_inspect.py stats data/refs/微X模块_2.44.apk data/refs/X_3.0.apk`
+
+### 7.1 基本数据
+
+| 项 | 微X 2.44 | X 3.0 |
+|---|---|---|
+| `classes.dex` 大小 | 2,397,988 B | 1,743,856 B |
+| dex 版本 | 035 | 035 |
+| 类定义（class_defs） | 2,829 | 1,869 |
+| 方法引用（method_ids） | 23,405 | 14,656 |
+| 实际定义方法（direct+virtual） | 18,843 | 10,836 |
+| 类型（type_ids） | 3,663 | 2,725 |
+| 字符串（string_ids） | 11,562 | 9,391 |
+| 非 ASCII 混淆类名占比 | 86% | 81% |
+| 壳入口 | `com.fkzhang.wechatxposed.XposedInit` | `com.android.x.XposedInit` |
+| native 桥 | `com.fkzhang.xposed.hook.WxCoreLoader.CallMethod` | `com.android.x.xposed.hook.WxCoreLoader.CallMethod` |
+| arm64 loader | `dc7be70f…` 461,560 B | `dc7be70f…` 533,080 B |
+| arm32 loader | `74fab57f…` 276,456 B | `74fab57f…` 331,604 B |
+| 功能 dex 加载 | `InMemoryDexClassLoader` | `InMemoryDexClassLoader` |
+
+两版 APK 的 assets 文件名（内容指纹）完全相同，说明是同一套资源在不同版本上的迭代。
+
+### 7.2 体积差的来源：裁依赖，不是裁功能
+
+3.0 少掉的约 830 个类主要来自 UI 依赖。包级对比：
+
+| 包 | 2.44 | 3.0 |
+|---|---|---|
+| `androidx/appcompat` | 127 | 23 |
+| `androidx/recyclerview` | 109 | 4 |
+| `androidx/fragment` | 86 | 4 |
+| `com/google`（Material） | 247 | 61 |
+| `androidx/constraintlayout` | 59 | 13 |
+| 混淆业务类（估算） | ~884 | ~764 |
+
+设置入口 `MainActivity` 的方法数：2.44 为 21 个，3.0 只有 6 个——3.0 的 UI 层大幅简化。
+
+### 7.3 同构点（同一设计的两次迭代）
+
+- `XposedInit` 都实现 `IXposedHookLoadPackage` + `IXposedHookZygoteInit`，`initZygote` 只保存 `modulePath`。
+- `handleLoadPackage` 都是「包名/进程过滤 → 静态初始化 → 加载器入口」三段式。
+- native 桥方法名与签名完全一致：`CallMethod(I[Ljava/lang/Object;)Ljava/lang/Object;`（`PUBLIC STATIC SYNCHRONIZED NATIVE`）。
+- 功能 dex 都拆成 4 个组件入口，命名空间不同但结构一致：
+
+  | 组件 | 2.44 | 3.0 |
+  |---|---|---|
+  | Core | `com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper` | `com.android.xc.Wrapper.HookWrapper` |
+  | Base | `com.fkzhang.wxfeatures.base.Wrapper.Init` | `com.android.xf.base.Wrapper.Init` |
+  | Donation | `com.fkzhang.wxfeatures.donation.Wrapper.Init` | `com.android.xf.donation.Wrapper.Init` |
+  | Themes | `com.fkzhang.wxfeatures.themes.Wrapper.Init` | `com.android.xf.themes.Wrapper.Init` |
+
+### 7.4 差异点
+
+**1）字符串池容器不同，算法相同**
+
+3.0 的解码器 `Lx/ﹳˉ/ʽʿ;.ʽʿ(J)Ljava/lang/String;` 与 1.2 的算法逐指令一致：
+
+- 池是**两个超长 `String` 静态常量**（每段 8191 字符），不是 `String[]`；索引用 `idx / 8191` 取段、`idx % 8191` 取字符，`String.charAt` 取值。
+- `mixA` 内联在解码方法里；`mixB` 在 `Lx/ˈˋ/ˎٴ;.ˏʽ(J)J`。
+- 常量与 1.2 相同：`0x62a9d9ed799705f5`、`0xcb24d0a5c88c35b3`、移位 33/28。
+- 2.44 主 dex 用 `String[]` 池，需要在 `<clinit>` 里解析乱序 `aput-object` 才能还原；3.0 的池直接以 `const-string` 字面量出现，逆向成本更低。
+
+**2）native 职责更重**
+
+壳 Java 层直接调用 `WxCoreLoader.CallMethod` 的位置：
+
+| 版本 | 调用点 | 封装方式 |
+|---|---|---|
+| 2.44 | 1 处 | 统一包装类 `x.ᵢـ.ˑʼ.ﾞʼ(I, Object[])` |
+| 3.0 | 5 处 | 消息 ID（10、21 等）直接散落在业务类中 |
+
+3.0 的 native `.text` 约 341 KB，比 2.44 的约 298 KB 大 15%；`.rodata` 大 7%；并新增了 `.init_array`。
+结论：3.0 把更多初始化/协调逻辑下沉到 native，Java 壳更薄。
+
+### 7.5 复写选型结论
+
+- **两版没有质的架构差异**，3.0 是 2.44 的瘦身 + native 下移 + UI 依赖裁剪版本。
+- **native loader 必须原样保留**：它是功能 dex 与微信交互的核心，Java 层可以重写，native 不能。
+- 复写时的合理边界：`Bootstrap → PackLoader → Wrapper 兼容层 → Bridge(native 透传) → Settings/Auth`。
+- **默认选 3.0**：类/方法规模更小、字符串池更统一、功能包更新、微信版本适配更好。
+- 2.44 作为兼容 profile 保留：组件入口契约与 3.0 同构，只需做命名空间映射（`fkzhang` ↔ `android.xc/xf`）。
+- 风险：3.0 的 Java 层与 native 耦合更紧，5 个调用点的入参语义需要黑盒对齐；本仓库对 3.0 的分析积累少于 2.44。
+
+---
+
+## 八、第三方整合包拆解：`微不x模块2.44.apk`
+
+> 对象：`data/refs/微不x模块2.44.apk`（5.7 MB）。
+> 结论先行：**它不是壳，也不是另一种壳架构**，而是「原版 2.44 壳 + 外挂修复工具 + 内嵌功能包」的二次整合包。
+> 复现：`python scripts/dex_inspect.py diff data/refs/微X模块_2.44.apk data/refs/微不x模块2.44.apk`
+
+### 8.1 APK 构成
+
+| 条目 | 大小 | 说明 |
+|---|---|---|
+| `classes.dex` | 2,404,040 B | 原版 2.44 壳，**只多 3 个类**；dex 版本 038（重新打包） |
+| `classes2.dex` | 591,280 B | `wx.repair.tool` 修复工具，243 类 |
+| `assets/xposed_init` | 56 B | **两行入口**：原壳 `com.fkzhang.wechatxposed.XposedInit` + `wx.repair.tool.Main` |
+| `assets/wx6orig.dat` | 4,423,605 B | 内嵌的功能包原件 |
+| `assets/wxcfg/1b5ac34…` | 43,336 B | 新增加密配置，容器头 `97 c4 01 30 c4 05` + `53214` |
+| 其余 12 个 assets | — | 与原版 2.44 **逐字节相同**（sha256 全一致） |
+
+`wx6orig.dat` 在 ZIP 中央目录里与其他条目偏移重叠，Python `zipfile` 会判定为 `Overlapped entries (possible zip bomb)` 并拒绝读取；Java `ZipFile.getEntry()` 仍可正常读取（`SigCompat` 正是这样用的）。
+
+### 8.2 主 dex 与原版的差异
+
+类清单对比：2,829 → 2,832，**没有删除或替换的类**，只新增：
+
+```
+com/fkzhang/wechatxposed/SigCompat
+com/fkzhang/wechatxposed/SigCompat$a
+com/fkzhang/wechatxposed/SigCompat$b
+```
+
+方法定义数 18,843 → 18,855（+12），字符串表 11,562 → 11,597（+35），与新增类及其
+常量吻合。本文只做了类级对比，未做逐方法字节码哈希；若要断言既有方法体未被修改，
+需要额外的 smali 级 diff。
+
+`SigCompat` 的三个方法：
+
+| 方法 | 作用 |
+|---|---|
+| `copyOut(String, File)Z` | 用 `ZipFile.getEntry("assets/wx6orig.dat")` 取出内嵌包，写到目标文件 |
+| `extract(String, String)String` | 在 `files/wx6_2.44` 下释放功能包（目标文件名 `obfbase.dat`） |
+| `fixConfig(ContentValues)V` | 改写 `modulePath` 等配置 |
+
+即：**壳逻辑一行没动**，只增加了「从自己 APK 里释放功能包」的启动逻辑。
+
+### 8.3 `wx.repair.tool`（classes2.dex）
+
+243 个类，其中 64 个在 `wx/repair/tool` 包。Xposed API 使用统计：`findAndHookMethod` 24、
+`findClass` 15、`hookAllMethods` 14、`hookMethod` 13、`findClassIfExists` 8、`hookAllConstructors` 5、
+`XSharedPreferences` 25 处引用。
+
+主要 hook 点：
+
+| 模块 | 目标 | 动作 |
+|---|---|---|
+| `LoaderGrab` | `InMemoryDexClassLoader` / `DexClassLoader` 构造 | 抓到 ClassLoader 后调 `FixHook.hookAll()` |
+| `FixHook` | `files/wx6_2.44/fixmap.txt` + 一批微信方法 | `findMethodExact` / `findMethodBestMatch` 装 hook |
+| `Remapper` | `ActivityThread.currentApplication().getClassLoader()` | 按表重映射类/方法/字段 |
+| `WxEntryBridge` | `SettingGroupMain`、`SettingGroupPersonalInfo`、`MainSettingsUI`、`Dialog.show`、`WindowManagerImpl.addView` | 注入 `Repairer_Setting` 菜单入口 |
+| `VerFix` | `c.ﹶˉ.ʿˊ#ʿˊ`（功能 dex） | 返回常量 `8.0.79` |
+| `UpdKill` | `c.ﹶˉ.ᵔˉ#ˊˑ`（功能 dex） | `XC_MethodReplacement` 返回空，并触发 `VerFix` |
+| `H140Patch` | `com.fkzhang.wechatxposedhooks.WxJniCoreBridge.CallMethod` | 按签名变体表补丁 |
+| `HbFix` | `com.tencent.mm.plugin.luckymoney.model.h6#onGYNetEnd` | 红包字段修复 |
+| `TfSpy` / `AutoTf` | `remittance.model.n0`、`pluginsdk.model.app.a0`、`RemittanceDetailUI` | 转账诊断 + 自动确认 |
+| `XAccountSync` | `SQLiteDatabase.rawQuery` | 去重 `FKZ_WX_DATA` 多账号记录 |
+| `CfgSeed` / `HSeed` | `files/wx6_2.44/1b5ac34…` | 写配置种子 |
+| `BridgeSpy` | `WxJniCoreBridge.CallMethod` | 诊断日志（`hb` / `RES` / `ARG` / `HIT`） |
+| `Main` | 启动 | 环境快照/恢复，解析 `LIC` / `params_S6` / `FKZ_WX_DATA` |
+
+### 8.4 符号映射表
+
+`TableData` 有 **7,592 条 `const-string`（6,691 个唯一值）**，内容是「逻辑名 → 实际符号」的成对映射：
+
+```
+ActionBarContainerClass        → androidx.appcompat.widget.ActionBarContainer
+ActionBar_getCustomViewMethod  → j
+ActionBar_hideMethod           → o
+AddMoreFriendsUI               → com.tencent.mm.plugin.subapp.ui.pluginapp.AddMoreFriendsUI
+AddressAdapterClass            → com.tencent.mm.ui.contact.e
+AlbumPreviewUI                 → com.tencent.mm.plugin.gallery.ui.AlbumPreviewUI
+```
+
+`Remapper` 维护 `clsMap` / `mthMap` / `valMap`，`getHostClass(String)` 查表得到真实类，再通过反射替换。
+这说明微X 2.44 自身已有一层符号间接，`repair.tool` 只是把表补齐到当前微信版本。
+
+`RemapTable` 提供静态表，`TableData.fill()` 分 `part0`–`part9` 填充。
+
+### 8.5 修复表格式
+
+`FixHook` 启动时读取外部文件：
+
+```
+/data/user/0/com.tencent.mm/files/wx6_2.44/fixmap.txt
+```
+
+格式为 `类#方法` 或 `类|方法|参数签名|索引`，实测样本：
+
+```
+com.tencent.mm.plugin.setting.ui.setting_new.MainSettingsUI#onActivityResult
+com.tencent.mm.ui.MMActivity|onActivityResult|-|3
+com.tencent.mm.storage.f9#G8
+com.tencent.mm.ui.HomeUI#r
+com.tencent.mm.xwebutil.q0|a|-|10
+com.tencent.mm.plugin.sns.ui.SnsUserUI#O6
+```
+
+`H140Patch` 的补丁表按参数类型做变体匹配（`!int` / `!boolean` / `!string` / `!object` / `!arraylist`）：
+
+```
+#SettingsUI,onActivityResult,!int,!int,!intent
+#MsgInfoStorage,#MsgInfoStorage_insertMsg,#msgClass,!boolean,!boolean
+#CursorDataAdapterCls,#CursorDataAdapter_refreshEvent,!object,!int
+#UIUtilsClass,#isTabletMethod1_b,pv5.w0
+#FakeGpsClass,#FakeGpsMethod1,!boolean,!double,!double,!int,...
+#ConversationAdapterClass,#ConversationWithCacheAdapter_getData
+#voiceClass1,#voiceMethod3,!string,!int,com.tencent.mm.modelbase.p0
+```
+
+其中 `#UIUtilsClass,#isTabletMethod1_b,pv5.w0` 是**平板模式判断**的补丁，与 8.0.49 平板模式问题处于同一片代码区域。
+
+### 8.6 版本与更新处理
+
+- `VerFix` hook 的目标 `c.ﹶˉ.ʿˊ` 不在壳 dex 里，属于运行时加载的功能 dex；`VerFix$S` 返回常量 `8.0.79`。
+- `UpdKill` hook `c.ﹶˉ.ᵔˉ#ˊˑ`，替换返回值，并在 after 回调里调用 `VerFix.installCL`。
+- 两者都只作用于微X自己的版本/更新类，不修改微信全局版本。
+
+### 8.7 环境快照与授权库操作
+
+`Main` 中的字符串显示它会做：
+
+- 快照：`app_WX_SNAPSHOT`、`_snap_`、`wx_env_restore`、`auto_restore_snapshot`
+- 解析：`结束解析模块核心文件`、`结束解析FKZ_WX_DATA`、`结束解析params_S6`、`结束解析LIC`
+- 读库：`SELECT * FROM DATA WHERE ACCOUNT = ? and TAG = ?`
+- `XAccountSync` 执行 `DELETE FROM DATA WHERE _ID NOT IN (SELECT MIN(_ID) FROM DATA GROUP BY ACCOUNT,TAG)`
+
+`TfCfg` 中还硬编码了 `wxid_7blde8urue3b22`，以及 `confirm_transfer_enable`、
+`confirm_transfer_delay_enable`、`transfer_money_notification_enable` 三个转账参数键。
+
+### 8.8 与「复写壳」的关系
+
+- 该包**没有复写壳**，壳是原版 2.44，只加了 3 个类。
+- 它的路线是「原壳照用 + 外围运行时修补」，与本项目 WxModuleHook 同路线，而不是策略 B（重写壳）。
+- 可借鉴的工程点：
+  - 表驱动修复（`fixmap.txt` 外部化，不重新打包即可适配新版微信）
+  - 用 `ZipFile.getEntry` 从自身 APK 释放内嵌功能包
+  - 版本伪装只 hook 功能 dex 内部类，不碰全局版本
+- 不建议借鉴：7,592 条全量映射的维护成本、运行时暴力重映射的稳定性、自动确认转账/硬编码账号等业务逻辑。
+- 风险提示：该类包会读写 `FKZ_WX_DATA`、`LIC`、`params_S6`，对授权库执行 `DELETE`，并具备自动确认转账能力；分析与试用时应在隔离环境进行。
