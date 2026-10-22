@@ -39,12 +39,20 @@ WeXposedHook/
 ./gradlew assembleX30Replica assembleX30ReplicaPublic
 ```
 
-正式产物是 **2 个 legacy 单 APK**（X 3.0 壳、API 102 现代版暂不参与打包）：
+现代 API 版用：
+
+```powershell
+./gradlew assembleX30ReplicaModern assembleX30ReplicaModernPublic
+```
+
+正式产物是 **4 个单 APK**（X 3.0 壳，legacy / modern × full / public）：
 
 | 版本 | 产物 |
 |---|---|
-| 完整版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk` |
-| 公开版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk` |
+| legacy 完整版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk` |
+| legacy 公开版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-base.apk` |
+| modern 完整版 | `app/build/outputs/apk/release/WeXposedHook-modern-v2.0-beta.apk` |
+| modern 公开版 | `app/build/outputs/apk/release/WeXposedHook-modern-v2.0-beta-base.apk` |
 
 两者都内置 X 3.0 壳、项目 hook 和基础包；完整版额外带扩展包。
 完整版的 sf/mf/af 需要在首次启动时用机器码 + wxid 生成离线激活码

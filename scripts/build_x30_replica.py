@@ -1062,7 +1062,7 @@ def main(argv: list[str]) -> int:
                         default="app/build/outputs/apk/legacyFullEdition/release/"
                                 "WeXposedHook-legacy-v2.0-beta-full.apk")
     parser.add_argument("--package", default="github.shadowbaby.wechatxposed.hook")
-    parser.add_argument("--output", default="build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk")
+    parser.add_argument("--output", default="build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk")
     parser.add_argument("--work")
     parser.add_argument("--android-sdk")
     parser.add_argument("--android-jar")

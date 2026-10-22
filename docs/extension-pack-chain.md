@@ -545,7 +545,7 @@ APK 资产由 `scripts/build_release_packs.py` 从项目仓 `xmetadata/wx7`
 ## 14. 单 APK 复刻壳（2026-10-22 实测成功）
 
 阶段一已把 X 3.0 壳、本项目 wx30 debug hook 与项目包合成一个 APK：
-`app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk`。原版 `cn.android.x`
+`app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk`。原版 `cn.android.x`
 与 microX 2.44 均无需安装/启用，实测 `X: Module loaded successfully!`。
 
 关键发现：壳把 **模块 APK 的签名证书**和 **modulePath** 一起绑进 params 解密密钥

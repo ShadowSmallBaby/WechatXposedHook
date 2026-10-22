@@ -109,8 +109,8 @@ jobs:
           unzip -Z1 app/x30.zip | grep -qx 'classes.dex'
           unzip -Z1 app/x30.zip | grep -qx 'resources.arsc'
 
-      - name: Build legacy single-APK variants
-        run: ./gradlew assembleX30Replica assembleX30ReplicaPublic --console=plain --stacktrace
+      - name: Build single-APK variants
+        run: ./gradlew assembleX30Replica assembleX30ReplicaPublic assembleX30ReplicaModern assembleX30ReplicaModernPublic --console=plain --stacktrace
 
       - name: Collect release assets
         run: |
@@ -125,14 +125,14 @@ jobs:
           mkdir -p dist/public dist/core
           for apk in app/build/outputs/apk/release/*.apk; do
             case "$apk" in
-              *-full.apk) cp "$apk" dist/core/ ;;
-              *) cp "$apk" dist/public/ ;;
+              *-base.apk) cp "$apk" dist/public/ ;;
+              *) cp "$apk" dist/core/ ;;
             esac
           done
           echo "public:"; ls -1 dist/public
           echo "core:"; ls -1 dist/core
-          test "$(ls -1 dist/public/*.apk | wc -l)" -eq 1
-          test "$(ls -1 dist/core/*.apk | wc -l)" -eq 1
+          test "$(ls -1 dist/public/*.apk | wc -l)" -eq 2
+          test "$(ls -1 dist/core/*.apk | wc -l)" -eq 2
 
       - name: Upload workflow artifacts (every build)
         uses: actions/upload-artifact@v4

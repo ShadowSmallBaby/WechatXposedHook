@@ -1,5 +1,8 @@
 package github.shadowbaby.wechatxposed.hook;
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.os.Process;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XposedBridge;
@@ -14,6 +17,8 @@ import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam;
 import java.lang.reflect.Method;
 
 public class ModernEntry extends XposedModule {
+
+    private static final String WECHAT_PACKAGE = "com.tencent.mm";
 
     private final ModernFramework framework = new ModernFramework(this);
 
@@ -33,14 +38,17 @@ public class ModernEntry extends XposedModule {
 
     @Override
     public void onPackageReady(PackageReadyParam param) {
+        if (!WECHAT_PACKAGE.equals(param.getPackageName())) {
+            return;
+        }
         String processName = currentProcessName();
-        Activation.install(new java.io.File(param.getApplicationInfo().dataDir));
+        ApplicationInfo info = targetInfo(param);
+        Activation.install(new java.io.File(info.dataDir));
         if (Activation.isBaseAllowed() && shellEntry == null) {
             shellEntry = initLegacy("com.android.x.XposedInit", modulePath);
         }
         HookBootstrap.onProcessReady(framework, param.getPackageName(), processName,
-                param.getClassLoader(), param.getApplicationInfo().dataDir,
-                param.getApplicationInfo().sourceDir);
+                param.getClassLoader(), info.dataDir, info.sourceDir);
         if (!Activation.isBaseAllowed()) {
             return;
         }
@@ -50,12 +58,40 @@ public class ModernEntry extends XposedModule {
                 load.packageName = param.getPackageName();
                 load.processName = processName;
                 load.classLoader = param.getClassLoader();
-                load.appInfo = param.getApplicationInfo();
+                load.appInfo = info;
                 load.isFirstApplication = true;
                 shell.handleLoadPackage(load);
             } catch (Throwable error) {
                 framework.log(error);
             }
+        }
+    }
+
+    /**
+     * PackageReadyParam 里的 ApplicationInfo 可能被共享进程污染：
+     * packageName 是 com.tencent.mm，但 dataDir 指向
+     * com.miui.contentcatcher。始终按包名重新查询。
+     */
+    private ApplicationInfo targetInfo(PackageReadyParam param) {
+        ApplicationInfo info = param.getApplicationInfo();
+        String packageName = param.getPackageName();
+        // 直接用当前用户的数据目录，绕过被兼容层改写的 PackageManager。
+        int userId = Process.myUid() / 100000;
+        java.io.File local = new java.io.File("/data/user/" + userId, packageName);
+        if (local.isDirectory()) {
+            info.dataDir = local.getAbsolutePath();
+            return info;
+        }
+        try {
+            Class<?> threadClass = Class.forName("android.app.ActivityThread");
+            Object thread = threadClass.getMethod("currentActivityThread").invoke(null);
+            Context context = (Context) threadClass.getMethod("getSystemContext")
+                    .invoke(thread);
+            return context.getPackageManager()
+                    .getApplicationInfo(packageName, 0);
+        } catch (Throwable error) {
+            framework.log(error);
+            return info;
         }
     }
 

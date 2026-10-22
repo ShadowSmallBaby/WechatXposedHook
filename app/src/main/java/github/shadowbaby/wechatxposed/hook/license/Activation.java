@@ -33,9 +33,11 @@ public final class Activation {
     /** 群号由 native 解密，避免明文常量留在 dex。 */
     public static String group() {
         String value = group;
-        if (value == null) {
+        if (value == null || value.isEmpty()) {
             value = Secret.of(SecretConstants.ACTIVATION_GROUP);
-            group = value;
+            if (!value.isEmpty()) {
+                group = value;
+            }
         }
         return value;
     }
@@ -43,9 +45,11 @@ public final class Activation {
     /** 承诺文案由 native 解密，避免明文常量留在 dex。 */
     public static String promise() {
         String value = promise;
-        if (value == null) {
+        if (value == null || value.isEmpty()) {
             value = Secret.of(SecretConstants.ACTIVATION_PROMISE);
-            promise = value;
+            if (!value.isEmpty()) {
+                promise = value;
+            }
         }
         return value;
     }
@@ -190,11 +194,14 @@ public final class Activation {
         String expected = promise();
         if (dataDir == null || promise == null
                 || !expected.equals(promise.trim())) {
-            ModuleLogger.log("activation: promise mismatch");
+            ModuleLogger.log("activation: promise mismatch exp=" + expected.length()
+                    + " in=" + (promise == null ? -1 : promise.trim().length()));
             return false;
         }
         int newLevel = verifyCode(code);
         if (newLevel <= LEVEL_NONE) {
+            ModuleLogger.log("activation: verify failed len="
+                    + (code == null ? -1 : code.trim().length()));
             return false;
         }
         try {
@@ -204,6 +211,7 @@ public final class Activation {
             File file = new File(dataDir, FILE_NAME);
             File parent = file.getParentFile();
             if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+                ModuleLogger.log("activation: parent " + parent);
                 return false;
             }
             try (java.io.FileOutputStream output = new java.io.FileOutputStream(file)) {
@@ -213,7 +221,9 @@ public final class Activation {
             level = newLevel;
             return true;
         } catch (Throwable error) {
-            ModuleLogger.log("activation: write " + error);
+            File probe = new File(dataDir, FILE_NAME);
+            ModuleLogger.log("activation: write " + error + " r=" + probe.canRead()
+                    + " w=" + probe.canWrite() + " len=" + probe.length());
             return false;
         }
     }

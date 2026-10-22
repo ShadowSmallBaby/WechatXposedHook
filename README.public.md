@@ -8,33 +8,35 @@
 - 内置功能包：检测到功能文件缺失时自动补齐
 - 自动写入授权数据库，换账号也能用
 - 屏蔽小程序与通话中的宿主版本检测，避免反复提示升级
-- 同时支持经典 Xposed 与现代 LibXposed 两种入口（发布包当前为 legacy 单 APK）
+- 同时支持经典 Xposed 与现代 LibXposed 两种入口（legacy / modern 均有单 APK）
 - 只保留 X 3.0，源码更精简
 - 一个 APK 同时包含 `arm64-v8a` 与 `armeabi-v7a`，64 位 / 32 位微信都能用
 
 ## 版本选择指南
 
-发布包按「公开/完整」拆分，共 2 个 legacy 单 APK。modern 入口仍可单独
-构建用于测试，但需要另外安装原版 `cn.android.x` 作为壳，暂不作为单 APK 发布。
+发布包按「公开/完整」×「legacy/modern」拆分，共 4 个单 APK。
 
 ### 第一步：确认版本
 
 | 需求 | 下载文件名 |
 |---|---|
-| 只用基础功能 | `WeXposedHook-legacy-v2.0-beta.apk` |
-| 需要 sf/mf/af 扩展包 | `WeXposedHook-legacy-v2.0-beta-full.apk` |
+| legacy + 基础功能 | `WeXposedHook-legacy-v2.0-beta-base.apk` |
+| legacy + sf/mf/af 扩展包 | `WeXposedHook-legacy-v2.0-beta.apk` |
+| modern + 基础功能 | `WeXposedHook-modern-v2.0-beta-base.apk` |
+| modern + sf/mf/af 扩展包 | `WeXposedHook-modern-v2.0-beta.apk` |
 
-不确定时先装公开版；需要扩展功能再换完整版。
+不确定时先装基础版；需要扩展功能再换完整版。
 
 ### 第二步：下载对应组合
 
 ```
+WeXposedHook-legacy-v2.0-beta-base.apk
 WeXposedHook-legacy-v2.0-beta.apk
-WeXposedHook-legacy-v2.0-beta-full.apk
+WeXposedHook-modern-v2.0-beta-base.apk
+WeXposedHook-modern-v2.0-beta.apk
 ```
 
-公开版只带基础包，`-full` 额外带 sf/mf/af 扩展包。当前正式产物只发布
-legacy 单 APK；modern 入口仍可单独构建用于测试，不作为单 APK 发布。
+`-base` 只带基础包，不带后缀的完整版额外带 sf/mf/af 扩展包。
 
 ### 环境要求
 

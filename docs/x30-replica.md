@@ -9,8 +9,8 @@
 输出：
 
 ```
-app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk
 app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk
+app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-base.apk
 package = github.shadowbaby.wechatxposed.hook
 versionCode = 8 / versionName = 2.0-beta / minSdk = 26
 签名 = v2 + v3（不再生成 v1）
@@ -244,7 +244,7 @@ python -X utf8 scripts/build_x30_replica.py \
   --shell data/refs/X_3.0.apk \
   --hook-apk app/build/outputs/apk/legacyFullEdition/release/WeXposedHook-legacy-v2.0-beta-full.apk \
   --package github.shadowbaby.wechatxposed.hook \
-  --output app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk
+  --output app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk
 
 JAVA_HOME=<JDK17> ./gradlew :app:assembleX30Replica
 ```
@@ -267,7 +267,7 @@ JAVA_HOME=<JDK17> ./gradlew :app:assembleX30Replica
 ## 6. 安装
 
 ```bash
-adb install -r -d app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk
+adb install -r -d app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk
 ```
 
 - 与设备上现有 `github.shadowbaby.wechatxposed.hook` 同 debug 证书，可原地升级；

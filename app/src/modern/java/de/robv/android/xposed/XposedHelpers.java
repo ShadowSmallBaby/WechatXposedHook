@@ -189,8 +189,12 @@ public final class XposedHelpers {
                 continue;
             }
             Class<?> actual = declared[index];
-            if (actual.isPrimitive() || expected.isPrimitive()) {
-                if (actual != expected) {
+            if (actual.isPrimitive()) {
+                if (boxed(actual) != boxed(expected)) {
+                    return false;
+                }
+            } else if (expected.isPrimitive()) {
+                if (!actual.isAssignableFrom(boxed(expected))) {
                     return false;
                 }
             } else if (!actual.isAssignableFrom(expected)) {
@@ -198,6 +202,18 @@ public final class XposedHelpers {
             }
         }
         return true;
+    }
+
+    private static Class<?> boxed(Class<?> type) {
+        if (type == Integer.TYPE) return Integer.class;
+        if (type == Long.TYPE) return Long.class;
+        if (type == Boolean.TYPE) return Boolean.class;
+        if (type == Byte.TYPE) return Byte.class;
+        if (type == Character.TYPE) return Character.class;
+        if (type == Short.TYPE) return Short.class;
+        if (type == Float.TYPE) return Float.class;
+        if (type == Double.TYPE) return Double.class;
+        return type;
     }
 
     private static Class<?>[] types(Object[] args) {

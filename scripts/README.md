@@ -17,7 +17,7 @@ python -X utf8 scripts/build_x30_replica.py \
   --shell data/refs/X_3.0.apk \
   --hook-apk data/refs/wxh-wx30-full-debug-20261022.apk \
   --package github.shadowbaby.wechatxposed.hook \
-  --output app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk
+  --output app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk
 ```
 
 关键点：

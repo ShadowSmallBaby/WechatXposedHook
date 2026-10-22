@@ -465,11 +465,13 @@ def registerX30Replica = { String taskName, String variant, String edition,
 }
 
 registerX30Replica('assembleX30Replica', 'legacyFullEdition', '-full',
-        "WeXposedHook-legacy-v${android.defaultConfig.versionName}-full.apk")
-registerX30Replica('assembleX30ReplicaPublic', 'legacyPublicEdition', '',
         "WeXposedHook-legacy-v${android.defaultConfig.versionName}.apk")
+registerX30Replica('assembleX30ReplicaPublic', 'legacyPublicEdition', '',
+        "WeXposedHook-legacy-v${android.defaultConfig.versionName}-base.apk")
 registerX30Replica('assembleX30ReplicaModern', 'modernFullEdition', '-full',
-        "WeXposedHook-modern-v${android.defaultConfig.versionName}-full.apk")
+        "WeXposedHook-modern-v${android.defaultConfig.versionName}.apk")
+registerX30Replica('assembleX30ReplicaModernPublic', 'modernPublicEdition', '',
+        "WeXposedHook-modern-v${android.defaultConfig.versionName}-base.apk")
 
 tasks.named('preBuild') {
     dependsOn generateFeaturePacks

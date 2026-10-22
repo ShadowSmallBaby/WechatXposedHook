@@ -4,7 +4,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.InputType;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -53,6 +56,16 @@ public final class ActivationDialog implements HookCallback {
             }
         }
         installed = hooked;
+        if (hooked) {
+            try {
+                Class<?> activityClass = framework.findClass("android.app.Activity", null);
+                framework.hookMethod(activityClass, "dispatchTouchEvent",
+                        new Class<?>[]{MotionEvent.class}, new ReopenTouch());
+                ModuleLogger.log("activation dialog: double-tap reopen installed");
+            } catch (Throwable error) {
+                framework.log(error);
+            }
+        }
         if (!hooked) {
             ModuleLogger.debug("activation dialog: activity not found");
         } else {
@@ -101,7 +114,8 @@ public final class ActivationDialog implements HookCallback {
 
         TextView header = new TextView(activity);
         header.setText("WXH交流群：" + Activation.group()
-                + "\n本模块免费使用，如付费购买请联系卖家退款。");
+                + "\n本模块免费使用，如付费购买请联系卖家退款。"
+                + "\n关闭后可在首页双击顶部“微信”重新打开。");
         header.setTextSize(13);
         header.setTextColor(textColor);
         header.setLineSpacing(0, 1.15f);
@@ -144,6 +158,7 @@ public final class ActivationDialog implements HookCallback {
         EditText code = new EditText(activity);
         code.setHint("请输入授权码（必填）");
         code.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         code.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
         code.setTextSize(14);
@@ -197,6 +212,7 @@ public final class ActivationDialog implements HookCallback {
             }
             });
         });
+        dialog.setOnDismissListener(d -> shown = false);
         dialog.show();
     }
 
@@ -247,6 +263,73 @@ public final class ActivationDialog implements HookCallback {
         @Override
         public boolean isSuggestionsEnabled() {
             return false;
+        }
+    }
+
+    /**
+     * 未授权时，在微信首页标题区域双击可重新打开授权窗。
+     * 只观察事件，不消费，不影响微信原有手势。
+     */
+    private static final class ReopenTouch implements HookCallback {
+
+        private static final String LAUNCHER = "com.tencent.mm.ui.LauncherUI";
+
+        private static long downTime;
+        private static long lastTapTime;
+        private static float downX;
+        private static float downY;
+        private static float lastTapY;
+
+        @Override
+        public void before(HookParam param) {
+            Object target = param.thisObject();
+            if (!(target instanceof Activity activity)
+                    || !LAUNCHER.equals(activity.getClass().getName())
+                    || shown || Activation.hasAuthorization()) {
+                return;
+            }
+            Object argument = param.arg(0);
+            if (!(argument instanceof MotionEvent event)
+                    || event.getPointerCount() != 1) {
+                return;
+            }
+            long now = SystemClock.uptimeMillis();
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                downTime = now;
+                downX = event.getX();
+                downY = event.getY();
+                return;
+            }
+            if (action != MotionEvent.ACTION_UP) {
+                return;
+            }
+            float limit = topLimit(activity);
+            float deltaX = event.getX() - downX;
+            float deltaY = event.getY() - downY;
+            float slop = ViewConfiguration.get(activity).getScaledTouchSlop() * 2f;
+            if (event.getY() > limit || downY > limit
+                    || deltaX * deltaX + deltaY * deltaY > slop * slop
+                    || now - downTime > 350) {
+                lastTapTime = 0;
+                return;
+            }
+            if (lastTapTime != 0 && now - lastTapTime <= 450
+                    && lastTapY <= limit) {
+                lastTapTime = 0;
+                activity.runOnUiThread(() -> tryShow(activity, 0));
+            } else {
+                lastTapTime = now;
+                lastTapY = event.getY();
+            }
+        }
+
+        private static float topLimit(Activity activity) {
+            int id = activity.getResources().getIdentifier(
+                    "status_bar_height", "dimen", "android");
+            int status = id > 0
+                    ? activity.getResources().getDimensionPixelSize(id) : 0;
+            return status + 64f * activity.getResources().getDisplayMetrics().density;
         }
     }
 }
