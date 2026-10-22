@@ -353,6 +353,23 @@ def generateFeaturePacks = tasks.register('generateFeaturePacks', Exec) {
             packs.get().file('wx30-ext/x7_3.0_ext.zip'))
 }
 
+// 阶段一：把原版 X 3.0 壳和冻结的 wx30 debug hook 包合成一个单 APK。
+// 不依赖 assemble，避免重新构建时覆盖 data/refs 里的冻结注入包。
+tasks.register('assembleShell30Replica', Exec) {
+    def script = rootProject.file('scripts/build_shell30_replica.py')
+    def shell = rootProject.file('data/refs/X_3.0.apk')
+    def hook = rootProject.file('data/refs/wxh-wx30-full-debug-20261022.apk')
+    def output = layout.buildDirectory.dir('generated/shell30')
+    def python = System.getProperty('os.name').toLowerCase().contains('windows')
+            ? 'python' : 'python3'
+    onlyIf { script.isFile() && shell.isFile() && hook.isFile() }
+    commandLine python, '-X', 'utf8', script.absolutePath,
+            '--shell', shell.absolutePath,
+            '--hook-apk', hook.absolutePath,
+            '--package', 'github.shadowbaby.wechatxposed.hook',
+            '--output', output.get().file('WeXposedHook-shell30-v117.apk').asFile.absolutePath
+}
+
 tasks.named('preBuild') {
     dependsOn generateFeaturePacks
 }

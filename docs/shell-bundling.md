@@ -183,13 +183,18 @@ HookBootstrap.onProcessReady(main)
 
 ## 9. 实施 checklist（策略 A）
 
-- [ ] 提取并校验 2.44/3.0 壳 `classes.dex` 的哈希与版本
-- [ ] 提取 `dc7be70f` 为 `libwxcoreloader.so`（arm64/arm）
-- [ ] 把两套功能包和壳 dex 放进 assets，启动时解压
-- [ ] 独立 ClassLoader 加载壳 dex，反射调用入口
-- [ ] 传入 modulePath/filesDir/Context/版本号
-- [ ] 复用本模块的桥/授权/验签绕过
-- [ ] 2.44 先跑通，再扩 3.0
-- [ ] 复用 3.0 的 params/设置绕过（00322）
-- [ ] 体积/启动耗时/回退方案评估
+> 阶段一实际落地（2026-10-22）见 `docs/shell30-replica.md`：
+> 只做 X 3.0，不加载独立 ClassLoader，而是把壳 dex/assets 原样合进本项目 APK，
+> 用 `Shell30Compat` 处理包名/证书/modulePath。以下 2.44 项保留为历史计划。
+
+- [x] 提取并校验 X 3.0 壳 `classes.dex` 的哈希与版本
+- [x] 保留 `dc7be70f` 等壳 assets（原样拷贝）
+- [x] 把 X 3.0 功能包和壳 dex 放进 APK，启动时解压
+- [x] 壳入口与 hook 入口同 APK（3 行 `xposed_init`）
+- [x] 传入 modulePath/filesDir/Context/版本号（compat 修正 modulePath/包名）
+- [x] 复用本模块的桥/授权/验签绕过
+- [x] X 3.0 单 APK 跑通（原版 `cn.android.x` 无需安装）
+- [x] 复用 3.0 的 params/设置绕过（00322）
+- [ ] 体积/启动耗时/回退方案评估（阶段一：约 11.7 MB，启动约 50 s 完成全部扩展）
 - [ ] 版权与分发边界确认
+- [ ] 2.44 单 APK（阶段二移除，不再作为目标）

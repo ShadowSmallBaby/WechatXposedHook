@@ -1,6 +1,33 @@
 # scripts/
 
-逆向、分析与生成脚本。全部只依赖 Python 标准库；产物写到 `build/`（已忽略）。
+逆向、分析与生成脚本。除 `build_shell30_replica.py` 需要 `cryptography` 外，
+其余只依赖 Python 标准库；产物写到 `build/`（已忽略）。
+
+## build_shell30_replica.py（X 3.0 单 APK 复刻）
+
+把原版 `X_3.0.apk`、冻结的 wx30 debug hook APK、内置项目包和
+`scripts/shell30/Shell30Compat.java` 合成一个可安装 APK。只做 X 3.0，
+输出不含任何 2.44 资产。
+
+```bash
+python -X utf8 scripts/build_shell30_replica.py \
+  --shell data/refs/X_3.0.apk \
+  --hook-apk data/refs/wxh-wx30-full-debug-20261022.apk \
+  --package github.shadowbaby.wechatxposed.hook \
+  --output build/generated/shell30/WeXposedHook-shell30-v117.apk
+```
+
+关键点：
+
+- 二进制 AXML string pool 只改包名相关字符串，不重编资源；
+- 原样保留 `META-INF/services` 的 cp437 文件名；
+- 注入原版证书/原版 APK 资产，compat dex 在运行时把壳的
+  `getPackageName`/`createPackageContext`/`modulePath`/`META-INF/*.RSA`
+  映射回原版；
+- `zipalign -p 4` + `apksigner`（v1/v2/v3）；默认 debug 密钥库，可用
+  `WXH_KEYSTORE_BASE64` 或 `--ks` 覆盖。
+
+完整说明见 `docs/shell30-replica.md`。
 
 ## dex_inspect.py（通用结构检查）
 

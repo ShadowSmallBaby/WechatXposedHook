@@ -18,6 +18,8 @@ WeXposedHook/
 ├── docs/                     逆向分析文档
 │   ├── reverse-engineering.md   主报告:dex 反汇编、授权链路、设置键
 │   ├── fkz-wx-data-crypto.md    授权库三层加密链路分析
+│   ├── shell30-replica.md       X 3.0 单 APK 复刻（壳 + hook + 项目包）
+│   └── shell-bundling.md        单 APK 全量壳方案讨论（历史）
 │   └── StringPools.java          字符串池留档(不参与编译)
 ├── tests/hook-regression/    对照参考实现的行为回归(79 项检查)
 ├── tests/license-data/      授权库生成的 Java/Python 对照

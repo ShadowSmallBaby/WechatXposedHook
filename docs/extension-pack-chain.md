@@ -534,3 +534,20 @@ restorer 26+6 → LicenseInstaller created → X 3.0 `Module loaded successfully
 APK 资产由 `scripts/build_release_packs.py` 从项目仓 `xmetadata/wx7`
 生成（X30 自动去 32B 前缀，`cfg/`→`_c`，`sig/`→`_s`）。
 
+## 14. 单 APK 复刻壳（2026-10-22 实测成功）
+
+阶段一已把 X 3.0 壳、本项目 wx30 debug hook 与项目包合成一个 APK：
+`build/generated/shell30/WeXposedHook-shell30-v117.apk`。原版 `cn.android.x`
+与 microX 2.44 均无需安装/启用，实测 `X: Module loaded successfully!`。
+
+关键发现：壳把 **模块 APK 的签名证书**和 **modulePath** 一起绑进 params 解密密钥
+（`SHA-256(MD5(证书DER) + "9n4hZkF_2019")`）。因此复刻 APK 必须通过
+`Shell30Compat` 向壳同时提供：
+
+- 原包名视图（`getPackageName`/`createPackageContext`）；
+- 原版证书（`META-INF/*.RSA` 映射到内置原版 `CERT.RSA`）；
+- 原版 modulePath（壳 `XposedInit` 实例字段 → 内置原版 APK）。
+
+方案、构建与验收见 `docs/shell30-replica.md`；证据见
+`build/analysis/af13/shell30-20261022/`。
+
