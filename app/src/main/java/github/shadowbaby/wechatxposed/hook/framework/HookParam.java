@@ -6,6 +6,9 @@ public interface HookParam {
 
     Object arg(int index);
 
+    /** 替换方法参数(before 阶段生效)。 */
+    void setArg(int index, Object value);
+
     Object thisObject();
 
     void setResult(Object result);

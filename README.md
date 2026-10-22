@@ -1,6 +1,6 @@
 # WeXposedHook
 
-针对 WeXposed(微X模块 2.44) 与 X 3.0 的 Xposed 模块。挂住微X把功能 dex 解密进内存的时机,
+针对 X 3.0 的 Xposed 模块。挂住壳把功能 dex 解密进内存的时机,
 接管它的授权校验入口,并对功能包文件、授权数据库做逆向与验证。
 
 本仓库同时包含**可编译的模块源码**与**完整逆向分析资料**。
@@ -9,7 +9,7 @@
 
 ```
 WeXposedHook/
-├── .github/workflows/        CI:构建 8 个 APK,并按公开/完整版分发
+├── .github/workflows/        CI:构建 2 个 legacy 单 APK,并按公开/完整版分发
 ├── app/                      Android 模块源码(Gradle 工程)
 │   ├── src/main/jni/         native 源码(敏感常量解码 + 授权加密;只在内部仓)
 │   └── 代码结构说明.md        源码组织 / 命名约定 / 字符串池对照
@@ -18,13 +18,13 @@ WeXposedHook/
 ├── docs/                     逆向分析文档
 │   ├── reverse-engineering.md   主报告:dex 反汇编、授权链路、设置键
 │   ├── fkz-wx-data-crypto.md    授权库三层加密链路分析
-│   ├── shell30-replica.md       X 3.0 单 APK 复刻（壳 + hook + 项目包）
-│   └── shell-bundling.md        单 APK 全量壳方案讨论（历史）
+│   ├── x30-replica.md       X 3.0 单 APK 复刻（壳 + hook + 项目包）
+│   └── x30-bundling.md        单 APK 全量壳方案讨论（历史）
 │   └── StringPools.java          字符串池留档(不参与编译)
 ├── tests/hook-regression/    对照参考实现的行为回归(79 项检查)
 ├── tests/license-data/      授权库生成的 Java/Python 对照
 ├── tests/dex-probe/          类名常量能否从真 dex 解析出来(点号 vs 斜杠)
-├── tests/file-restore/       功能包补齐逻辑(2.44 24 个 / 3.0 26 个,设备上跑真代码)
+├── tests/file-restore/       功能包补齐逻辑(3.0 26+6,设备上跑真代码)
 ├── tests/license-crypto/     授权加密链路(同一份 .inc 与 Python 参考实现对照)
 ├── tests/secret-encoding/    敏感常量密文与脚本明文逐项对照
 ├── data/                     分析样本:APK / tar / 部署脚本 / 授权库(不入库)
@@ -36,36 +36,31 @@ WeXposedHook/
 需要 JDK 17 与 Android SDK 37(AGP 9.4.1 要求 Gradle 9.6+;wrapper 已锁定版本):
 
 ```powershell
-./gradlew assembleRelease
+./gradlew assembleX30Replica assembleX30ReplicaPublic
 ```
 
-产物按「框架 × 微X版本 × 公开/完整」组合，共 8 个 APK：
+正式产物是 **2 个 legacy 单 APK**（X 3.0 壳、API 102 现代版暂不参与打包）：
 
-| 维度 | 取值 |
+| 版本 | 产物 |
 |---|---|
-| 框架 | `legacy`（经典 Xposed / API < 102）、`modern`（LibXposed API ≥ 102） |
-| 微X版本 | `wx2.44`、`wx3.0` |
-| 版本 | 公开版（无后缀）、完整版（`-full`） |
+| 完整版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk` |
+| 公开版 | `app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta.apk` |
 
-文件名格式：
+两者都内置 X 3.0 壳、项目 hook 和基础包；完整版额外带扩展包。
+完整版的 sf/mf/af 需要在首次启动时用机器码 + wxid 生成离线激活码
+（见 `docs/offline-activation.md`）；未激活只保留基础功能。
+两个 ABI 同时打包在同一个 APK 中。
 
-```
-WeXposedHook-{modern|legacy}-wx{2.44|3.0}-v{version}.apk
-WeXposedHook-{modern|legacy}-wx{2.44|3.0}-v{version}-full.apk
-```
+> 模块 APK 的版本号为项目的 `versionCode 9`、`minSdk 26`，签名只保留 v2+v3；
+> 壳身份仍由内置 `identity.apk` 以 `cn.android.x` 117 提供。
 
-输出目录：
+> 现代 API 版本（`modernWx30*`）仍可单独构建用于测试，但需要另外安装
+> 原版 `cn.android.x` 作为壳，暂不作为正式单 APK 发布。
 
-```
-app/build/outputs/apk/<framework><wx><edition>/release/
-```
-
-每个 APK 只内置对应微X版本的基础包；完整版额外内置扩展包，公开版不带扩展包。
-两个 ABI 仍同时打包在同一个 APK 中。
-
-> 功能包 zip 不再入库，构建前由 `generateFeaturePacks` 从 `xmetadata` 生成到
-> `app/build/generated/featurepacks/wx244/`（基础包）、`wx244-ext/`（扩展包），
-> 以及对应的 `wx30/`、`wx30-ext/`。
+> 功能包 zip 不再入库，构建前由 `generateFeaturePacks` 从 `xmetadata/wx7`
+> 生成到 `app/build/generated/featurepacks/wx30/`（基础包）、`wx30-ext/`（扩展包）。
+> `assets/featuredex` 同样在构建时从 `xmetadata/wx7` 解出；壳的必要条目已抽取到
+> `app/x30.zip`，仓库不需要完整的原版 APK。
 
 > 本机默认 JDK 25 的 class 文件版本(69)不被当前 Gradle 支持,需显式指定 JDK 17:
 > `JAVA_HOME=<JDK17 路径> ./gradlew assembleRelease`
@@ -84,7 +79,7 @@ app/build/outputs/apk/<framework><wx><edition>/release/
 | `scripts/` | 全部 | 仅 `encode_secrets.py` / `build_release_packs.py` | 没有 |
 | `docs/`、`tests/`、`app/代码结构说明.md` | 有 | 没有 | 没有 |
 | `xmetadata/` | 有 | 有 | 有 |
-| 构建 | 本地 | GitHub Actions,8 个 APK | 不构建 |
+| 构建 | 本地 | GitHub Actions,4 个 APK | 不构建 |
 | 发布 | 无 | Release / tag | 无,只接收 README / CHANGELOG 同步 |
 
 核心仓构建时用 `WXH_MASTER_KEY` + `WXH_SECRETS_B64` 生成 `SecretConstants` 与两个功能包 zip;
@@ -175,16 +170,13 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
 入口 `github.shadowbaby.wechatxposed.hook.XposedInit`(`assets/xposed_init` 指向),
 纯 `IXposedHookZygoteInit`,无 Activity / Service。
 
-1. `XposedInit` 挂 `dalvik.system.InMemoryDexClassLoader` 构造 —— 微X把功能 dex 解密进内存时拦截。
-2. `InMemoryDexLoadHook` 在刚加载的 classLoader 里识别微X的四个组件 dex
-   (Base / Core / Themes / Donation),并屏蔽 5 个授权校验入口
-   (`disable` / `on_update_check` / `process_metadata` / `updateLicense` / `delayed_check`)。
-3. `WxComponentHooks` 对每个 dex 注入 hook,`CallMethodBypassHook` 拦截
-   `WxJniCoreBridge.CallMethod`,按 `bypassMode` 伪造授权校验结果与功能列表。
-4. `XposedInit.handleLoadPackage` 在微信主进程启动时跑一次启动自检:
-   - `FeaturePackRestorer` 按 APK 版本检查对应运行时目录(2.44 24 个 / 3.0 26 个文件,
-     文件名是内容指纹,大小对不上也算缺失),缺哪个就从 APK 的内置载荷补写——
-     载荷由构建脚本从 `xmetadata/` 生成;微X 判定未授权时会自己删掉其中一部分;
+1. `XposedInit` 挂 `dalvik.system.InMemoryDexClassLoader` 构造 —— 壳把功能 dex 解密进内存时拦截。
+2. `InMemoryDexLoadHook` 在刚加载的 classLoader 里识别 X 3.0 组件 dex，
+   安装 License/Guard/Settings hook；扩展包内层返回空 buffer 时用离线 dex 注入。
+3. `XposedInit.handleLoadPackage` 在微信主进程启动时跑一次启动自检:
+   - `FeaturePackRestorer` 检查 `files/x7_3.0`（基础 26 + 扩展 6，文件名是内容指纹，
+     大小对不上也算缺失），缺哪个就从 APK 的内置载荷补写；
+     载荷由构建脚本从 `xmetadata/wx7` 生成；
    - `PackIntegrity` 在主进程与 `:appbrand0/1` 都安装:按内置载荷校验文件数量与 SHA-256,
      `d61f8` / `36a76b` / `dc7b` 等核心文件被写入、出现 `a660e` / `a282` 自解包副本,
      或旧核心类出现时,直接对 `files/x7_3.0` 做目录级覆盖恢复;
@@ -192,13 +184,12 @@ CI 只构建,不做密钥 / 文件检测:密钥配套、so 是否齐全、有没
      `libwexhook.so` 生成/提供,Java 只负责调度,不再依赖设备上的 shell 脚本。账号先读微信 prefs 里的
     `login_weixin_username`,微X 校验时再把权威账号交过来补一次。
    库或账号已存在时只补缺:已经是该账号的 LIC/verifier6 原样保留,其余设置键一动不动。
-   启动自检跑在微X 读文件之前,所以这两步在这次启动里就生效(实测补齐后同一进程直接
-   `feature loaded: base 525 / donation 71 / themes 113`);只有库是由微X 校验回调触发补写时,
-   微X 已经读过库,才需要再重启一次。
+   启动自检跑在壳读文件之前,所以这两步在这次启动里就生效（实测同一进程直接
+   `feature loaded: base 519 / themes 116 / af 175 / sf 76 / mf 132`）；
+   只有库是由壳校验回调触发补写时,才需要再重启一次。
 5. `HostVersionSpoof` 在微信主进程与小程序进程(`:appbrand0` / `:appbrand1`)里伪装宿主版本:
    主进程在 `LauncherUI.onResume` 时把 `c64.xe.g` 设为版本文件里的客户端版本
-   (默认 8.0.79,可手动修改),文件位于 `files/X/wxh_client_version`(3.0)或
-   `files/WechatXposed/wxh_client_version`(2.44)。进入钱包/转账页面
+   (默认 8.0.79,可手动修改),文件位于 `files/X/wxh_client_version`。进入钱包/转账页面
    (`WalletBaseUI` 及白名单内的页面)时临时还原真实版本,退出后恢复。
    启动约 30 秒后还会主动请求一次官方升级页(24 小时内不重复),
    减少用户看到升级页的概率。
@@ -310,7 +301,7 @@ python -X utf8 scripts/generate_min_db.py wxid_a,wxid_b,wxid_c merged.db
 - `ACCOUNT` 列必须等于当前登录 wxid,否则整表读不到;同一设备多账号共用一份库。
 - `LIC` 三段结构 `"<blob>#<flag>#<seg3>"`,**段 3 的 key 是 `SHA-256(当前 wxid)`**
   (AES/CBC/PKCS7,零 IV),必须按账号现算。照抄别的账号的段 3 会解出乱码 →
-  微X 判定未授权 → 不显示 `[VIP][专业]`、菜单为空,**并删掉 `wx6_2.44` 里的三个功能包**。
+  X 3.0 判定未授权 → 不显示 `[VIP][专业]`、菜单为空，并删掉扩展包文件。
   生成脚本自带自检(解回去必须等于 `[1]`)。
 - `PRAGMA user_version` 必须为 1,否则微X 建表报 `table DATA already exists` 启动失败。
 

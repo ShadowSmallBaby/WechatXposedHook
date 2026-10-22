@@ -100,7 +100,7 @@ AES-CBC(IV=f1[:16]) 解 f1[16:]
   `doFinal`。靠 **password+salt+seed+IV+AES key** 关联一次解密。
 - `DigestProbe`：记录 `MessageDigest` 的 preimage，可直接看出
   `C/P/K/S + 后缀` 的拼接顺序。
-- `SignatureProbe` / `SignatureVerifyBypass`：确认 `_s` 走 SHA1withRSA
+- `SignatureProbe`（历史）：确认 `_s` 走 SHA1withRSA；自签放行已移除
   Java 验签；bypass 后任意 256B 可通过。
 - `FileReadProbe`：看宿主读取了哪个包、读了多少字节、是否失败。
 - `NativeCallProbe`：记录 `CallMethod(id,args)`；`133` 是扩展准备，
@@ -172,8 +172,7 @@ AES-CBC(IV=f1[:16]) 解 f1[16:]
 - 项目仓 `xmetadata/wx7` = **32B SHA-256 前缀 + 旧版 body**；
   远程仓 `data/xmetadata/wx7` 的 core/base 更新，117 不认。
 - 最小集：`3.0/r/C`、`r/L`、`r/fp/{base,themes,donation,vidurlparser,sf,mf,af}`、
-  固定工具（`D/H_p/M/S/Xmd/pr/P/pr/P_8049/LD64`）、`cfg/*`→`_c`、
-  `sig/*`→`_s`。
+  固定工具（`D/H_p/M/S/Xmd/pr/P/pr/P_8049/LD64`）、`cfg/*.{c,s}`→原样复制 `_c`/`_s`。
 - 生成：
 
   ```bash
@@ -183,9 +182,11 @@ AES-CBC(IV=f1[:16]) 解 f1[16:]
   ```
 
 - Gradle 的 `generateFeaturePacks` 会调用 `build_release_packs.py`：
-  X30 源用项目仓、X30 ext 去 32B 前缀、`cfg/sig` 作为旁车。
+  X30 源用项目仓、X30 ext 去 32B 前缀；`_c`/`_s` 从 `cfg/` 原样复制。
 - 资产注意：`x7_3.0.zip` 放 `wx30/`，`x7_3.0_ext.zip` 放 `wx30-ext/`，
   否则 asset merge 会报 duplicate。
+- 上游停止更新后的逐版本适配（8.0.50–8.0.79）见
+  `docs/version-adaptation-plan.md`。
 
 ## 9. 自签经验
 
@@ -194,6 +195,9 @@ AES-CBC(IV=f1[:16]) 解 f1[16:]
 - 包尾 256B RSA 记录由 native 用厂商公钥解析，**保留原值**；要换自己的
   RSA 必须同时替换宿主公钥/验证路径（Java + native）。
 - 不要仅替换包里的 RSA 字节：未打补丁的宿主仍用厂商公钥，验签/解析会失败。
+- X 3.0 实测：`_c` 的 256B 签名覆盖容器载荷，native loader 会对两个 256B 槽位做
+  RSA 公钥运算；即使保留原签名块、只换 salt/IV 重新加密，也会在 `strlen(NULL)`
+  处 SIGSEGV。`_s` 同理。结论：旁车必须原样保留，不能构建时重生成。
 
 ## 10. 排错清单
 

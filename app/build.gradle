@@ -8,6 +8,7 @@ def signingStorePassword = envValue('WXH_STORE_PASSWORD')
 def signingKeyAlias = envValue('WXH_KEY_ALIAS')
 def signingKeyPassword = envValue('WXH_KEY_PASSWORD')
 def hasSigning = ksBase64 && signingStorePassword && signingKeyAlias && signingKeyPassword
+def certPinOverride = envValue('WXH_CERT_SHA256')
 
 android {
     namespace 'github.shadowbaby.wechatxposed.hook'
@@ -18,8 +19,8 @@ android {
         applicationId 'github.shadowbaby.wechatxposed.hook'
         minSdk 26
         targetSdk 37
-        versionCode 7
-        versionName '1.3.6'
+        versionCode 9
+        versionName '2.0-BETA'
 
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
@@ -48,25 +49,16 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources true
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 
-    flavorDimensions 'framework', 'wx', 'edition'
+    flavorDimensions 'framework', 'edition'
     productFlavors {
         legacy { dimension 'framework' }
         modern { dimension 'framework' }
-
-        wx244 {
-            dimension 'wx'
-            buildConfigField 'String', 'WX_PACK', '"wx6_2.44"'
-        }
-        wx30 {
-            dimension 'wx'
-            buildConfigField 'String', 'WX_PACK', '"x7_3.0"'
-        }
 
         publicEdition {
             dimension 'edition'
@@ -105,10 +97,10 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         def flavors = variant.productFlavors.collectEntries { [(it.first): it.second] }
         def framework = flavors['framework']
-        def wx = flavors['wx'] == 'wx244' ? '2.44' : '3.0'
         def edition = flavors['edition'] == 'fullEdition' ? '-full' : ''
-        def pack = flavors['wx'] == 'wx244' ? 'wx244' : 'wx30'
+        def pack = 'wx30'
         def appVersion = android.defaultConfig.versionName
+        def appVersionCode = android.defaultConfig.versionCode
         variant.sources.assets?.addStaticSourceDirectory(
                 layout.buildDirectory.dir("generated/featurepacks/${pack}")
                         .get().asFile.absolutePath)
@@ -119,7 +111,7 @@ androidComponents {
         }
         variant.outputs.each { output ->
             output.outputFileName.set(
-                    "WeXposedHook-${framework}-wx${wx}-v${appVersion}${edition}.apk")
+                    "WeXposedHook-${framework}-v${appVersion}${edition}.apk")
         }
     }
 }
@@ -164,6 +156,52 @@ def nativeCompileFlags = { ->
             '-Wl,--build-id=none']
 }
 
+def signingCertSha256 = { ->
+    if (certPinOverride) {
+        return certPinOverride.toLowerCase()
+    }
+    try {
+        File store
+        String storePassword
+        String alias
+        if (hasSigning) {
+            store = layout.buildDirectory.file('keystore/release.jks').get().asFile
+            storePassword = signingStorePassword
+            alias = signingKeyAlias
+        } else {
+            store = new File(System.getProperty('user.home'), '.android/debug.keystore')
+            storePassword = 'android'
+            alias = 'androiddebugkey'
+        }
+        if (!store.isFile()) {
+            return ''
+        }
+        java.security.KeyStore keyStore = null
+        for (String type : ['JKS', 'PKCS12']) {
+            try {
+                def candidate = java.security.KeyStore.getInstance(type)
+                candidate.load(new java.io.FileInputStream(store), storePassword.toCharArray())
+                keyStore = candidate
+                break
+            } catch (Throwable ignored) {
+            }
+        }
+        if (keyStore == null) {
+            return ''
+        }
+        def certificate = keyStore.getCertificate(alias)
+        if (certificate == null) {
+            return ''
+        }
+        return java.security.MessageDigest.getInstance('SHA-256')
+                .digest(certificate.encoded)
+                .collect { String.format('%02x', it) }.join()
+    } catch (Throwable error) {
+        logger.lifecycle('无法计算签名证书指纹: ' + error.message)
+        return ''
+    }
+}
+
 def encodeSecrets = tasks.register('encodeSecrets') {
     def script = rootProject.file('scripts/encode_secrets.py')
     def table = rootProject.file('scripts/secrets_table.py')
@@ -174,6 +212,7 @@ def encodeSecrets = tasks.register('encodeSecrets') {
         inputs.file(script)
         inputs.property('wxhMasterKey', masterKeyText ?: '')
         inputs.property('wxhSecrets', secretsB64 ?: '')
+        inputs.property('wxhCertPin', signingCertSha256())
     }
     if (table.isFile()) {
         inputs.file(table)
@@ -185,6 +224,10 @@ def encodeSecrets = tasks.register('encodeSecrets') {
                        '--output-root', output.get().asFile.absolutePath]
         if (masterKeyText != null) {
             command.addAll(['--master-key', masterKeyText])
+        }
+        def certPin = signingCertSha256()
+        if (certPin) {
+            command.addAll(['--module-cert-sha256', certPin])
         }
         def result = providers.exec {
             commandLine command
@@ -199,6 +242,48 @@ def encodeSecrets = tasks.register('encodeSecrets') {
 
 tasks.named('preBuild') {
     dependsOn encodeSecrets
+}
+
+// x30 注入 dex 由 xmetadata/wx7 的扩展包容器在构建时解出（assets/featuredex/x30_*.dex）。
+abstract class ExtractFeatureDexTask extends DefaultTask {
+    @InputDirectory
+    abstract DirectoryProperty getSourceDir()
+
+    @InputFile
+    abstract RegularFileProperty getScriptFile()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void extract() {
+        File target = new File(outputDir.get().asFile, 'featuredex')
+        target.mkdirs()
+        def python = System.getenv('WXH_PYTHON') ?: 'python'
+        def result = getProject().providers.exec {
+            commandLine python, '-X', 'utf8', scriptFile.get().asFile.absolutePath,
+                    '--source', sourceDir.get().asFile.absolutePath,
+                    '--output', target.absolutePath
+            ignoreExitValue = true
+        }
+        if (result.result.get().exitValue != 0) {
+            throw new GradleException('extract_featuredex.py 执行失败')
+        }
+    }
+}
+
+def extractFeatureDex = tasks.register('extractFeatureDex', ExtractFeatureDexTask) {
+    sourceDir.set(rootProject.layout.projectDirectory.dir('xmetadata/wx7'))
+    scriptFile.set(rootProject.layout.projectDirectory.file('scripts/extract_featuredex.py'))
+    inputs.file(rootProject.layout.projectDirectory.file('scripts/decrypt_wx244.py'))
+    outputDir.set(layout.buildDirectory.dir('generated/featuredex-assets'))
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+                extractFeatureDex, { task -> task.outputDir })
+    }
 }
 
 def buildNative = tasks.register('buildNativeSecret') {
@@ -346,29 +431,45 @@ def generateFeaturePacks = tasks.register('generateFeaturePacks', Exec) {
     commandLine python, script.absolutePath, '--output-root', packs.get().asFile.absolutePath
     onlyIf { script.isFile() && rootProject.file('xmetadata').isDirectory() }
     inputs.file(script)
-    inputs.files(rootProject.fileTree('xmetadata') { include 'wx6/**', 'wx7/**' })
-    outputs.files(packs.get().file('wx244/wx6_2.44.zip'),
-            packs.get().file('wx244-ext/wx6_2.44_ext.zip'),
-            packs.get().file('wx30/x7_3.0.zip'),
+    inputs.files(rootProject.fileTree('xmetadata') { include 'wx7/**' })
+    outputs.files(packs.get().file('wx30/x7_3.0.zip'),
             packs.get().file('wx30-ext/x7_3.0_ext.zip'))
 }
 
-// 阶段一：把原版 X 3.0 壳和冻结的 wx30 debug hook 包合成一个单 APK。
-// 不依赖 assemble，避免重新构建时覆盖 data/refs 里的冻结注入包。
-tasks.register('assembleShell30Replica', Exec) {
-    def script = rootProject.file('scripts/build_shell30_replica.py')
-    def shell = rootProject.file('data/refs/X_3.0.apk')
-    def hook = rootProject.file('data/refs/wxh-wx30-full-debug-20261022.apk')
-    def output = layout.buildDirectory.dir('generated/shell30')
-    def python = System.getProperty('os.name').toLowerCase().contains('windows')
-            ? 'python' : 'python3'
-    onlyIf { script.isFile() && shell.isFile() && hook.isFile() }
-    commandLine python, '-X', 'utf8', script.absolutePath,
-            '--shell', shell.absolutePath,
-            '--hook-apk', hook.absolutePath,
-            '--package', 'github.shadowbaby.wechatxposed.hook',
-            '--output', output.get().file('WeXposedHook-shell30-v117.apk').asFile.absolutePath
+// 阶段二：从源码构建 legacy hook 载荷（release），再与内置壳条目合成单 APK。
+def registerX30Replica = { String taskName, String variant, String edition,
+                               String outputName ->
+    tasks.register(taskName, Exec) {
+        dependsOn "assemble${variant.capitalize()}Release".toString(), 'generateFeaturePacks'
+        def script = rootProject.file('scripts/build_x30_replica.py')
+        def shellZip = rootProject.file('app/x30.zip')
+        def appVersion = android.defaultConfig.versionName
+        def appVersionCode = android.defaultConfig.versionCode
+        def hook = layout.buildDirectory.file(
+                "outputs/apk/${variant}/release/" +
+                "WeXposedHook-${variant.startsWith('legacy') ? 'legacy' : 'modern'}-v${appVersion}${edition}.apk")
+        def output = layout.buildDirectory.dir('outputs/apk/release')
+        def python = System.getProperty('os.name').toLowerCase().contains('windows')
+                ? 'python' : 'python3'
+        onlyIf { script.isFile() }
+        commandLine python, '-X', 'utf8', script.absolutePath,
+                '--shell-zip', shellZip.absolutePath,
+                '--hook-apk', hook.get().asFile.absolutePath,
+                '--package', 'github.shadowbaby.wechatxposed.hook',
+                '--app-name', 'WeXposedHook',
+                '--version-name', appVersion,
+                '--version-code', String.valueOf(appVersionCode),
+                '--icon', rootProject.file('app/src/main/res/mipmap/logo.png').absolutePath,
+                '--output', output.get().file(outputName).asFile.absolutePath
+    }
 }
+
+registerX30Replica('assembleX30Replica', 'legacyFullEdition', '-full',
+        "WeXposedHook-legacy-v${android.defaultConfig.versionName}-full.apk")
+registerX30Replica('assembleX30ReplicaPublic', 'legacyPublicEdition', '',
+        "WeXposedHook-legacy-v${android.defaultConfig.versionName}.apk")
+registerX30Replica('assembleX30ReplicaModern', 'modernFullEdition', '-full',
+        "WeXposedHook-modern-v${android.defaultConfig.versionName}-full.apk")
 
 tasks.named('preBuild') {
     dependsOn generateFeaturePacks

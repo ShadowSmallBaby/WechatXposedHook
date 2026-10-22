@@ -29,7 +29,7 @@ static const uint8_t AES_KEY[32] = {
 };
 
 /* LIC 第 3 段解密后的明文:授权档位。 */
-static const char LICENSE_FEATURE_SET[] = "[0,1,4]";
+static const char LICENSE_FEATURE_SET[] = "[0, 1, 2, 4, 101, 104]";
 /* 公开版不带扩展包，功能集合保持 [1]；native 两种都接受。 */
 static const char LICENSE_FEATURE_SET_LEGACY[] = "[1]";
 
@@ -497,18 +497,34 @@ static int check_segment3(const char *segment, const char *account, size_t accou
         return 0;
     }
     int matches = 0;
-    if (raw_length == 16) {
+    if (raw_length > 0 && raw_length % 16 == 0) {
         uint8_t round_keys[240];
         aes256_expand(key, round_keys);
-        uint8_t state[16];
-        memcpy(state, raw, 16);
-        uint8_t zero[16];
-        memset(zero, 0, 16);
-        aes256_decrypt_block(round_keys, state, zero);
+        uint8_t chain[16];
+        memset(chain, 0, 16);
+        uint8_t state[64];
+        size_t copied = 0;
+        for (size_t offset = 0; offset < raw_length && copied < sizeof(state);
+                offset += 16) {
+            uint8_t block[16];
+            memcpy(block, raw + offset, 16);
+            aes256_decrypt_block(round_keys, block, chain);
+            size_t take = sizeof(block);
+            if (copied + take > sizeof(state)) {
+                take = sizeof(state) - copied;
+            }
+            memcpy(state + copied, block, take);
+            copied += take;
+            memcpy(chain, raw + offset, 16);
+        }
         size_t expected_length = strlen(LICENSE_FEATURE_SET);
-        matches = memcmp(state, LICENSE_FEATURE_SET, expected_length) == 0
-                || memcmp(state, LICENSE_FEATURE_SET_LEGACY,
-                          strlen(LICENSE_FEATURE_SET_LEGACY)) == 0;
+        size_t legacy_length = strlen(LICENSE_FEATURE_SET_LEGACY);
+        if (copied >= expected_length) {
+            matches = memcmp(state, LICENSE_FEATURE_SET, expected_length) == 0;
+        }
+        if (!matches && copied >= legacy_length) {
+            matches = memcmp(state, LICENSE_FEATURE_SET_LEGACY, legacy_length) == 0;
+        }
     }
     free(raw);
     return matches;

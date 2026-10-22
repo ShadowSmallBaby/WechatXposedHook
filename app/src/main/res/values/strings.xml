@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WeXposedHook</string>
-    <string name="xp_desc">微X模块 Hook 工具</string>
+    <string name="xp_desc">WeXposedHook 微信增强模块</string>
 </resources>

@@ -4,14 +4,14 @@ import java.io.File;
 import java.util.List;
 
 /**
- * 在设备上跑真正的 FeaturePackRestorer(读模块 APK 的 assets/wx6_2.44.zip)。
+ * 在设备上跑真正的 FeaturePackRestorer(读模块 APK 的 assets/x7_3.0.zip)。
  *
  * 参数: <微信 files 目录> [mode] [模块 APK 路径]
- * ensureOnce 收的是微信 files 目录,它自己会拼 wx6_2.44 子目录,所以探针也按这个语义走。
+ * ensureOnce 收的是微信 files 目录,它自己会拼 x7_3.0 子目录,所以探针也按这个语义走。
  */
 public final class FileRestoreCheck {
 
-    private static final String DIR_NAME = "wx6_2.44";
+    private static final String DIR_NAME = "x7_3.0";
 
     public static void main(String[] args) throws Exception {
         File filesDir = new File(args[0]);

@@ -88,6 +88,11 @@ public final class LegacyFramework implements HookFramework {
         }
 
         @Override
+        public void setArg(int index, Object value) {
+            param.args[index] = value;
+        }
+
+        @Override
         public Object thisObject() {
             return param.thisObject;
         }

@@ -1,7 +1,7 @@
-"""在设备上验证 FeaturePackRestorer:按清单补齐 files/wx6_2.44 的 24 个文件。
+"""在设备上验证 FeaturePackRestorer:按清单补齐 files/x7_3.0 的 26 个文件。
 
 跑的是真正的 App 代码(FeaturePackRestorer + ModuleApk),载荷取模块 APK 里的
-assets/wx6_2.44.zip(构建时由 xmetadata 生成)。场景都在 /data/local/tmp 下的临时目录里铺,
+assets/x7_3.0.zip(构建时由 xmetadata/wx7 生成)。场景都在 /data/local/tmp 下的临时目录里铺,
 不碰微信真实目录。
 
 需要 JDK17、Android SDK、adb,以及一份已构建的 release APK(默认见 tests/_apk.py)。
@@ -22,8 +22,8 @@ REMOTE_JAR = REMOTE_DIR + "/file-restore-check.jar"
 REMOTE_APK = REMOTE_DIR + "/file-restore-module.apk"
 REMOTE_LIB = REMOTE_DIR + "/file-restore-lib"
 REMOTE_WORK = REMOTE_DIR + "/file-restore-work"
-REMOTE_FILES = REMOTE_WORK + "/wx6_2.44"
-PAYLOAD_ENTRY = "assets/wx6_2.44.zip"
+REMOTE_FILES = REMOTE_WORK + "/x7_3.0"
+PAYLOAD_ENTRY = "assets/x7_3.0.zip"
 
 
 def run(*command, timeout=180):

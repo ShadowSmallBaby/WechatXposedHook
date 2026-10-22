@@ -6,8 +6,8 @@
     app/src/legacy/java    legacy 入口与框架适配层
     app/src/modern/java    modern 入口与框架适配层
 
-    app/build/outputs/apk/legacy/release/app-legacy-release.apk
-    app/build/outputs/apk/modern/release/app-modern-release.apk
+    app/build/outputs/apk/legacyWx30FullEdition/release/WeXposedHook-legacy-wx3.0-*.apk
+    app/build/outputs/apk/modernWx30FullEdition/release/WeXposedHook-modern-wx3.0-*.apk
 
 这些测试都跑在真机上,用 legacy 包(含 assets/xposed_init 与两个 ABI 的 so);
 两个 flavor 的 so 内容相同,主密钥与密文表也相同,所以取哪一份都行。
@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # 测试用的 flavor:legacy 包与 modern 包除了 Xposed 描述符外没有差别。
 FLAVOR = "legacy"
 
-APK = ROOT / ("app/build/outputs/apk/%s/release/app-%s-release.apk" % (FLAVOR, FLAVOR))
+APK = ROOT / "app/build/outputs/apk/legacyWx30FullEdition/release" / (
+    "WeXposedHook-legacy-wx3.0-v1.3.6-full.apk")
 
 # 模块的 so 名(两个 flavor 相同)。
 LIB_NAME = "libwexhook.so"

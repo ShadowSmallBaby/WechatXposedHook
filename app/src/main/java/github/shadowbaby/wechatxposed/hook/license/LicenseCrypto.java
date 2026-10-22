@@ -1,6 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.license;
 
-import github.shadowbaby.wechatxposed.hook.loader.NativeLibrary;
+import github.shadowbaby.wechatxposed.hook.loader.util.NativeLibrary;
 
 public final class LicenseCrypto {
 

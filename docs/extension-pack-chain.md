@@ -20,7 +20,7 @@
   ```
 
   Gradle 的 `generateFeaturePacks` 也会从项目仓生成 X30 资产
-  （自动去 32B 前缀，`cfg/`→`_c`，`sig/`→`_s`）。
+  （自动去 32B 前缀；`_c`/`_s` 带厂商签名，从 `cfg/` 原样复制）。
 - 干净环境：root 创建 `files/wxh_clean_env` 后重启微信；`CleanEnvironment`
   把旧目录/DB 重命名为 `.cleanbak_*`，随后自动恢复 26+6 文件并建库。
 - 自签：本模块存在时 `_s` 任意 256B、`_c` 可重加密 payload（保留原 RSA 记录）、
@@ -157,8 +157,12 @@ preimage 后缀一致）。内层容器用同样方法读出自己的后缀，�
 
 ## 4. `_c` / `_s` 与自签
 
+> **2026-10-22 更新**：X 3.0 实测 `_c` 改载荷即 SIGSEGV、`_s` 也不能用随机
+> 256B；自签支持已移除，仓库原样保留 `xmetadata/wx7/cfg/<role>.{c,s}`。
+
+
 - `_s`：256B RSA-SHA1 签名（厂商 D 证书可验）。宿主通过 Java
-  `Signature.verify` 校验；本模块的 `SignatureVerifyBypass` 放行所有 SHA1withRSA，
+  `Signature.verify` 校验；本模块的 `自签放行（已移除）` 放行所有 SHA1withRSA，
   因此可用自己的密钥重新签名——实测自签 `a38c6c9e…` 不影响 207/202 核心加载。
 - `_c`：599B 旁车容器（同一 MsgPack 格式）。password 全表见 4.1（如 core_c
   主 `9cba32d6…`、backup `2aaf7e1f…`）。解出的 32B 是 msgpack `fixstr`
@@ -171,7 +175,7 @@ preimage 后缀一致）。内层容器用同样方法读出自己的后缀，�
     2.44 宿主路径不会对扩展包内嵌 `_c` 做 PBE，因此拷贝最稳。
   - payload：外层 password 与内层 password 均已还原（见 3.1），
     因此 sf/mf/af 的**内层 APK 可以按原 password 重新加密/替换**；
-    签名校验已被 `SignatureVerifyBypass` 放行。
+    签名校验已被 `自签放行（已移除）` 放行。
   - 注意：尾记录里的 `<hash>`（如 sf `804798d2`）疑似与 payload 绑定，
     替换 payload 时是否被校验尚未验证；保留原内层 payload 则无此问题。
 
@@ -449,6 +453,10 @@ X 3.0 的 password 同样是 `trim(MD5(常量排列 + 7位后缀))`，但**不�
 
 ## 12. 运行时命名规则与自签边界（2026-10-22）
 
+> **2026-10-22 更新**：X 3.0 实测 `_c` 改载荷即 SIGSEGV、`_s` 也不能用随机
+> 256B；自签支持已移除，仓库原样保留 `xmetadata/wx7/cfg/<role>.{c,s}`。
+
+
 运行文件名是**确定性哈希**，不是随机：
 
 ```
@@ -475,7 +483,7 @@ trim  = 逐字节去掉 hex 的前导 0
 - `_c`：password 链已完整还原（第 4.1 节）。保留原 256B RSA 记录（它给出后缀），
   用自己的 msgpack payload 重新 AES 加密即可；**换后缀**才需要厂商私钥。
 - `_s`：厂商用 SHA1withRSA 验签。没有私钥无法生成厂商有效签名；
-  但本模块的 `SignatureVerifyBypass` 放行所有 SHA1withRSA，运行环境里可用任意
+  但本模块的 `自签放行（已移除）` 放行所有 SHA1withRSA，运行环境里可用任意
   256B 自签。
 - 包的 256B 尾记录同样是公钥可还原的 RSA 记录；复制原记录即可。
   若替换 payload，`<hash>` 是否被校验尚未验证；保留原 payload 则无此问题。
@@ -490,7 +498,7 @@ trim  = 逐字节去掉 hex 的前导 0
 
 **“只换 RSA” 的边界**：
 
-- 换 `_s` 的 256B 签名字节：本模块 `SignatureVerifyBypass` 下可行；
+- 换 `_s` 的 256B 签名字节：本模块 `自签放行（已移除）` 下可行；
   未打补丁的宿主仍用厂商公钥做 SHA1withRSA，验签失败。
 - 换 `_c` / 包尾的 256B RSA 记录为我们自己的密钥：宿主用内嵌**厂商公钥**
   还原（Java 验签 + native 尾解析），换记录会解析失败；必须把宿主的
@@ -532,22 +540,22 @@ touch /data/data/com.tencent.mm/files/wxh_clean_env   # root
 `injected`、导入源等重命名为 `.cleanbak_*`，随后：
 restorer 26+6 → LicenseInstaller created → X 3.0 `Module loaded successfully!`。
 APK 资产由 `scripts/build_release_packs.py` 从项目仓 `xmetadata/wx7`
-生成（X30 自动去 32B 前缀，`cfg/`→`_c`，`sig/`→`_s`）。
+生成（X30 自动去 32B 前缀；`_c`/`_s` 原样复制）。
 
 ## 14. 单 APK 复刻壳（2026-10-22 实测成功）
 
 阶段一已把 X 3.0 壳、本项目 wx30 debug hook 与项目包合成一个 APK：
-`build/generated/shell30/WeXposedHook-shell30-v117.apk`。原版 `cn.android.x`
+`app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk`。原版 `cn.android.x`
 与 microX 2.44 均无需安装/启用，实测 `X: Module loaded successfully!`。
 
 关键发现：壳把 **模块 APK 的签名证书**和 **modulePath** 一起绑进 params 解密密钥
 （`SHA-256(MD5(证书DER) + "9n4hZkF_2019")`）。因此复刻 APK 必须通过
-`Shell30Compat` 向壳同时提供：
+`X30Compat` 向壳同时提供：
 
 - 原包名视图（`getPackageName`/`createPackageContext`）；
 - 原版证书（`META-INF/*.RSA` 映射到内置原版 `CERT.RSA`）；
 - 原版 modulePath（壳 `XposedInit` 实例字段 → 内置原版 APK）。
 
-方案、构建与验收见 `docs/shell30-replica.md`；证据见
-`build/analysis/af13/shell30-20261022/`。
+方案、构建与验收见 `docs/x30-replica.md`；证据见
+`build/analysis/af13/x30-20261022/`。
 

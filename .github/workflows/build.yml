@@ -102,25 +102,28 @@ jobs:
         if: steps.native-cache.outputs.cache-hit != 'true'
         run: ./gradlew buildNativeSecret --console=plain
 
-      - name: Build all release variants
-        run: ./gradlew assembleRelease --console=plain --stacktrace
+      - name: Verify vendored shell entries
+        run: |
+          test -f app/x30.zip
+          unzip -Z1 app/x30.zip | grep -qx 'AndroidManifest.xml'
+          unzip -Z1 app/x30.zip | grep -qx 'classes.dex'
+          unzip -Z1 app/x30.zip | grep -qx 'resources.arsc'
+
+      - name: Build legacy single-APK variants
+        run: ./gradlew assembleX30Replica assembleX30ReplicaPublic --console=plain --stacktrace
 
       - name: Collect release assets
         run: |
-          test -f app/build/generated/featurepacks/wx244/wx6_2.44.zip
-          test -f app/build/generated/featurepacks/wx244-ext/wx6_2.44_ext.zip
           test -f app/build/generated/featurepacks/wx30/x7_3.0.zip
           test -f app/build/generated/featurepacks/wx30-ext/x7_3.0_ext.zip
-          test "$(unzip -Z1 app/build/generated/featurepacks/wx244/wx6_2.44.zip | wc -l)" -eq 26
-          test "$(unzip -Z1 app/build/generated/featurepacks/wx244-ext/wx6_2.44_ext.zip | wc -l)" -eq 3
           test "$(unzip -Z1 app/build/generated/featurepacks/wx30/x7_3.0.zip | wc -l)" -eq 26
           test "$(unzip -Z1 app/build/generated/featurepacks/wx30-ext/x7_3.0_ext.zip | wc -l)" -eq 3
-          ! unzip -Z1 app/build/generated/featurepacks/wx244/wx6_2.44.zip \
-              | grep -qE '^(257f23e0175be13dec231373679bedc|ec38a2b5b262d9c72f75edacb8875cfe|ee06cd8f9beaf915a27b8bad9e8c2f)$'
           ! unzip -Z1 app/build/generated/featurepacks/wx30/x7_3.0.zip \
               | grep -qE '^(257f23e0175be13dec231373679bedc|ec38a2b5b262d9c72f75edacb8875cfe|ee06cd8f9beaf915a27b8bad9e8c2f)$'
+          ! unzip -Z1 app/build/generated/featurepacks/wx30-ext/x7_3.0_ext.zip \
+              | grep -qE '^(257f23e0175be13dec231373679bedc|ec38a2b5b262d9c72f75edacb8875cfe|ee06cd8f9beaf915a27b8bad9e8c2f)$'
           mkdir -p dist/public dist/core
-          for apk in app/build/outputs/apk/*/release/WeXposedHook-*.apk; do
+          for apk in app/build/outputs/apk/release/*.apk; do
             case "$apk" in
               *-full.apk) cp "$apk" dist/core/ ;;
               *) cp "$apk" dist/public/ ;;
@@ -128,8 +131,8 @@ jobs:
           done
           echo "public:"; ls -1 dist/public
           echo "core:"; ls -1 dist/core
-          test "$(ls -1 dist/public/*.apk | wc -l)" -eq 4
-          test "$(ls -1 dist/core/*.apk | wc -l)" -eq 4
+          test "$(ls -1 dist/public/*.apk | wc -l)" -eq 1
+          test "$(ls -1 dist/core/*.apk | wc -l)" -eq 1
 
       - name: Upload workflow artifacts (every build)
         uses: actions/upload-artifact@v4
@@ -189,15 +192,14 @@ jobs:
             echo
             echo "## 下载哪个包？ / Which APK?"
             echo
-            echo "| 微X 版本 | 现代 LibXposed（API ≥ 102） | 经典 Xposed / API < 102 |"
-            echo "|---|---|---|"
-            echo "| 微X 2.44 | \`WeXposedHook-modern-wx2.44-${tag}.apk\` | \`WeXposedHook-legacy-wx2.44-${tag}.apk\` |"
-            echo "| X 3.0 | \`WeXposedHook-modern-wx3.0-${tag}.apk\` | \`WeXposedHook-legacy-wx3.0-${tag}.apk\` |"
+            echo "| 框架 | APK |"
+            echo "|---|---|"
+            echo "| 现代 LibXposed（API ≥ 102） | \`WeXposedHook-modern-${tag}.apk\` |"
+            echo "| 经典 Xposed / API < 102 | \`WeXposedHook-legacy-${tag}.apk\` |"
             echo
-            echo "- 先确认已安装的微X是 **2.44** 还是 **X 3.0**，再按框架二选一。"
             echo "- 现代包若提示「该模块需要更新的 Xposed 版本 102」，改用 **legacy** 包。"
             echo "- 作用域勾选 **微信**。"
-            echo "- 环境要求：Android 8.0+、微信 8.0.49、微X模块 2.44 / X 3.0。"
+            echo "- 环境要求：Android 8.0+、微信 8.0.49、X 3.0（117）。"
             echo
             prev=$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)
             if [ -n "$prev" ]; then

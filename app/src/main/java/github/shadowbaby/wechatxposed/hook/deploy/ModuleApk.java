@@ -1,6 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.deploy;
 
-import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,7 +28,18 @@ public abstract class ModuleApk {
         remember(modulePath);
     }
 
+    /** 当前模块 APK 路径；证书自检使用。 */
+    public static String modulePath() {
+        String current = usablePath(path);
+        return current != null ? current : usablePath(findInstalledApk());
+    }
+
     public static boolean extractPayload(String assetName, File target) throws IOException {
+        return copyAsset(assetName, target);
+    }
+
+    /** 从模块 APK 的 assets/ 下复制单个文件（平铺功能包用）。 */
+    public static boolean copyAsset(String assetPath, File target) throws IOException {
         String modulePath = usablePath(path);
         if (modulePath == null) {
             modulePath = usablePath(findInstalledApk());
@@ -37,7 +48,7 @@ public abstract class ModuleApk {
             return false;
         }
         try (ZipFile apk = new ZipFile(modulePath)) {
-            ZipEntry entry = apk.getEntry(ASSETS_PREFIX + assetName);
+            ZipEntry entry = apk.getEntry(ASSETS_PREFIX + assetPath);
             if (entry == null) {
                 return false;
             }
@@ -51,6 +62,35 @@ public abstract class ModuleApk {
             }
         }
         return true;
+    }
+
+    /** 读取模块 APK 的单个 asset，失败返回 null。 */
+    public static byte[] readAsset(String assetPath) {
+        String modulePath = usablePath(path);
+        if (modulePath == null) {
+            modulePath = usablePath(findInstalledApk());
+        }
+        if (modulePath == null) {
+            return null;
+        }
+        try (ZipFile apk = new ZipFile(modulePath)) {
+            ZipEntry entry = apk.getEntry(ASSETS_PREFIX + assetPath);
+            if (entry == null) {
+                return null;
+            }
+            try (InputStream input = apk.getInputStream(entry);
+                    java.io.ByteArrayOutputStream output =
+                            new java.io.ByteArrayOutputStream()) {
+                byte[] buffer = new byte[16 * 1024];
+                int read;
+                while ((read = input.read(buffer)) > 0) {
+                    output.write(buffer, 0, read);
+                }
+                return output.toByteArray();
+            }
+        } catch (IOException error) {
+            return null;
+        }
     }
 
     private static String usablePath(String candidate) {

@@ -42,10 +42,6 @@ NAMES = [
     "IN_MEMORY_DEX_LOADER",
 
     # InMemoryDexLoadHook
-    "COMPONENT_BASE",
-    "COMPONENT_CORE",
-    "COMPONENT_DONATION",
-    "COMPONENT_THEMES",
     "COMPONENT_X30",
     "X30_BRIDGE_CLASS",
     "X30_LOADER_CLASS",
@@ -127,47 +123,14 @@ NAMES = [
     "X30_REGISTRY_PUBLISH",
     "X30_REGISTRY_GET_DATA",
     "X30_BASE_DISABLE_GETTER",
-    "COMPONENT_NAME_BASE",
-    "COMPONENT_NAME_CORE",
-    "COMPONENT_NAME_DONATION",
-    "COMPONENT_NAME_THEMES",
     "METHOD_ON_UPDATE_CHECK",
     "METHOD_DISABLE",
     "METHOD_PROCESS_METADATA",
     "METHOD_UPDATE_LICENSE",
-    "METHOD_DELAYED_CHECK",
 
     # WxComponentHooks
-    "BASE_ENTRY_CLASS",
-    "BASE_ENTRY_METHOD",
-    "BASE_HOOK_ARGUMENT_CLASS",
-    "WX_JNI_CORE_BRIDGE",
-    "CALL_METHOD",
-    "CORE_VERIFIER_CLASS",
-    "CORE_VERIFY_SIGNATURE_METHOD",
-    "CORE_VERIFY_BOOLEAN_STRING_METHOD",
-    "CORE_VERIFY_UPDATED_TIPS_METHOD",
-    "CORE_POLLING_CLASS",
-    "CORE_POLLING_METHOD",
-    "CORE_LICENSE_CLASS",
-    "CORE_LICENSE_METHOD",
-    "CORE_DISABLE_SETTER",
-    "CORE_DISABLE_GETTER",
-    "CORE_STATUS_CHECK",
-    "CORE_VERIFIER_FACTORY",
-    "CORE_VERIFIER_CLASS_V2",
-    "CORE_DISABLE_SETTER_V2",
-    "CORE_DISABLE_GETTER_V2",
-    "CORE_STATUS_CHECK_V2",
-    "CORE_VERIFIER_INSTANCE_V2",
-    "THEMES_ENTRY_CLASS",
-    "THEMES_ENTRY_METHOD",
-    "THEMES_HOOK_ARGUMENT_CLASS",
-    "DONATION_ENTRY_CLASS",
-    "DONATION_ENTRY_METHOD",
-    "DONATION_HOOK_ARGUMENT_CLASS",
-    "DONATION_REQUIRES_CLASS",
-    "DONATION_REQUIRES_METHOD",
+    "DONATION_REQUIRES_CLASS_V30",
+    "DONATION_REQUIRES_METHOD_V30",
 
     # CallMethodBypassHook
     "VERIFIER_SERVICE",
@@ -175,17 +138,6 @@ NAMES = [
     "MIN_SUPPORTED_VERSION",
     "UNLIMITED",
     "REMOTE_COMMAND",
-    "OBJECTS_CLASS",
-    "OBJECTS_EQUALS_METHOD",
-    "VERIFIER_SERVICE_CLASS",
-    "VERIFIER_SERVICE_FACTORY",
-    "LICENSE_FIELD",
-    "LICENSE_GETTER_METHOD",
-    "RELEASE_LICENSE_METHOD",
-    "CLEANUP_CLASS",
-    "CLEANUP_FACTORY_METHOD",
-    "SET_INTERNAL_VERSION_METHOD",
-    "WXID_PREFIX",
     "FEATURES",
 
     # LicenseData
@@ -193,30 +145,40 @@ NAMES = [
     "FP_VERSIONS",
     "FP",
     "FP_ASYNC",
-    "LICENSE_FEATURE_SET",
-    "LICENSE_TAG",
-    "VERIFIER6_TAG",
 
     # StartupCheck / ModuleApk
     "PREFS_PATH",
     "ACCOUNT_KEY",
     "MODULE_PACKAGE",
+    "MODULE_CERT_SHA256",
+    "ACTIVATION_GROUP",
+    "ACTIVATION_PROMISE",
 
     # FeaturePackRestorer
-    "FEATURE_DIR",
-    "FEATURE_PAYLOAD",
-    "SELF_SIGN_PUBLIC_KEY",
 
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS",
     "CLIENT_VERSION_FIELD",
     "LAUNCH_SCENE_CLASS",
     "LAUNCH_SCENE_CALLBACK",
-    "ILINK_START_CONFIG_CLASS",
-    "ILINK_SET_APP_VERSION_METHOD",
-    "UPGRADE_URL_1",
-    "DEX_SUFFIX",
-    "DEX_PREFIX",
+    "BASE_REQUEST_FILLER_CLASS",
+    "BASE_REQUEST_FILL_METHOD",
+    "BASE_REQUEST_SET_VERSION_METHOD",
+    "CHAT_CONFIG_HUB_CLASS",
+    "CHAT_CONFIG_GET_METHOD",
+    "CORE_CERT_CLASS",
+    "CORE_CERT_METHOD",
+    "CORE_MD5_CLASS",
+    "CORE_MD5_METHOD",
+    "CORE_CERT_ASSET",
+    "FEATURE_DEX_DIR",
+    "FEATURE_DEX_INJECTED",
+    "FEATURE_DEX_PREFIX",
+    "FEATURE_DEX_SUFFIX",
+    "FEATURE_PACK_DIR",
+    "FEATURE_PACK_ASSET_DIR",
+    "AES_ALGORITHM",
+    "AES_KEY_ALGORITHM",
 ]
 
 
@@ -319,12 +281,19 @@ def secrets_table() -> dict:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         table = module.SECRETS
+    # 证书固定值由构建脚本从签名密钥库现算；没有时留空（不做固定）。
+    table.setdefault("MODULE_CERT_SHA256", "")
     validate(table)
     return table, source
 
 
 def validate(table: dict) -> None:
     """常量名必须与 NAMES 完全一致:缺项会让源码引用编译不过,多项说明表过期了。"""
+    # 兼容旧版 CI Secrets：这些常量已下沉 native，不再生成 Java 字段。
+    legacy = {"PBE_ALGORITHM"}
+    for name in list(table):
+        if name not in NAMES and name in legacy:
+            del table[name]
     missing = [name for name in NAMES if name not in table]
     extra = [name for name in table if name not in NAMES]
     if missing or extra:
@@ -373,10 +342,14 @@ def main():
     parser.add_argument("--output-root", type=Path,
                         default=ROOT / "app" / "build" / "generated" / "secrets",
                         help="生成目录（默认 app/build/generated/secrets）")
+    parser.add_argument("--module-cert-sha256",
+                        help="模块 APK 签名证书 SHA-256（hex）；由 Gradle 从密钥库现算")
     args = parser.parse_args()
     # 每项的子密钥按常量名派生(与 so 里的 derive_subkey 一致),dex 里没有密钥。
     key_source = apply_master_key(args.master_key)
     table, source = secrets_table()
+    if args.module_cert_sha256:
+        table["MODULE_CERT_SHA256"] = args.module_cert_sha256.strip().lower()
     for edition, edition_table in (
             ("fullEdition", table),
             ("publicEdition", public_table(table))):

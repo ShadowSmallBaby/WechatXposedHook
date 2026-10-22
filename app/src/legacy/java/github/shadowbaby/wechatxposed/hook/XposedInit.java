@@ -5,7 +5,8 @@ import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import github.shadowbaby.wechatxposed.hook.framework.HookBootstrap;
 import github.shadowbaby.wechatxposed.hook.framework.LegacyFramework;
-import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.license.Activation;
+import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 
 public class XposedInit implements IXposedHookZygoteInit, IXposedHookLoadPackage {
 
@@ -13,8 +14,10 @@ public class XposedInit implements IXposedHookZygoteInit, IXposedHookLoadPackage
 
     @Override
     public void initZygote(StartupParam startupParam) {
+        Activation.captureBuildIdentity();
         ModuleLogger.attach(framework);
-        HookBootstrap.installZygote(framework, startupParam.modulePath);
+        // 授权前不安装任何功能 hook，只记录模块路径。
+        HookBootstrap.remember(startupParam.modulePath);
     }
 
     @Override

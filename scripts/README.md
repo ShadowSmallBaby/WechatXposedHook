@@ -1,33 +1,51 @@
 # scripts/
 
-逆向、分析与生成脚本。除 `build_shell30_replica.py` 需要 `cryptography` 外，
-其余只依赖 Python 标准库；产物写到 `build/`（已忽略）。
+逆向、分析与生成脚本。除 `build_x30_replica.py` 需要 `cryptography` 外，
+其余只依赖 Python 标准库；`build_x30_replica.py` 建议安装 Pillow（用于项目图标的 WebP 生成，缺失时沿用壳图标）。产物写到 `build/`（已忽略）。
 
-## build_shell30_replica.py（X 3.0 单 APK 复刻）
+> 阶段二已移除 `xmetadata/wx6` 与 2.44 构建。下文 2.44 章节保留为历史分析资料，
+> 相关命令需要自备 2.44 样本才能复现。
 
-把原版 `X_3.0.apk`、冻结的 wx30 debug hook APK、内置项目包和
-`scripts/shell30/Shell30Compat.java` 合成一个可安装 APK。只做 X 3.0，
+## build_x30_replica.py（X 3.0 单 APK 复刻）
+
+把原版 `X_3.0.apk`、源码构建的 wx30 hook APK、内置项目包和
+`scripts/x30/X30Compat.java` 合成一个可安装 APK。只做 X 3.0，
 输出不含任何 2.44 资产。
 
 ```bash
-python -X utf8 scripts/build_shell30_replica.py \
+python -X utf8 scripts/build_x30_replica.py \
   --shell data/refs/X_3.0.apk \
   --hook-apk data/refs/wxh-wx30-full-debug-20261022.apk \
   --package github.shadowbaby.wechatxposed.hook \
-  --output build/generated/shell30/WeXposedHook-shell30-v117.apk
+  --output app/build/outputs/apk/release/WeXposedHook-legacy-v2.0-beta-full.apk
 ```
 
 关键点：
 
-- 二进制 AXML string pool 只改包名相关字符串，不重编资源；
+- 二进制 AXML string pool 改包名、项目名称、versionName/versionCode；
 - 原样保留 `META-INF/services` 的 cp437 文件名；
-- 注入原版证书/原版 APK 资产，compat dex 在运行时把壳的
-  `getPackageName`/`createPackageContext`/`modulePath`/`META-INF/*.RSA`
-  映射回原版；
+- 默认 `--shell-assets minimal`：只保留 32 位 loader `74fab57f`，64 位
+  loader `dc7be70f` 与证书 `534a9729` 从 `x7_3.0.zip` 取，其余 7 个旧
+  fallback blob 丢弃；`--shell-assets all` 可回退全量；
+- 项目图标 `app/src/main/res/mipmap/logo.png` 替换启动图标/自适应图标；
+- 从壳的 `AndroidManifest.xml` + `resources.arsc` 现场生成约 176 KB 的
+  `assets/x30/identity.apk`（包名 `cn.android.x`、117），运行时解到
+  `files/x30/identity.apk` 作为壳的 `modulePath`；不再打包完整原版 APK；
+- `x7_3.0.zip` / `x7_3.0_ext.zip` 摊平为 `assets/x7_3.0/`；带 `_c`/`_s`
+  的条目合并为 `WXH1` 容器，运行时拆回 32 个文件；
+- 不再携带 `assets/featuredex/x30_*.dex`；`FeatureDexDecoder` 在运行时
+  从扩展包容器解出 sf/mf/af 的 `classes.dex` 再注入；
+- 注入原版证书 `assets/x30/original_cert.rsa`，compat 在运行时把壳的
+  `getPackageName`/`createPackageContext`/`META-INF/*.RSA` 映射回原版；
+- 外层功能包 PBE password 由证书派生，`PbePasswordHook` 按 salt 换回原版密码
+  （见 `docs/x30-replica.md` §4）；
+- 最小 `identity.apk` 在 LSPosed 2.x（Android 16）验证通过；LSPosed 1.9.x
+  （Android 13）需要 `--identity-apk data/refs/X_3.0.apk` 使用完整原版 APK，
+  否则壳只加载 wxcore、不加载功能包（见 §8.2）；
 - `zipalign -p 4` + `apksigner`（v1/v2/v3）；默认 debug 密钥库，可用
   `WXH_KEYSTORE_BASE64` 或 `--ks` 覆盖。
 
-完整说明见 `docs/shell30-replica.md`。
+完整说明见 `docs/x30-replica.md`。
 
 ## dex_inspect.py（通用结构检查）
 
@@ -257,7 +275,8 @@ python scripts/assemble_pack_from_xmetadata.py --out build/xmeta_pack \
 1. **运行时文件名**是服务端下发的内容 ID（31 位 hex），不是 body 的 MD5/SHA 前缀。
    `data/xmetadata/2.44_849.mapping.json`（本地文件，不入库）记录内容 ID 与角色路径的对应。
 2. **`_c` / `_s` 边车**：849 快照已按 `r/fp/base_c`、`r/C_s` 等约定保存。
-   `_s` 是 RSA-SHA1 签名，运行时由 `SignatureVerifyBypass` 跳过验签。
+   `_s` 是 RSA-SHA1 签名；X 3.0 运行时由 `PackSignatureGuard` 用项目公钥
+   在 native 校验四个项目包，核心/loader 仍保留厂商签名。
 3. **服务端资源包** `9816b5df…`：849 快照曾保存为 `r/server_resource`；现已移除，不参与当前打包。
 
 **2026-10-18 真机验证**（微信 8.0.49 / 微X 2.44_5.41 / 原始包为基线）：
@@ -271,7 +290,8 @@ python scripts/assemble_pack_from_xmetadata.py --out build/xmeta_pack \
 
 结论：
 
-- `_s` 的 RSA-SHA1 验签已经被 `SignatureVerifyBypass` 绕过（错误 `_s` 仍能加载）。
+- X 3.0 的 `_s` 已改为项目自签 + native 验签；非项目签名会删除 body/_s。
+  2.44 历史样本仍由旧 `SignatureVerifyBypass` 记录，当前构建不再包含该类。
 - `_c` 与 body 不配套也不影响加载（错误 `_c` 仍能加载）。
 - 真正的阻塞点是**旧源快照的构建批次**：修复工具实测 8.0.48 (2580) 与
   8.0.49 (2600) 的 `wx6_2.44` 包完全相同，说明不是 848/849 差异；旧
@@ -400,7 +420,11 @@ body 大小/哈希/类型。
   `InMemoryDexClassLoader` 传入的 dex 落到 `files/dex_dump/`。
 - `FeaturePackRestorer`：每个 APK 只携带对应版本的载荷；2.44 为 24 个文件，
   3.0 为 26 基础 + 6 扩展。`build_release_packs.py` 从项目仓 `xmetadata/wx7`
-  生成 zip 并打进 assets（X30 自动去 32B 前缀，`cfg/`→`_c`，`sig/`→`_s`）。
+  生成 zip 并打进 assets（X30 自动去 32B 前缀；`_c`/`_s` 带厂商签名，从 `xmetadata/wx7/cfg/<role>.{c,s}` 原样复制）。
+- `extract_shell_entries.py`：从原版壳 APK 抽取构建所需条目到 `app/x30.zip`（可重复执行）。
+- `sign_sidecars.py`：用项目私钥重签 base/themes/donation/vidurlparser 的 `_s`（C/L 保持厂商签名）。
+- `extract_featuredex.py`：构建时从 `xmetadata/wx7` 的扩展包容器解出 `x30_{sf,mf,af}.dex`，
+  不再依赖本地 `data/refs/featuredex`。
 - `build_x30_min.py`：从项目仓生成 32 文件 / 4,292,161B 的最小运行目录，
   并输出 `x7_3.0.zip` / `x7_3.0_ext.zip`。
 - `runtime_names.py`：运行文件名的确定性规则

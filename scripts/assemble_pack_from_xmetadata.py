@@ -15,8 +15,7 @@ M / S / Xmd / pr/P_* 等）。
 1. **运行时文件名**：是服务端下发的内容 ID（31 位 hex），不是 body 的常见哈希。
    脚本用内置角色表映射已知文件；其余用 --name-map 指定。
 2. **_c / _s 边车**：源树里没有。`_s` 是 RSA-SHA1 签名（用 D 证书可验签），
-   没有作者私钥无法为新 body 生成；但本模块的 `SignatureVerifyBypass` 会在运行时
-   跳过验签。真机对照表明 `_c`/`_s` 与 body 不配套也不影响加载。真正的限制是
+   没有作者私钥无法为新 body 生成；body 不修改时直接保留原签名即可。真机对照表明 `_c`/`_s` 与 body 不配套也不影响加载。真正的限制是
    **源 body 快照必须与当前壳/微信版本匹配**：旧 xmetadata 快照的
    `wx6/r/fp/*` 在微信 8.0.49 + 微X 2.44_5.41 上会解不出
    `com.fkzhang.wxfeatures.*` 入口类。
@@ -104,6 +103,7 @@ SIDECAR_RUNTIME = {
     "donation": "a89eaf67dc796cb3af54d94fac0198b",
     "C": "d61f837cad1d412f80b84d143e1257",
     "C_backup": "d61f837cad1d412f80b84d143e1257_backup",
+    "vidurlparser": "df4e6fd144fab2389ece8cb79eaa8f",
 }
 
 
@@ -222,21 +222,16 @@ def main(argv=None) -> int:
 
     sidecar_count = 0
     if args.role_sidecars:
-        for folder, suffix in (("cfg", "_c"), ("sig", "_s")):
-            directory = args.source / folder
-            if not directory.is_dir():
-                continue
-            for source in sorted(directory.iterdir()):
-                if not source.is_file():
-                    continue
-                runtime = SIDECAR_RUNTIME.get(source.name)
-                if runtime is None:
-                    print(f"跳过未知边车角色 {source}")
-                    continue
-                target = args.out / (runtime + suffix)
-                target.write_bytes(source.read_bytes())
-                sidecar_count += 1
-                print(f"边车 {source.relative_to(args.source)} -> {target.name}")
+        from sidecars import build_sidecars
+        try:
+            generated = build_sidecars(args.source, SIDECAR_RUNTIME)
+        except FileNotFoundError as error:
+            print(f"边车记录缺失，跳过: {error}")
+            generated = {}
+        for name, data in generated.items():
+            (args.out / name).write_bytes(data)
+            sidecar_count += 1
+            print(f"边车 {name}")
     if args.sidecars:
         for item in manifest:
             for suffix in ("_c", "_s", "_backup_c", "_backup_s"):
@@ -259,7 +254,7 @@ def main(argv=None) -> int:
                     "源文件 -> body：校验并去掉前 32 字节 SHA-256",
                     "运行时文件名是服务端内容 ID，不是 body 的常见哈希",
                     "_s 是 RSA-SHA1 签名（覆盖 body），无私钥无法为新 body 生成；"
-                    "运行时由 SignatureVerifyBypass 跳过验签",
+                    "body 未改时原签名继续有效",
                     "真机对照：错误 _c/_s 不影响加载；阻塞点是源 body 快照与当前壳不匹配",
                 ],
             },

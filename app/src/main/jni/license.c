@@ -14,8 +14,7 @@
  *   tag 1 —— verifier6:解出 "verifier6:<flag>:<账号>"。
  * 返回 1/0。
  */
-JNIEXPORT jint JNICALL
-Java_github_shadowbaby_wechatxposed_hook_license_LicenseCrypto_nativeIsUsable(JNIEnv *env,
+jint license_native_is_usable(JNIEnv *env,
                                                                               jclass type,
                                                                               jstring stored,
                                                                               jstring account,
@@ -146,8 +145,7 @@ static char *segment3_for(const char *account, size_t account_length) {
     return encoded;
 }
 
-JNIEXPORT jobjectArray JNICALL
-Java_github_shadowbaby_wechatxposed_hook_license_LicenseCrypto_nativeStructure(
+jobjectArray license_native_structure(
         JNIEnv *env, jclass type) {
     (void) type;
     jclass string_class = (*env)->FindClass(env, "java/lang/String");
@@ -170,8 +168,7 @@ Java_github_shadowbaby_wechatxposed_hook_license_LicenseCrypto_nativeStructure(
     return result;
 }
 
-JNIEXPORT jobjectArray JNICALL
-Java_github_shadowbaby_wechatxposed_hook_license_LicenseCrypto_nativeRows(
+jobjectArray license_native_rows(
         JNIEnv *env, jclass type, jstring account, jstring latest_versions,
         jstring fp_versions, jstring fp, jstring fp_async) {
     (void) type;

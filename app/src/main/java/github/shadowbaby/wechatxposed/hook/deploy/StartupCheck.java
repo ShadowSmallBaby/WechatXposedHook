@@ -2,7 +2,7 @@ package github.shadowbaby.wechatxposed.hook.deploy;
 
 import github.shadowbaby.wechatxposed.hook.license.LicenseDatabase;
 import github.shadowbaby.wechatxposed.hook.license.LicenseInstaller;
-import github.shadowbaby.wechatxposed.hook.loader.Secret;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,7 +33,7 @@ public abstract class StartupCheck {
         long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
         long license = android.os.SystemClock.elapsedRealtime();
-        github.shadowbaby.wechatxposed.hook.loader.ModuleLogger.debug(
+        github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger.debug(
                 "perf: packs=" + (packs - start) + "ms, license=" + (license - packs) + "ms");
     }
 
@@ -46,8 +46,31 @@ public abstract class StartupCheck {
     }
 
     public static String readLoginAccount(File dataDir) {
+        String account = readAccount(new File(dataDir, PREFS_PATH));
+        if (account != null) {
+            return account;
+        }
+        // 部分微信版本把 login_weixin_username 写到其他 shared_prefs 文件。
+        File prefs = new File(dataDir, "shared_prefs");
+        File[] files = prefs.listFiles();
+        if (files == null) {
+            return null;
+        }
+        for (File file : files) {
+            if (!file.isFile() || !file.getName().endsWith(".xml")) {
+                continue;
+            }
+            account = readAccount(file);
+            if (account != null) {
+                return account;
+            }
+        }
+        return null;
+    }
+
+    private static String readAccount(File file) {
         try {
-            String xml = readText(new File(dataDir, PREFS_PATH));
+            String xml = readText(file);
             if (xml == null) {
                 return null;
             }

@@ -27,10 +27,6 @@ SECRETS = {
     "IN_MEMORY_DEX_LOADER": "dalvik.system.InMemoryDexClassLoader",
 
     # InMemoryDexLoadHook
-    "COMPONENT_BASE": "com.fkzhang.wxfeatures.base.Wrapper.Init",
-    "COMPONENT_CORE": "com.fkzhang.wechatxposedhooks.Wrapper.HookWrapper",
-    "COMPONENT_DONATION": "com.fkzhang.wxfeatures.donation.Wrapper.Init",
-    "COMPONENT_THEMES": "com.fkzhang.wxfeatures.themes.Wrapper.Init",
     # X 3.0（cn.android.x）
     "COMPONENT_X30": "com.android.xc.Wrapper.HookWrapper",
     "X30_BRIDGE_CLASS": "com.android.xc.WxJniCoreBridge",
@@ -116,49 +112,17 @@ SECRETS = {
     "X30_REGISTRY_PUBLISH": "ˈˈ",
     "X30_REGISTRY_GET_DATA": "ʻˑ",
     "X30_BASE_DISABLE_GETTER": "ⁱʾ",
-    "COMPONENT_NAME_BASE": "BaseDex",
-    "COMPONENT_NAME_CORE": "CoreDex",
-    "COMPONENT_NAME_DONATION": "DonationDex",
-    "COMPONENT_NAME_THEMES": "ThemesDex",
     "METHOD_ON_UPDATE_CHECK": "on_update_check",
     "METHOD_DISABLE": "disable",
     "METHOD_PROCESS_METADATA": "process_metadata",
     "METHOD_UPDATE_LICENSE": "updateLicense",
-    "METHOD_DELAYED_CHECK": "delayed_check",
 
     # WxComponentHooks
-    "BASE_ENTRY_CLASS": "\ufe76\u02c6.\u02bc\u05d9",
-    "BASE_ENTRY_METHOD": "\u2071\u02bc",
-    "BASE_HOOK_ARGUMENT_CLASS": "\ufe76\u02c6.\u02c9\u02d1$\u02bf\u1d54",
-    "WX_JNI_CORE_BRIDGE": "com.fkzhang.wechatxposedhooks.WxJniCoreBridge",
-    "CALL_METHOD": "CallMethod",
-    "CORE_VERIFIER_CLASS": "c.\ufe76\u02c9.\u1d54\u02c9",
-    "CORE_VERIFY_SIGNATURE_METHOD": "\u0674\u02bc",
-    "CORE_VERIFY_BOOLEAN_STRING_METHOD": "\u1d62",
-    "CORE_VERIFY_UPDATED_TIPS_METHOD": "\u02ce\u02c8",
-    "CORE_POLLING_CLASS": "c.\u02cb.\u1d62\u02d1",
-    "CORE_POLLING_METHOD": "\u02cb\u1d4e",
-    "CORE_LICENSE_CLASS": "c.\ufe76\u02c9.\u0640\u02cb",
-    "CORE_LICENSE_METHOD": "\u0640\u02cb",
-    "CORE_DISABLE_SETTER": "\u02d1\u1d4e",
-    "CORE_DISABLE_GETTER": "\u02bb\u02d1",
-    "CORE_STATUS_CHECK": "\u2071\u1d62",
-    "CORE_VERIFIER_FACTORY": "\u1d4e\u0640",
     # 2.44_5.41 \u65b0\u6838\u5fc3\uff08352186\uff09\u7684\u540c\u4e00\u7ec4\u65b9\u6cd5
-    "CORE_VERIFIER_CLASS_V2": "c.\u02bb\u02bb.\u0640\u02cb",
-    "CORE_DISABLE_SETTER_V2": "\u02c9\ufe76",
-    "CORE_DISABLE_GETTER_V2": "\u2071\u05d9",
-    "CORE_STATUS_CHECK_V2": "\u02bd\u02bd",
-    "CORE_VERIFIER_INSTANCE_V2": "\u02c9\u0674",
-    "THEMES_ENTRY_CLASS": "\ufe76\u02ce.\u0640\u02c6",
-    "THEMES_ENTRY_METHOD": "\u02bd\u02be",
-    "THEMES_HOOK_ARGUMENT_CLASS": "\ufe76\u02ce.\u02bb\u02ce$\uff9e\u02cf",
-    "DONATION_ENTRY_CLASS": "\u1d54\u02cf.\u1427\u05d9",
-    "DONATION_ENTRY_METHOD": "\u02cf\u02ca",
-    "DONATION_HOOK_ARGUMENT_CLASS": "\u1d54\u02cf.\u2071\u05d9$\u02bf\u0674",
     # \u6350\u8d60 keycard \u5305\u662f\u5426\u53ef\u7528\u7684\u5224\u5b9a\uff1aL\u1d54\u02cf/\u1427\u05d9;->\u02bf\u0674(String,Object[])Z
-    "DONATION_REQUIRES_CLASS": "\u1d54\u02cf.\u1427\u05d9",
-    "DONATION_REQUIRES_METHOD": "\u02bf\u0674",
+    # X 3.0 donation \u5305\u540c\u4e00\u65b9\u6cd5\uff0c\u6df7\u6dc6\u6210 d.* \u547d\u540d\u7a7a\u95f4
+    "DONATION_REQUIRES_CLASS_V30": "d.\u05d9\u02bb.\u02ce\u02cf",
+    "DONATION_REQUIRES_METHOD_V30": "\u1427\u05d9",
 
     # CallMethodBypassHook
     "VERIFIER_SERVICE": "verifier6",
@@ -166,17 +130,6 @@ SECRETS = {
     "MIN_SUPPORTED_VERSION": "8.0.49",
     "UNLIMITED": "unlimited",
     "REMOTE_COMMAND": "remote_rp_cmd",
-    "OBJECTS_CLASS": "java.util.Objects",
-    "OBJECTS_EQUALS_METHOD": "equals",
-    "VERIFIER_SERVICE_CLASS": "c.\u02c9\u02c9.\u0674\u02bb",
-    "VERIFIER_SERVICE_FACTORY": "\u2071\u02cf",
-    "LICENSE_FIELD": "LIC",
-    "LICENSE_GETTER_METHOD": "\ufe73\u02cf",
-    "RELEASE_LICENSE_METHOD": "\u02bd\u1d54",
-    "CLEANUP_CLASS": "c.\ufe73\ufe76.\u02bd\u1d54",
-    "CLEANUP_FACTORY_METHOD": "\u1427\u0674",
-    "SET_INTERNAL_VERSION_METHOD": "\u02d1\u1d4e",
-    "WXID_PREFIX": "wxid_",
     "FEATURES": (
         "remove_notice,priority_update,extra_df,send_raw_image,auto_comment_robot,"
         "text_rep_nickname,sort_contacts,contacts_select_sex,contacts_select_location,"
@@ -207,41 +160,46 @@ SECRETS = {
         "\"meta\":\"1902dffe702\",\"string\":\"18fe3f447ec\",\"h_p\":\"18eec2d7db3\","
         "\"lib\":\"9\",\"core\":\"cf\",\"apk\":\"42,2.2,821452f9\"}"),
     "FP_VERSIONS": "{\"themes\":113,\"donation\":71,\"base\":525,\"vidurlparser\":30}",
-    "FP": "themes",
+    "FP": "themes,af,sf,mf",
     "FP_ASYNC": "base,vidurlparser,donation",
-    "LICENSE_FEATURE_SET": "[0,1,4]",
-    "LICENSE_TAG": "LIC",
-    "VERIFIER6_TAG": "verifier6",
 
     # StartupCheck / ModuleApk
     "PREFS_PATH": "shared_prefs/com.tencent.mm_preferences.xml",
     "ACCOUNT_KEY": "login_weixin_username",
     "MODULE_PACKAGE": "github.shadowbaby.wechatxposed.hook",
-
-    # FeaturePackRestorer
-    "FEATURE_DIR": "wx6_2.44",
-    "FEATURE_PAYLOAD": "wx6_2.44.zip",
-    "SELF_SIGN_PUBLIC_KEY": (
-        "-----BEGIN PUBLIC KEY-----\n"
-        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlqFTDs271XTnRh5sHUwU\n"
-        "OH5kfFdc1ndpMcN4JS2esQn8z5OqQ+h13Y/bvrgXG7IFB+3kSO3uBdAQj9vkjuDj\n"
-        "oyMcvcXpmZqFV3LPB8bKjAWAcQ5giahOxzt74rBBYXhpf9UD4TeezosiDqlD4p0J\n"
-        "nb0IIQbhCg+6diSn8QA+6YfkkhjuPq90O2U7I4a/zZhQrhn5Y2audGwOp4D2idfR\n"
-        "a6mxI0wwyQdlVzUKjnXvtxoe+CrtUlJFyntHscJxSfymJoHecMqPt6Dgjo+aJKVS\n"
-        "LJ2lxKl0LS0aRTXa4ANUzf4719KeWdmH0zGm7j3oV7PE76LONmIBUzUMLQn1EJBV\n"
-        "swIDAQAB\n"
-        "-----END PUBLIC KEY-----\n"),
+    # 构建时由 encodeSecrets 从签名密钥库写入；为空表示不做证书固定。
+    "MODULE_CERT_SHA256": "",
+    # 授权弹窗文案（明文只存在于本表，运行时由 native 解密）
+    "ACTIVATION_GROUP": "1065821554",
+    "ACTIVATION_PROMISE": "免费模块我承诺不倒卖我承诺不用于商业用途及非法用途",
 
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS": "c64.xe",
     "CLIENT_VERSION_FIELD": "g",
     "LAUNCH_SCENE_CLASS": "wx0.d",
     "LAUNCH_SCENE_CALLBACK": "f",
-    "ILINK_START_CONFIG_CLASS": "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder",
-    "ILINK_SET_APP_VERSION_METHOD": "setAppVersion",
-    "UPGRADE_URL_1": "https://support.weixin.qq.com/update",
-    "DEX_SUFFIX": ".dex",
-    "DEX_PREFIX": "classes",
+    # 1:1 通话：版本号通过 RUDP 命令 505 上报（4 字节小端）
+    # 所有 CGI 的公共请求头：ClientVersion 在这里写入 BaseRequest
+    "BASE_REQUEST_FILLER_CLASS": "com.tencent.mm.modelbase.i1",
+    "BASE_REQUEST_FILL_METHOD": "fillBaseReq",
+    "BASE_REQUEST_SET_VERSION_METHOD": "setClientVersion",
+    # 8.0.49 聊天 MVVM 兼容守卫：服务端开关打开时本地强制走旧路径
+    "CHAT_CONFIG_HUB_CLASS": "kl1.d",
+    "CHAT_CONFIG_GET_METHOD": "b",
+    # 证书 hook / 扩展 dex：细节字符串走 native 解密
+    "CORE_CERT_CLASS": "c.ˏᵎ.ﾞˏ",
+    "CORE_CERT_METHOD": "ʾʻ",
+    "CORE_MD5_CLASS": "b.ʾᵢ.ˊˏ",
+    "CORE_MD5_METHOD": "ᵔʾ",
+    "CORE_CERT_ASSET": "x30/original_cert.rsa",
+    "FEATURE_DEX_DIR": "featuredex/",
+    "FEATURE_DEX_INJECTED": "injected/",
+    "FEATURE_DEX_PREFIX": "x30_",
+    "FEATURE_DEX_SUFFIX": ".dex",
+    "FEATURE_PACK_DIR": "x7_3.0",
+    "FEATURE_PACK_ASSET_DIR": "x7_3.0/",
+    "AES_ALGORITHM": "AES/CBC/PKCS5Padding",
+    "AES_KEY_ALGORITHM": "AES",
 }
 
 

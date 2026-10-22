@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from runtime_names import BRIDGE, CORE, UTILITY, runtime
+from sidecars import build_sidecars
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,23 +48,17 @@ EXT_PACKS = [
     ("r/fp/af", runtime("af", False)),
 ]
 
-SIDECARS = [
-    ("cfg/C", CORE, "_c"),
-    ("cfg/L", BRIDGE, "_c"),
-    ("cfg/base", runtime("base"), "_c"),
-    ("cfg/themes", runtime("themes"), "_c"),
-    ("cfg/donation", runtime("donation"), "_c"),
-    ("cfg/vidurlparser", runtime("vidurlparser"), "_c"),
-    ("sig/C", CORE, "_s"),
-    ("sig/L", BRIDGE, "_s"),
-    ("sig/base", runtime("base"), "_s"),
-    ("sig/themes", runtime("themes"), "_s"),
-    ("sig/donation", runtime("donation"), "_s"),
-    ("sig/vidurlparser", runtime("vidurlparser"), "_s"),
-]
+SIDECARS = {
+    "C": CORE,
+    "L": BRIDGE,
+    "base": runtime("base"),
+    "themes": runtime("themes"),
+    "donation": runtime("donation"),
+    "vidurlparser": runtime("vidurlparser"),
+}
 
 BASE_NAMES = [name for _, name in BASE_PACKS] + [
-    name + suffix for _, name, suffix in SIDECARS]
+    name + suffix for name in SIDECARS.values() for suffix in ("_c", "_s")]
 EXT_NAMES = [name for _, name in EXT_PACKS]
 
 
@@ -111,13 +106,8 @@ def build(source: Path, output: Path, assets: Path | None = None) -> int:
         (target / name).write_bytes(data)
         count += 1
         total += len(data)
-    for rel, name, suffix in SIDECARS:
-        path = source / rel
-        if not path.is_file():
-            print(f"缺少 {path}")
-            continue
-        data = path.read_bytes()
-        (target / (name + suffix)).write_bytes(data)
+    for name, data in build_sidecars(source, SIDECARS).items():
+        (target / name).write_bytes(data)
         count += 1
         total += len(data)
     print(f"生成 {target}: {count} 个文件, {total} B ({total / 1048576:.2f} MiB)")

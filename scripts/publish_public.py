@@ -294,7 +294,6 @@ REQUIRED = [
     "app/src/main/jni/license.c",
     "scripts/encode_secrets.py",
     "scripts/build_release_packs.py",
-    "xmetadata/wx6/r/fp/base",
     "xmetadata/wx7/3.0/r/C",
     "gradle/wrapper/gradle-wrapper.jar",
     "gradlew",

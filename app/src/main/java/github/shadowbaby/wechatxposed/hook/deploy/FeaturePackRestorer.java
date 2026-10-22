@@ -1,25 +1,23 @@
 package github.shadowbaby.wechatxposed.hook.deploy;
 
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
-import github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
-import github.shadowbaby.wechatxposed.hook.loader.Secret;
-import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
- * 按清单补齐功能包。
+ * 按 native 清单补齐功能包。
  *
- * 每个 APK 只处理对应版本的运行时目录:
- *   - 微X 2.44: files/wx6_2.44, 基础包 26 / 扩展包 3
- *   - X 3.0: files/x7_3.0, 基础包 26 / 扩展包 3
+ * 运行目录、基础包与扩展包的文件名/长度、扩展包别名都由
+ * `Secret.restorePlan()` 提供，Java 不保留明文清单。
  */
 public abstract class FeaturePackRestorer {
 
@@ -30,115 +28,23 @@ public abstract class FeaturePackRestorer {
      */
     private static final String SKIP_MARKER = "wxh_skip_restore";
 
+    /** APK versionCode 写在这里；版本变化时强制重写全部功能包（含 _c/_s）。 */
+    private static final String VERSION_MARKER = "wxh_pack_version";
+
     private static final String LOG_SKIPPED = "feature packs: restore skipped by marker";
 
     private static final String LOG_NO_DIR = "feature packs: cannot create dir ";
-    private static final String LOG_NO_PAYLOAD = "feature packs: payload missing, skipped";
-    private static final String LOG_BAD_PAYLOAD_PREFIX = "feature packs: payload lacks ";
     private static final String LOG_NOT_READABLE = "feature packs: cannot chmod ";
-    private static final String LOG_NOT_DELETED = "feature packs: cannot delete temp payload ";
 
-    private static final String[] V24_BASE_NAMES = {
-            "14e777717682cce8a53cfcb34a22d65", "14e777717682cce8a53cfcb34a22d65_c",
-            "14e777717682cce8a53cfcb34a22d65_s",
-            "36a76b97b96b5d46742bb4bcd2ff24d", "36a76b97b96b5d46742bb4bcd2ff24d_c",
-            "36a76b97b96b5d46742bb4bcd2ff24d_s", "44c29edb103a2872f519adc9afdaaa",
-            "534a9729a0c461cbd7a4379978fb742",
-            "5dbc98dcc983a7728bd82d1a47546e", "62a4e566b714ea1c4349923c9ea6c35",
-            "69691c7bdcc3ce6d5d8a1361f22d4ac", "6d6586c9c5458ecfc98981b52ee662de",
-            "739440c5d87b2b8095b99f9d2a1bbf9",
-            "802766a4a4bd401c145a57463274d4dd", "802766a4a4bd401c145a57463274d4dd_c",
-            "802766a4a4bd401c145a57463274d4dd_s",
-            "a89eaf67dc796cb3af54d94fac0198b", "a89eaf67dc796cb3af54d94fac0198b_c",
-            "a89eaf67dc796cb3af54d94fac0198b_s",
-            "d61f837cad1d412f80b84d143e1257", "d61f837cad1d412f80b84d143e1257_c",
-            "d61f837cad1d412f80b84d143e1257_s",
-            "dc7be70f1898d3a58965a919740f97",
-            "df4e6fd144fab2389ece8cb79eaa8f", "df4e6fd144fab2389ece8cb79eaa8f_c",
-            "df4e6fd144fab2389ece8cb79eaa8f_s"};
+    /** 包清单由 native 生成：role|dir|name|size|...;alias|from|to|...。 */
+    private static final String RESTORE_PLAN =
+            Secret.restorePlan(BuildConfig.FULL_EDITION);
 
-    private static final long[] V24_BASE_SIZES = {
-            1035962L, 599L, 256L,
-            528976L, 599L, 256L, 4568L, 1159L,
-            259018L, 48008L, 41352L, 43336L, 98264L,
-            200890L, 599L, 256L,
-            121466L, 599L, 256L,
-            347578L, 599L, 256L,
-            461560L,
-            131050L, 599L, 256L};
+    private static final Pack[] PACKS = parsePacks(RESTORE_PLAN);
 
-    private static final String[] V24_EXT_NAMES = {
-            "257f23e0175be13dec231373679bedc",
-            "ec38a2b5b262d9c72f75edacb8875cfe",
-            "ee06cd8f9beaf915a27b8bad9e8c2f"};
+    private static final String[][] ALIASES = parseAliases(RESTORE_PLAN);
 
-    private static final long[] V24_EXT_SIZES = {
-            88670L, 151710L, 178558L};
-
-    private static final String[] X30_BASE_NAMES = {
-            "14e777717682cce8a53cfcb34a22d65", "14e777717682cce8a53cfcb34a22d65_c",
-            "14e777717682cce8a53cfcb34a22d65_s",
-            "36a76b97b96b5d46742bb4bcd2ff24d", "36a76b97b96b5d46742bb4bcd2ff24d_c",
-            "36a76b97b96b5d46742bb4bcd2ff24d_s", "44c29edb103a2872f519adc9afdaaa",
-            "534a9729a0c461cbd7a4379978fb742",
-            "5dbc98dcc983a7728bd82d1a47546e", "62a4e566b714ea1c4349923c9ea6c35",
-            "69691c7bdcc3ce6d5d8a1361f22d4ac",
-            "6d6586c9c5458ecfc98981b52ee662de",
-            "739440c5d87b2b8095b99f9d2a1bbf9",
-            "802766a4a4bd401c145a57463274d4dd", "802766a4a4bd401c145a57463274d4dd_c",
-            "802766a4a4bd401c145a57463274d4dd_s",
-            "a89eaf67dc796cb3af54d94fac0198b", "a89eaf67dc796cb3af54d94fac0198b_c",
-            "a89eaf67dc796cb3af54d94fac0198b_s",
-            "d61f837cad1d412f80b84d143e1257", "d61f837cad1d412f80b84d143e1257_c",
-            "d61f837cad1d412f80b84d143e1257_s",
-            "df4e6fd144fab2389ece8cb79eaa8f",
-            "df4e6fd144fab2389ece8cb79eaa8f_c",
-            "df4e6fd144fab2389ece8cb79eaa8f_s",
-            "dc7be70f1898d3a58965a919740f97"};
-
-    private static final long[] X30_BASE_SIZES = {
-            994250L, 599L, 256L,
-            597288L, 599L, 256L, 4568L, 1159L,
-            258922L, 48008L, 41464L,
-            43336L, 98264L,
-            200554L, 599L, 256L,
-            121962L, 599L, 256L,
-            370042L, 599L, 256L,
-            129498L, 599L, 256L,
-            533080L};
-
-    private static final String[] X30_EXT_NAMES = {
-            "257f23e0175be13dec231373679bedc",
-            "ec38a2b5b262d9c72f75edacb8875cfe",
-            "ee06cd8f9beaf915a27b8bad9e8c2f"};
-
-    private static final long[] X30_EXT_SIZES = {
-            91594L, 148186L, 182538L};
-
-    private static final String V24_EXT_PAYLOAD = "wx6_2.44_ext.zip";
-    private static final String X30_EXT_PAYLOAD = "x7_3.0_ext.zip";
-
-    private static final Pack V24_BASE = new Pack("v24",
-            Secret.of(SecretConstants.FEATURE_DIR),
-            Secret.of(SecretConstants.FEATURE_PAYLOAD),
-            V24_BASE_NAMES, V24_BASE_SIZES);
-
-    private static final Pack V24_EXT = new Pack("v24-ext",
-            Secret.of(SecretConstants.FEATURE_DIR),
-            V24_EXT_PAYLOAD, V24_EXT_NAMES, V24_EXT_SIZES);
-
-    private static final Pack X30_BASE = new Pack("x30",
-            "x7_3.0", "x7_3.0.zip", X30_BASE_NAMES, X30_BASE_SIZES);
-
-    private static final Pack X30_EXT = new Pack("x30-ext",
-            "x7_3.0", X30_EXT_PAYLOAD, X30_EXT_NAMES, X30_EXT_SIZES);
-
-    /** 公开版只有基础包；full 额外补齐扩展包。 */
-    private static final Pack[] PACKS = BuildConfig.WX_PACK.startsWith("wx6")
-            ? (BuildConfig.FULL_EDITION
-                    ? new Pack[]{V24_BASE, V24_EXT} : new Pack[]{V24_BASE})
-            : (BuildConfig.FULL_EDITION
-                    ? new Pack[]{X30_BASE, X30_EXT} : new Pack[]{X30_BASE});
+    private static final Pack BASE_PACK = PACKS.length == 0 ? null : PACKS[0];
 
     private static boolean checked;
 
@@ -147,58 +53,122 @@ public abstract class FeaturePackRestorer {
             return;
         }
         checked = true;
+        if (PACKS.length == 0) {
+            ModuleLogger.log("feature packs: native plan unavailable");
+            return;
+        }
         if (new File(filesDir, SKIP_MARKER).isFile()) {
             ModuleLogger.debug(LOG_SKIPPED);
             return;
         }
+        boolean force = !matchesVersion(filesDir);
         for (Pack pack : PACKS) {
-            ensure(filesDir, pack);
+            ensure(filesDir, pack, force);
+        }
+        if (force) {
+            writeVersion(filesDir);
+        }
+    }
+
+    private static boolean matchesVersion(File filesDir) {
+        if (BASE_PACK == null) {
+            return false;
+        }
+        File marker = new File(new File(filesDir, BASE_PACK.dirName), VERSION_MARKER);
+        if (!marker.isFile()) {
+            return false;
+        }
+        try (InputStream input = new FileInputStream(marker)) {
+            byte[] buffer = new byte[32];
+            int read = input.read(buffer);
+            if (read <= 0) {
+                return false;
+            }
+            String value = new String(buffer, 0, read, java.nio.charset.StandardCharsets.UTF_8);
+            return String.valueOf(BuildConfig.VERSION_CODE).equals(value.trim());
+        } catch (Throwable error) {
+            return false;
+        }
+    }
+
+    private static void writeVersion(File filesDir) {
+        if (BASE_PACK == null) {
+            return;
+        }
+        File directory = new File(filesDir, BASE_PACK.dirName);
+        if (!directory.isDirectory() && !directory.mkdirs()) {
+            return;
+        }
+        try (OutputStream output = new FileOutputStream(new File(directory, VERSION_MARKER))) {
+            output.write(String.valueOf(BuildConfig.VERSION_CODE)
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
         }
     }
 
     public static List<String> missingFiles(File directory) {
-        return missingFiles(directory, BuildConfig.WX_PACK.startsWith("wx6")
-                ? V24_BASE : X30_BASE);
+        if (BASE_PACK == null) {
+            return new ArrayList<>();
+        }
+        return missingFiles(directory, BASE_PACK);
     }
 
     /** 当前 APK 对应的运行时目录名。 */
     public static String packDirName() {
-        return BuildConfig.WX_PACK.startsWith("wx6")
-                ? Secret.of(SecretConstants.FEATURE_DIR) : "x7_3.0";
+        return BASE_PACK == null ? "" : BASE_PACK.dirName;
     }
 
-    /** 当前 APK 内置载荷的 zip 名。 */
-    public static String payloadName() {
-        return BuildConfig.WX_PACK.startsWith("wx6")
-                ? Secret.of(SecretConstants.FEATURE_PAYLOAD) : "x7_3.0.zip";
-    }
-
-    /** full 版额外内置的扩展包 zip 名。 */
-    public static String extPayloadName() {
-        return BuildConfig.WX_PACK.startsWith("wx6")
-                ? V24_EXT_PAYLOAD : X30_EXT_PAYLOAD;
-    }
-
-    private static void ensure(File filesDir, Pack pack) {
+    private static void ensure(File filesDir, Pack pack, boolean force) {
         try {
             File directory = new File(filesDir, pack.dirName);
             if (!directory.isDirectory() && !directory.mkdirs()) {
                 ModuleLogger.log(LOG_NO_DIR + directory.getAbsolutePath());
                 return;
             }
-            List<String> missing = missingFiles(directory, pack);
+            List<String> missing = force
+                    ? new ArrayList<>(Arrays.asList(pack.names))
+                    : missingFiles(directory, pack);
             if (missing.isEmpty()) {
                 ModuleLogger.debug("feature packs[" + pack.name + "]: all "
                         + pack.names.length + " intact");
-                return;
+            } else {
+                int restored = restore(directory, pack, missing);
+                if (restored > 0) {
+                    ModuleLogger.log("feature packs[" + pack.name + "]: restored " + restored
+                            + " file(s) from assets");
+                }
             }
-            int restored = restore(directory, pack, missing);
-            if (restored > 0) {
-                ModuleLogger.log("feature packs[" + pack.name + "]: restored " + restored
-                        + " file(s) from payload");
+            if (pack != BASE_PACK) {
+                ensureAliases(directory);
             }
         } catch (Throwable error) {
             ModuleLogger.log(error);
+        }
+    }
+
+    /** 第二套命名与主文件内容一致；主文件在时直接拷贝一份。 */
+    private static void ensureAliases(File directory) {
+        for (String[] pair : ALIASES) {
+            if (pair == null || pair.length < 2) {
+                continue;
+            }
+            File source = new File(directory, pair[0]);
+            File alias = new File(directory, pair[1]);
+            if (!source.isFile() || alias.length() == source.length()) {
+                continue;
+            }
+            try (InputStream input = new FileInputStream(source);
+                    OutputStream output = new FileOutputStream(alias)) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int read;
+                while ((read = input.read(buffer)) > 0) {
+                    output.write(buffer, 0, read);
+                }
+                alias.setReadable(true, false);
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
+            }
         }
     }
 
@@ -215,53 +185,140 @@ public abstract class FeaturePackRestorer {
 
     private static int restore(File directory, Pack pack, List<String> missing)
             throws IOException {
-        File archive = new File(directory, pack.payload);
-        if (!ModuleApk.extractPayload(pack.payload, archive)) {
-            ModuleLogger.log(LOG_NO_PAYLOAD + " [" + pack.name + "]");
-            return 0;
-        }
         int restored = 0;
-        try (ZipFile payload = new ZipFile(archive)) {
-            for (String name : missing) {
-                ZipEntry entry = payload.getEntry(name);
-                if (entry == null) {
-                    ModuleLogger.log(LOG_BAD_PAYLOAD_PREFIX + name);
-                    continue;
-                }
-                File target = new File(directory, name);
-                try (InputStream input = payload.getInputStream(entry);
-                        OutputStream output = new FileOutputStream(target)) {
-                    byte[] buffer = new byte[BUFFER_SIZE];
-                    int read;
-                    while ((read = input.read(buffer)) > 0) {
-                        output.write(buffer, 0, read);
-                    }
-                }
+        for (String name : missing) {
+            if (restoreMerged(directory, pack.dirName, name)) {
+                restored++;
+                continue;
+            }
+            File target = new File(directory, name);
+            if (ModuleApk.copyAsset(name, target)
+                    || ModuleApk.copyAsset(pack.dirName + "/" + name, target)) {
                 if (!target.setReadable(true, false)) {
                     ModuleLogger.log(LOG_NOT_READABLE + name);
                 }
                 restored++;
-            }
-        } finally {
-            if (!archive.delete()) {
-                ModuleLogger.log(LOG_NOT_DELETED + archive.getName());
+            } else {
+                ModuleLogger.log("feature packs: asset missing " + name);
             }
         }
         return restored;
+    }
+
+    /** 平铺资产里的 WXH1 容器：body + _c + _s 合一，运行时拆开写盘。 */
+    private static boolean restoreMerged(File directory, String dirName, String name) {
+        String base = name;
+        if (name.endsWith("_c") || name.endsWith("_s")) {
+            base = name.substring(0, name.length() - 2);
+        }
+        byte[] data = ModuleApk.readAsset(base);
+        if (data == null) {
+            data = ModuleApk.readAsset(dirName + "/" + base);
+        }
+        if (data == null || data.length < 16
+                || data[0] != 'W' || data[1] != 'X'
+                || data[2] != 'H' || data[3] != '1') {
+            return false;
+        }
+        int bodySize = readInt(data, 4);
+        int sidecarSize = readInt(data, 8);
+        int signatureSize = readInt(data, 12);
+        if (bodySize < 0 || sidecarSize < 0 || signatureSize < 0
+                || 16L + bodySize + sidecarSize + signatureSize != data.length) {
+            return false;
+        }
+        try {
+            int offset = 16;
+            writePart(directory, base, data, offset, bodySize);
+            offset += bodySize;
+            if (sidecarSize > 0) {
+                writePart(directory, base + "_c", data, offset, sidecarSize);
+                offset += sidecarSize;
+            }
+            if (signatureSize > 0) {
+                writePart(directory, base + "_s", data, offset, signatureSize);
+            }
+            return true;
+        } catch (IOException error) {
+            ModuleLogger.log(error);
+            return false;
+        }
+    }
+
+    private static void writePart(File directory, String name, byte[] data,
+            int offset, int length) throws IOException {
+        File target = new File(directory, name);
+        try (OutputStream output = new FileOutputStream(target)) {
+            output.write(data, offset, length);
+        }
+        if (!target.setReadable(true, false)) {
+            ModuleLogger.log(LOG_NOT_READABLE + name);
+        }
+    }
+
+    private static int readInt(byte[] data, int offset) {
+        return ((data[offset] & 0xFF) << 24)
+                | ((data[offset + 1] & 0xFF) << 16)
+                | ((data[offset + 2] & 0xFF) << 8)
+                | (data[offset + 3] & 0xFF);
+    }
+
+    private static Pack[] parsePacks(String plan) {
+        if (plan == null || plan.isEmpty()) {
+            return new Pack[0];
+        }
+        List<Pack> packs = new ArrayList<>();
+        for (String section : plan.split(";")) {
+            String[] parts = section.split("\\|");
+            if (parts.length < 4 || "alias".equals(parts[0])) {
+                continue;
+            }
+            int count = (parts.length - 2) / 2;
+            String[] names = new String[count];
+            long[] sizes = new long[count];
+            try {
+                for (int index = 0; index < count; index++) {
+                    names[index] = parts[2 + index * 2];
+                    sizes[index] = Long.parseLong(parts[3 + index * 2]);
+                }
+            } catch (NumberFormatException error) {
+                continue;
+            }
+            packs.add(new Pack(parts[0], parts[1], names, sizes));
+        }
+        return packs.toArray(new Pack[0]);
+    }
+
+    private static String[][] parseAliases(String plan) {
+        if (plan == null || plan.isEmpty()) {
+            return new String[0][];
+        }
+        for (String section : plan.split(";")) {
+            String[] parts = section.split("\\|");
+            if (parts.length < 3 || !"alias".equals(parts[0])) {
+                continue;
+            }
+            int count = (parts.length - 1) / 2;
+            String[][] aliases = new String[count][2];
+            for (int index = 0; index < count; index++) {
+                aliases[index][0] = parts[1 + index * 2];
+                aliases[index][1] = parts[2 + index * 2];
+            }
+            return aliases;
+        }
+        return new String[0][];
     }
 
     private static final class Pack {
 
         final String name;
         final String dirName;
-        final String payload;
         final String[] names;
         final long[] sizes;
 
-        Pack(String name, String dirName, String payload, String[] names, long[] sizes) {
+        Pack(String name, String dirName, String[] names, long[] sizes) {
             this.name = name;
             this.dirName = dirName;
-            this.payload = payload;
             this.names = names;
             this.sizes = sizes;
         }
