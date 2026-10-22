@@ -38,6 +38,15 @@ public class ModernEntry extends XposedModule {
 
     @Override
     public void onPackageReady(PackageReadyParam param) {
+        try {
+            handlePackage(param);
+        } catch (Throwable error) {
+            // 授权/初始化异常不能影响微信；最坏情况就是不装模块。
+            framework.log(error);
+        }
+    }
+
+    private void handlePackage(PackageReadyParam param) {
         if (!WECHAT_PACKAGE.equals(param.getPackageName())) {
             return;
         }

@@ -82,11 +82,16 @@ public final class Activation {
         if (cached >= 0) {
             return cached;
         }
-        int result = readLevel();
-        if (result >= 0) {
-            level = result;
+        try {
+            int result = readLevel();
+            if (result >= 0) {
+                level = result;
+            }
+            return result;
+        } catch (Throwable error) {
+            ModuleLogger.log("activation: level " + error);
+            return LEVEL_NONE;
         }
-        return result;
     }
 
     public static boolean isBaseAllowed() {
@@ -98,12 +103,17 @@ public final class Activation {
     }
 
     public static boolean hasAuthorization() {
-        int current = level();
-        if (current > LEVEL_NONE) {
-            return true;
+        try {
+            int current = level();
+            if (current > LEVEL_NONE) {
+                return true;
+            }
+            // 账号/prefs 尚未就绪时不误弹；下次检查再判定。
+            return current == LEVEL_UNKNOWN && hasCodeFile();
+        } catch (Throwable error) {
+            ModuleLogger.log("activation: hasAuthorization " + error);
+            return false;
         }
-        // 账号/prefs 尚未就绪时不误弹；下次检查再判定。
-        return current == LEVEL_UNKNOWN && hasCodeFile();
     }
 
     public static boolean hasCodeFile() {
@@ -149,13 +159,18 @@ public final class Activation {
     }
 
     public static String machineCode() {
-        String account = wxid();
-        if (account == null || account.isEmpty()) {
+        try {
+            String account = wxid();
+            if (account == null || account.isEmpty()) {
+                return null;
+            }
+            String certificate = Secret.of(SecretConstants.MODULE_CERT_SHA256);
+            return Secret.machineCode(bindingFingerprint(), bindingDevice(),
+                    certificate, account);
+        } catch (Throwable error) {
+            ModuleLogger.log("activation: machineCode " + error);
             return null;
         }
-        String certificate = Secret.of(SecretConstants.MODULE_CERT_SHA256);
-        return Secret.machineCode(bindingFingerprint(), bindingDevice(),
-                certificate, account);
     }
 
     private static int readLevel() {
@@ -177,16 +192,21 @@ public final class Activation {
 
     /** 校验授权码，返回 LEVEL_NONE / LEVEL_BASE / LEVEL_EXT（全部在 native）。 */
     public static int verifyCode(String code) {
-        if (code == null || code.trim().isEmpty()) {
+        try {
+            if (code == null || code.trim().isEmpty()) {
+                return LEVEL_NONE;
+            }
+            String account = wxid();
+            if (account == null || account.isEmpty()) {
+                return LEVEL_UNKNOWN;
+            }
+            return Secret.activationLevel(code.trim(), bindingFingerprint(), bindingDevice(),
+                    Secret.of(SecretConstants.MODULE_CERT_SHA256), account,
+                    System.currentTimeMillis() / 1000L);
+        } catch (Throwable error) {
+            ModuleLogger.log("activation: verify " + error);
             return LEVEL_NONE;
         }
-        String account = wxid();
-        if (account == null || account.isEmpty()) {
-            return LEVEL_UNKNOWN;
-        }
-        return Secret.activationLevel(code.trim(), bindingFingerprint(), bindingDevice(),
-                Secret.of(SecretConstants.MODULE_CERT_SHA256), account,
-                System.currentTimeMillis() / 1000L);
     }
 
     /** 校验承诺与授权码并写入文件；成功返回 true。 */

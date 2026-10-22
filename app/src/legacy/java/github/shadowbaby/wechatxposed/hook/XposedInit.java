@@ -25,7 +25,12 @@ public class XposedInit implements IXposedHookZygoteInit, IXposedHookLoadPackage
         if (param.appInfo == null) {
             return;
         }
-        HookBootstrap.onProcessReady(framework, param.packageName, param.processName,
-                param.classLoader, param.appInfo.dataDir, param.appInfo.sourceDir);
+        try {
+            HookBootstrap.onProcessReady(framework, param.packageName, param.processName,
+                    param.classLoader, param.appInfo.dataDir, param.appInfo.sourceDir);
+        } catch (Throwable error) {
+            // 授权/初始化异常不能影响微信；最坏情况就是不装模块。
+            ModuleLogger.log(error);
+        }
     }
 }

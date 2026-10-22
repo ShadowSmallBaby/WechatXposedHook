@@ -72,6 +72,17 @@ public final class HookBootstrap {
 
     public static void onProcessReady(HookFramework framework, String packageName,
             String processName, ClassLoader classLoader, String dataDir, String sourceDir) {
+        try {
+            processReady(framework, packageName, processName,
+                    classLoader, dataDir, sourceDir);
+        } catch (Throwable error) {
+            // 授权/模块初始化异常绝不能影响微信本身；最坏退回原生。
+            ModuleLogger.log("bootstrap: " + error);
+        }
+    }
+
+    private static void processReady(HookFramework framework, String packageName,
+            String processName, ClassLoader classLoader, String dataDir, String sourceDir) {
         if (!WECHAT_PACKAGE.equals(packageName)) {
             return;
         }

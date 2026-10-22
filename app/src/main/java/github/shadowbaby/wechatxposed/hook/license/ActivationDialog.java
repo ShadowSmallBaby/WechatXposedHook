@@ -75,14 +75,19 @@ public final class ActivationDialog implements HookCallback {
 
     @Override
     public void after(HookParam param) {
-        if (shown || Activation.hasAuthorization()) {
-            return;
+        try {
+            if (shown || Activation.hasAuthorization()) {
+                return;
+            }
+            Object target = param.thisObject();
+            if (!(target instanceof Activity activity) || activity.isFinishing()) {
+                return;
+            }
+            tryShow(activity, 0);
+        } catch (Throwable error) {
+            // 授权弹窗异常不能影响微信。
+            ModuleLogger.log("activation dialog: " + error);
         }
-        Object target = param.thisObject();
-        if (!(target instanceof Activity activity) || activity.isFinishing()) {
-            return;
-        }
-        tryShow(activity, 0);
     }
 
     private static void tryShow(Activity activity, int attempt) {
