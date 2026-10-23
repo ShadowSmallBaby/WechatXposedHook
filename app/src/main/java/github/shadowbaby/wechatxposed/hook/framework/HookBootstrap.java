@@ -99,11 +99,11 @@ public final class HookBootstrap {
         if (WECHAT_PACKAGE.equals(processName)) {
             File data = new File(dataDir);
             long t0 = android.os.SystemClock.elapsedRealtime();
-            if (BuildConfig.DEBUG) {
-                File dumpMarker = new File(data, "files/" + DexDumper.MARKER);
-                if (dumpMarker.exists()) {
-                    DexDumper.setDirectory(new File(data, "files/" + DexDumper.DIR));
-                }
+            // 诊断用：存在 marker 时把 InMemoryDexClassLoader 的 dex 落盘。
+            // 需要 root 才能创建 marker，release 包也保留这个能力。
+            File dumpMarker = new File(data, "files/" + DexDumper.MARKER);
+            if (dumpMarker.exists()) {
+                DexDumper.setDirectory(new File(data, "files/" + DexDumper.DIR));
             }
             FeatureDexInjector.setFilesDir(new File(data, "files"));
             Activation.install(data);

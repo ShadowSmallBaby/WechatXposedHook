@@ -68,11 +68,31 @@ public final class FeatureCloseGuard {
     private static final String LOG_DISABLE_GET = "feature disable getter blocked: ";
     private static final String LOG_PUBLISH_BLOCKED = "feature publish blocked: ";
     private static final String LOG_PUBLISH = "feature publish: ";
+    private static final String LOG_PUBLISH_SLOW = "feature publish slow: ";
+    private static final String LOG_EVENT = "feature event: ";
     private static final String LOG_REGISTRY_REMOVE = "feature registry remove: ";
 
     private static final int LOG_LIMIT = 12;
 
+    /** 超过这个耗时的 publish 就打一条 log，用来定位主线程卡顿的事件源。 */
+    private static final int SLOW_MS = 200;
+
     private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
+
+    /** 每种事件只打印一次，保证日志量可控又能看到全集。 */
+    private static final Set<String> EVENTS = ConcurrentHashMap.newKeySet();
+
+    private static final ThreadLocal<String> PUBLISH_CMD = new ThreadLocal<>();
+
+    private static final ThreadLocal<Long> PUBLISH_AT = new ThreadLocal<>();
+
+    /** 事件频道表只在第一次 publish 时打印一次。 */
+    private static final java.util.concurrent.atomic.AtomicBoolean CHANNELS_LOGGED =
+            new java.util.concurrent.atomic.AtomicBoolean();
+
+    private static final String LOG_CHANNELS = "feature channels: ";
+
+    private static final int CHANNEL_LIMIT = 40;
 
     private static final AtomicInteger PUBLISH_LOGS = new AtomicInteger();
 
@@ -214,6 +234,88 @@ public final class FeatureCloseGuard {
             }
         }
         return false;
+    }
+
+    /**
+     * X3 的 Wrapper 暴露了事件频道表；第一次 publish 时把全集打出来，
+     * 用来把慢事件名对应到具体功能。只执行一次。
+     */
+    private static void logChannels(HookParam param) {
+        if (!CHANNELS_LOGGED.compareAndSet(false, true)) {
+            return;
+        }
+        Object instance = param.thisObject();
+        if (instance == null) {
+            return;
+        }
+        dumpChannels(instance, "getEventChannels");
+        dumpChannels(instance, "getIdEventChannels");
+    }
+
+    private static void dumpChannels(Object instance, String name) {
+        try {
+            java.lang.reflect.Method method = instance.getClass().getMethod(name);
+            Object value = method.invoke(instance);
+            ModuleLogger.log(LOG_CHANNELS + name + " count=" + channelSize(value));
+            if (value instanceof java.util.Collection<?> collection) {
+                // 逐批打印，单条日志保持在 logcat 的 4KB 限制以内。
+                java.util.List<String> items = new java.util.ArrayList<>();
+                for (Object item : collection) {
+                    items.add(String.valueOf(item));
+                }
+                for (int start = 0; start < items.size(); start += CHANNEL_LIMIT) {
+                    int end = Math.min(items.size(), start + CHANNEL_LIMIT);
+                    ModuleLogger.log(LOG_CHANNELS + name + " [" + start + "-" + (end - 1)
+                            + "] " + String.join(", ", items.subList(start, end)));
+                }
+                return;
+            }
+            ModuleLogger.log(LOG_CHANNELS + name + " " + channelBrief(value));
+        } catch (Throwable error) {
+            ModuleLogger.debug(LOG_CHANNELS + name + " failed: " + error);
+        }
+    }
+
+    private static int channelSize(Object value) {
+        if (value instanceof java.util.Collection<?> collection) {
+            return collection.size();
+        }
+        if (value instanceof java.util.Map<?, ?> map) {
+            return map.size();
+        }
+        return value == null ? 0 : 1;
+    }
+
+    private static String channelBrief(Object value) {
+        try {
+            if (value instanceof java.util.Collection<?> collection) {
+                java.util.StringJoiner joiner = new java.util.StringJoiner(", ");
+                int count = 0;
+                for (Object item : collection) {
+                    if (count++ >= CHANNEL_LIMIT) {
+                        joiner.add("...");
+                        break;
+                    }
+                    joiner.add(String.valueOf(item));
+                }
+                return joiner.toString();
+            }
+            if (value instanceof java.util.Map<?, ?> map) {
+                java.util.StringJoiner joiner = new java.util.StringJoiner(", ");
+                int count = 0;
+                for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (count++ >= CHANNEL_LIMIT) {
+                        joiner.add("...");
+                        break;
+                    }
+                    joiner.add(entry.getKey() + "=" + entry.getValue());
+                }
+                return joiner.toString();
+            }
+            return String.valueOf(value);
+        } catch (Throwable error) {
+            return "<" + error + ">";
+        }
     }
 
     /**
@@ -370,6 +472,12 @@ public final class FeatureCloseGuard {
         @Override
         public void before(HookParam param) {
             String command = String.valueOf(param.arg(0));
+            logChannels(param);
+            PUBLISH_CMD.set(command);
+            PUBLISH_AT.set(android.os.SystemClock.elapsedRealtime());
+            if (EVENTS.add(command)) {
+                ModuleLogger.log(LOG_EVENT + command + " -> " + className);
+            }
             // 只拦详情页这一个场景；聊天卡片的金额伪装走消息渲染链路，不受影响。
             if (TRANSFER_SCENE_COMMAND.equals(command)) {
                 ModuleLogger.log(LOG_PUBLISH_BLOCKED + command + " -> " + className);
@@ -387,6 +495,21 @@ public final class FeatureCloseGuard {
                     || lower.contains("unload");
             if (interesting || PUBLISH_LOGS.incrementAndGet() <= LOG_LIMIT) {
                 ModuleLogger.debug(LOG_PUBLISH + command + " -> " + className);
+            }
+        }
+
+        @Override
+        public void after(HookParam param) {
+            String command = PUBLISH_CMD.get();
+            Long at = PUBLISH_AT.get();
+            PUBLISH_CMD.remove();
+            PUBLISH_AT.remove();
+            if (command == null || at == null) {
+                return;
+            }
+            long cost = android.os.SystemClock.elapsedRealtime() - at;
+            if (cost >= SLOW_MS) {
+                ModuleLogger.log(LOG_PUBLISH_SLOW + command + " " + cost + "ms -> " + className);
             }
         }
     }

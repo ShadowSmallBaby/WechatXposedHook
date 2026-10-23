@@ -98,6 +98,18 @@ public final class X3CallMethodHook implements HookCallback {
         }
     }
 
+    /**
+     * X3 参数里混着 wxid_friend_req / wxid_missing / wxid_invalid 这类内部占位符，
+     * 它们同样以 wxid_ 开头。真实 wxid 的尾部是字母数字，占位符尾部带下划线，
+     * 用这一点区分，避免机器码绑定到假账号。
+     */
+    private static boolean isRealWxid(String text) {
+        if (text == null || !text.startsWith("wxid_") || text.length() < 13) {
+            return false;
+        }
+        return text.indexOf('_', 5) < 0;
+    }
+
     /** 从 X 3.0 传入的参数里捞出当前登录 wxid，作为授权账号的权威来源。 */
     private static void captureAccount(Object[] params) {
         java.util.Set<String> found = new java.util.LinkedHashSet<>();
@@ -115,7 +127,7 @@ public final class X3CallMethodHook implements HookCallback {
 
     private static void collectWxid(Object value, java.util.Set<String> out) {
         if (value instanceof String text) {
-            if (text.startsWith("wxid_")) {
+            if (isRealWxid(text)) {
                 out.add(text);
             }
         } else if (value instanceof Object[] array) {

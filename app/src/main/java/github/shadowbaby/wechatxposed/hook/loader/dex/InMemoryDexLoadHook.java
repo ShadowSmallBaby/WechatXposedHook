@@ -1,6 +1,7 @@
 package github.shadowbaby.wechatxposed.hook.loader.dex;
 
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.dex.DexDumper;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -33,6 +34,7 @@ public final class InMemoryDexLoadHook implements HookCallback {
             return;
         }
 
+        DexDumper.maybeDump(param);
         FeatureCloseGuard.probe(framework, hostClassLoader);
         CoreCertHook.install(framework, hostClassLoader);
         DonationFeatureUnlock.installIfPresent(framework, hostClassLoader);
