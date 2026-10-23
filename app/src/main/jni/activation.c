@@ -156,7 +156,13 @@ static int ed25519_token_level(const char *code, size_t code_length,
 
     uint8_t *signed_message = (uint8_t *) malloc(
             ED25519_SIGNATURE_BYTES + message_length);
-    uint8_t *opened = (uint8_t *) malloc(message_length);
+    /*
+     * crypto_sign_open 会先把 sm 整体（64B 签名 + N 字节正文）拷进 m，
+     * 所以 opened 必须按 64 + N 分配；只给 N 会溢出 64 字节，
+     * 覆盖堆上相邻对象（曾表现为 ICU RegexPattern 被踩后 GC 崩溃）。
+     */
+    uint8_t *opened = (uint8_t *) malloc(
+            ED25519_SIGNATURE_BYTES + message_length);
     if (signed_message == NULL || opened == NULL) {
         free(signed_message);
         free(opened);
@@ -171,7 +177,7 @@ static int ed25519_token_level(const char *code, size_t code_length,
                    && opened_length == message_length
                    && memcmp(opened, message, message_length) == 0;
     memset(signed_message, 0, ED25519_SIGNATURE_BYTES + message_length);
-    memset(opened, 0, message_length);
+    memset(opened, 0, ED25519_SIGNATURE_BYTES + message_length);
     free(signed_message);
     free(opened);
     memset(message, 0, sizeof(message));
