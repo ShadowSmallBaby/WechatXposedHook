@@ -3,6 +3,7 @@ package github.shadowbaby.wechatxposed.hook.license;
 import android.os.Build;
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
+import github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
@@ -62,7 +63,40 @@ public final class Activation {
 
     private static volatile String cachedWxid;
 
+    private static volatile String runtimeWxid;
+
     private Activation() {
+    }
+
+    public static String runtimeWxid() {
+        return runtimeWxid;
+    }
+
+    /**
+     * X 3.0 core 在 msgId 132/150 里传入的 userId 是权威账号，
+     * 比 prefs 更可靠（双开、prefs 未就绪时尤其明显）。
+     */
+    public static void setRuntimeWxid(String value) {
+        if (value == null) {
+            return;
+        }
+        String account = value.trim();
+        if (!account.startsWith("wxid_")
+                || account.equals(runtimeWxid)) {
+            return;
+        }
+        runtimeWxid = account;
+        cachedWxid = account;
+        level = -1;
+        ModuleLogger.log("activation: runtime account=" + account);
+        try {
+            if (dataDir != null) {
+                StartupCheck.run(dataDir, account);
+            }
+            FeaturePackUnlock.retry();
+        } catch (Throwable error) {
+            ModuleLogger.log("activation: runtime retry " + error);
+        }
     }
 
     public static void install(File directory) {
@@ -121,6 +155,10 @@ public final class Activation {
     }
 
     public static String wxid() {
+        String runtime = runtimeWxid;
+        if (runtime != null) {
+            return runtime;
+        }
         String cached = cachedWxid;
         if (cached != null) {
             return cached;
@@ -245,6 +283,8 @@ public final class Activation {
             }
             file.setReadable(true, false);
             level = newLevel;
+            // 授权已落盘，重新读一次宿主账号，机器码授权紧接着要用。
+            cachedWxid = null;
             return true;
         } catch (Throwable error) {
             File probe = new File(dataDir, FILE_NAME);

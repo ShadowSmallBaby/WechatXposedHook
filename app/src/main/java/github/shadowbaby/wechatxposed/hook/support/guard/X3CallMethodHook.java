@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.support.guard;
 
+import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.support.feature.EditionFeatures;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
@@ -42,6 +43,13 @@ public final class X3CallMethodHook implements HookCallback {
             int msgId = (Integer) param.arg(0);
             int call = CALLS.incrementAndGet();
             Object[] params = (Object[]) param.arg(1);
+            if (msgId == MSG_LICENSE_BLOB || msgId == MSG_FEATURE_QUERY) {
+                ModuleLogger.debug("X3 msg " + msgId + " params="
+                        + java.util.Arrays.deepToString(params));
+            }
+            // 132/150 只在首次授权时出现，重启后 X3 不再发，wxid 会永远拿不到。
+            // 任何一次 CallMethod 都顺手捞一遍，机器码授权才能算出来。
+            captureAccount(params);
             if (SEEN.add(msgId)) {
                 ModuleLogger.debug("X3 msg new: " + msgId
                         + " args=" + java.util.Arrays.toString(params));
@@ -87,6 +95,33 @@ public final class X3CallMethodHook implements HookCallback {
             }
         } catch (Throwable error) {
             ModuleLogger.log(error);
+        }
+    }
+
+    /** 从 X 3.0 传入的参数里捞出当前登录 wxid，作为授权账号的权威来源。 */
+    private static void captureAccount(Object[] params) {
+        java.util.Set<String> found = new java.util.LinkedHashSet<>();
+        collectWxid(params, found);
+        if (found.isEmpty()) {
+            return;
+        }
+        String preferred = Activation.wxid();
+        if (preferred != null && found.contains(preferred)) {
+            Activation.setRuntimeWxid(preferred);
+            return;
+        }
+        Activation.setRuntimeWxid(found.iterator().next());
+    }
+
+    private static void collectWxid(Object value, java.util.Set<String> out) {
+        if (value instanceof String text) {
+            if (text.startsWith("wxid_")) {
+                out.add(text);
+            }
+        } else if (value instanceof Object[] array) {
+            for (Object item : array) {
+                collectWxid(item, out);
+            }
         }
     }
 }

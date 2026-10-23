@@ -120,10 +120,14 @@ public final class HookBootstrap {
             installZygote(framework, ModuleApk.modulePath());
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
             PackSignatureGuard.verifyInstalled(new File(data, "files"));
-            boolean trusted = ModuleCertCheck.verify(ModuleApk.modulePath())
-                    && DexIntegrity.verify(ModuleApk.modulePath())
-                    && RuntimeGuard.verify();
+            boolean certOk = ModuleCertCheck.verify(ModuleApk.modulePath());
+            boolean dexOk = DexIntegrity.verify(ModuleApk.modulePath());
+            boolean runtimeOk = RuntimeGuard.verify();
+            boolean trusted = certOk && dexOk && runtimeOk;
             boolean extensions = trusted && Activation.isExtensionAllowed();
+            ModuleLogger.log("integrity: cert=" + certOk + " dex=" + dexOk
+                    + " runtime=" + runtimeOk + " extLevel="
+                    + Activation.isExtensionAllowed());
             if (!extensions) {
                 ModuleLogger.log("module cert: extension dex disabled");
             }

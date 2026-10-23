@@ -1,9 +1,15 @@
 package github.shadowbaby.wechatxposed.hook.license;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Process;
 import android.os.SystemClock;
 import android.text.InputType;
 import android.view.MotionEvent;
@@ -213,17 +219,52 @@ public final class ActivationDialog implements HookCallback {
                 return;
             }
             boolean ok = Activation.activate(promiseText, codeText);
-            Toast.makeText(activity,
-                    ok ? "授权成功，请重启微信"
-                            : "承诺内容或授权码不正确",
-                    Toast.LENGTH_LONG).show();
-            if (ok) {
-                dialog.dismiss();
+            if (!ok) {
+                Toast.makeText(activity, "承诺内容或授权码不正确",
+                        Toast.LENGTH_LONG).show();
+                return;
             }
+            dialog.dismiss();
+            restartWechat(activity);
             });
         });
         dialog.setOnDismissListener(d -> shown = false);
         dialog.show();
+    }
+
+    /** 授权成功后拉起微信新进程，再结束当前进程，让授权/功能包立即生效。 */
+    private static void restartWechat(Activity activity) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.setClassName("com.tencent.mm", "com.tencent.mm.ui.LauncherUI");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            PendingIntent launch = PendingIntent.getActivity(activity, 0x5758, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            AlarmManager alarms = activity.getSystemService(AlarmManager.class);
+            if (alarms == null) {
+                Toast.makeText(activity, "授权成功，请手动重启微信",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            long when = SystemClock.elapsedRealtime() + 900;
+            try {
+                alarms.setExactAndAllowWhileIdle(
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP, when, launch);
+            } catch (Throwable error) {
+                alarms.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, when, launch);
+            }
+            Toast.makeText(activity, "授权成功，正在重启微信…",
+                    Toast.LENGTH_SHORT).show();
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                activity.finishAffinity();
+                Process.killProcess(Process.myPid());
+            }, 500);
+        } catch (Throwable error) {
+            ModuleLogger.log("activation restart: " + error);
+            Toast.makeText(activity, "授权成功，请手动重启微信",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
     private static android.graphics.drawable.GradientDrawable box(

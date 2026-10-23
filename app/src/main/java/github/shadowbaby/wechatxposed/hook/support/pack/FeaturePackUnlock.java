@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
+import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
@@ -48,38 +49,60 @@ public final class FeaturePackUnlock {
 
     private static volatile boolean done;
 
+    private static volatile File lastDataDir;
+
+    private static volatile boolean lastAllowExtensions;
+
     private FeaturePackUnlock() {
     }
 
-    public static void run(File dataDir, boolean allowExtensions) {
+    public static synchronized void run(File dataDir, boolean allowExtensions) {
+        lastDataDir = dataDir;
+        lastAllowExtensions = allowExtensions;
         if (done) {
             return;
         }
         done = true;
         try {
-            enableFeature(dataDir, allowExtensions);
+            if (!enableFeature(dataDir, allowExtensions)) {
+                // 账号/DB 还没就绪时允许运行时账号到达后重试。
+                done = false;
+            }
         } catch (Throwable error) {
+            done = false;
             ModuleLogger.log(error);
         }
     }
 
-    private static void enableFeature(File dataDir, boolean allowExtensions) throws Exception {
+    /** X 3.0 运行时传入权威 userId 后重跑一次。 */
+    public static synchronized void retry() {
+        File dataDir = lastDataDir;
+        if (dataDir != null) {
+            // 首次往往是公开码 + 无 wxid，allowExtensions 为 false；
+            // 拿到 wxid 升级成机器码授权后必须按当前等级重算，否则扩展永远不会写入。
+            lastAllowExtensions = BuildConfig.FULL_EDITION && Activation.isExtensionAllowed();
+            run(dataDir, lastAllowExtensions);
+        }
+    }
+
+    private static boolean enableFeature(File dataDir, boolean allowExtensions)
+            throws Exception {
         boolean extensions = allowExtensions && BuildConfig.FULL_EDITION;
         if (DB_NAME.isEmpty() || DB_KEY.isEmpty()
                 || DEFAULT_FP_VERSIONS.isEmpty() || DEFAULT_FP_VERSIONS_V7.isEmpty()
                 || AES_MODE.isEmpty() || AES_KEY.isEmpty()) {
             ModuleLogger.log("feature unlock: native table unavailable");
-            return;
+            return false;
         }
         String account = StartupCheck.readLoginAccount(dataDir);
         if (account == null || account.isEmpty()) {
             ModuleLogger.log("feature unlock: no account");
-            return;
+            return false;
         }
         File file = new File(dataDir, DB_DIR + DB_NAME);
         if (!file.isFile()) {
             ModuleLogger.log("feature unlock: no db");
-            return;
+            return false;
         }
         SQLiteDatabase database = SQLiteDatabase.openDatabase(file.getPath(), null,
                 SQLiteDatabase.OPEN_READWRITE);
@@ -97,7 +120,7 @@ public final class FeaturePackUnlock {
             String current = value == null ? "" : decrypt(value);
             if (current == null) {
                 ModuleLogger.log("feature unlock: fp decrypt failed");
-                return;
+                return false;
             }
             // 只补默认值里缺的项，保留数据库里已有的项和顺序；
             // 公开版即使带上内部分量也不影响（没有扩展包就加载不出来）。
@@ -128,6 +151,7 @@ public final class FeaturePackUnlock {
         } finally {
             database.close();
         }
+        return true;
     }
 
     private static void ensureVersions(SQLiteDatabase database, String account,

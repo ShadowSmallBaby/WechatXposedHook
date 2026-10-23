@@ -103,7 +103,7 @@ public final class X3ComponentHooks {
                     CALL_METHOD,
                     new Class<?>[]{Integer.TYPE, Object[].class},
                     new X3CallMethodHook());
-            ModuleLogger.debug(LOG_HOOKED + className + "." + CALL_METHOD);
+            ModuleLogger.log(LOG_HOOKED + className + "." + CALL_METHOD);
         } catch (Throwable error) {
             ModuleLogger.debug(LOG_FAILED + ": " + className);
             ModuleLogger.log(error);

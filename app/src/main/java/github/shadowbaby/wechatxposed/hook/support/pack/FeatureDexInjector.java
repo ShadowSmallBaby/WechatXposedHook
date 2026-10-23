@@ -38,6 +38,16 @@ public final class FeatureDexInjector {
 
     private static final Map<String, byte[]> CACHE = new ConcurrentHashMap<>();
 
+    /**
+     * 注入用的 direct buffer 必须活到进程结束。
+     *
+     * InMemoryDexClassLoader 只借用 buffer 的 native 内存，buffer 被 GC 回收后
+     * ART 后续解析该类时会读到已释放内存，破坏 LinearAlloc（Android 17 上表现为
+     * Class.forName 阶段 SIGSEGV，fault addr 为 dex 里的字符串数据）。
+     */
+    private static final java.util.List<ByteBuffer> LIVE_BUFFERS =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
     private static volatile File filesDir;
 
     private FeatureDexInjector() {
@@ -151,6 +161,7 @@ public final class FeatureDexInjector {
         ByteBuffer buffer = ByteBuffer.allocateDirect(data.length);
         buffer.put(data);
         buffer.flip();
+        LIVE_BUFFERS.add(buffer);
         return buffer;
     }
 }

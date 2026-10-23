@@ -1,7 +1,12 @@
 package github.shadowbaby.wechatxposed.hook.deploy;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.license.LicenseDatabase;
 import github.shadowbaby.wechatxposed.hook.license.LicenseInstaller;
+import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
@@ -46,7 +51,19 @@ public abstract class StartupCheck {
     }
 
     public static String readLoginAccount(File dataDir) {
+        String runtime = Activation.runtimeWxid();
+        if (runtime != null) {
+            return runtime;
+        }
+        // 宿主进程的 Application Context 最权威；读不到再退到磁盘扫描。
+        String fromContext = readFromContext();
+        if (fromContext != null) {
+            return fromContext;
+        }
+        File primary = new File(dataDir, PREFS_PATH);
+        ModuleLogger.log("login scan dir=" + dataDir + " pref=" + primary.isFile());
         String account = scanLoginAccount(dataDir);
+        ModuleLogger.log("login account=" + (account == null ? "null" : account));
         if (account != null) {
             return account;
         }
@@ -56,10 +73,30 @@ public abstract class StartupCheck {
         if (!decrypted.equals(path)) {
             File deviceDir = new File(decrypted);
             if (deviceDir.isDirectory()) {
-                return scanLoginAccount(deviceDir);
+                String fallback = scanLoginAccount(deviceDir);
+                ModuleLogger.log("login de=" + fallback);
+                return fallback;
             }
         }
         return null;
+    }
+
+    /** 从宿主 Application 的 SharedPreferences 直接读账号，自动适配双开/多用户。 */
+    private static String readFromContext() {
+        try {
+            Class<?> activityThread = Class.forName("android.app.ActivityThread");
+            Object application = activityThread
+                    .getDeclaredMethod("currentApplication").invoke(null);
+            if (!(application instanceof Context context)) {
+                return null;
+            }
+            SharedPreferences prefs = context.getSharedPreferences(
+                    "com.tencent.mm_preferences", Context.MODE_PRIVATE);
+            String account = prefs.getString("login_weixin_username", "");
+            return account != null && account.startsWith(WXID_PREFIX) ? account : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private static String scanLoginAccount(File dataDir) {
