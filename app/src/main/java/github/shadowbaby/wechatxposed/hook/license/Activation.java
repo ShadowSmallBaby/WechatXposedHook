@@ -177,15 +177,22 @@ public final class Activation {
         if (dataDir == null) {
             return LEVEL_UNKNOWN;
         }
-        if (wxid() == null) {
-            return LEVEL_UNKNOWN;
-        }
         String code = readCode();
         if (code.isEmpty()) {
             ModuleLogger.log("activation: no code machine=" + machineCode());
             return LEVEL_NONE;
         }
         int result = verifyCode(code);
+        if (result > LEVEL_NONE) {
+            return result;
+        }
+        // 机器码在 wxid 尚未就绪时先不缓存失败；公开码不依赖 wxid。
+        String publicCode = Secret.packValue(Secret.PACK_PUBLIC_CODE);
+        int publicLength = publicCode == null || publicCode.isEmpty()
+                ? 10 : publicCode.length();
+        if (wxid() == null && code.length() != publicLength) {
+            return LEVEL_UNKNOWN;
+        }
         ModuleLogger.debug("activation: level=" + result);
         return result;
     }
@@ -197,11 +204,10 @@ public final class Activation {
                 return LEVEL_NONE;
             }
             String account = wxid();
-            if (account == null || account.isEmpty()) {
-                return LEVEL_UNKNOWN;
-            }
+            // 公开码不依赖 wxid；机器码在 native 里用空 wxid 会自然校验失败。
             return Secret.activationLevel(code.trim(), bindingFingerprint(), bindingDevice(),
-                    Secret.of(SecretConstants.MODULE_CERT_SHA256), account,
+                    Secret.of(SecretConstants.MODULE_CERT_SHA256),
+                    account == null ? "" : account,
                     System.currentTimeMillis() / 1000L);
         } catch (Throwable error) {
             ModuleLogger.log("activation: verify " + error);

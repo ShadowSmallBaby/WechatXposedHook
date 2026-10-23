@@ -91,7 +91,12 @@ public final class ActivationDialog implements HookCallback {
     }
 
     private static void tryShow(Activity activity, int attempt) {
-        if (shown || Activation.hasAuthorization() || activity.isFinishing()) {
+        tryShow(activity, attempt, false);
+    }
+
+    private static void tryShow(Activity activity, int attempt, boolean force) {
+        if (shown || (!force && Activation.hasAuthorization())
+                || activity.isFinishing()) {
             return;
         }
         shown = true;
@@ -290,7 +295,7 @@ public final class ActivationDialog implements HookCallback {
             Object target = param.thisObject();
             if (!(target instanceof Activity activity)
                     || !LAUNCHER.equals(activity.getClass().getName())
-                    || shown || Activation.hasAuthorization()) {
+                    || shown) {
                 return;
             }
             Object argument = param.arg(0);
@@ -322,7 +327,7 @@ public final class ActivationDialog implements HookCallback {
             if (lastTapTime != 0 && now - lastTapTime <= 450
                     && lastTapY <= limit) {
                 lastTapTime = 0;
-                activity.runOnUiThread(() -> tryShow(activity, 0));
+                activity.runOnUiThread(() -> tryShow(activity, 0, true));
             } else {
                 lastTapTime = now;
                 lastTapY = event.getY();

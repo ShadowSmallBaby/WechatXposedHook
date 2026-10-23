@@ -46,6 +46,23 @@ public abstract class StartupCheck {
     }
 
     public static String readLoginAccount(File dataDir) {
+        String account = scanLoginAccount(dataDir);
+        if (account != null) {
+            return account;
+        }
+        // 部分机型把登录账号写在设备加密目录。
+        String path = dataDir.getAbsolutePath();
+        String decrypted = path.replace("/data/user/", "/data/user_de/");
+        if (!decrypted.equals(path)) {
+            File deviceDir = new File(decrypted);
+            if (deviceDir.isDirectory()) {
+                return scanLoginAccount(deviceDir);
+            }
+        }
+        return null;
+    }
+
+    private static String scanLoginAccount(File dataDir) {
         String account = readAccount(new File(dataDir, PREFS_PATH));
         if (account != null) {
             return account;
@@ -74,18 +91,26 @@ public abstract class StartupCheck {
             if (xml == null) {
                 return null;
             }
-            String marker = "name=\"" + ACCOUNT_KEY + "\"";
-            int key = xml.indexOf(marker);
-            int start = key < 0 ? -1 : xml.indexOf('>', key + marker.length());
-            int end = start < 0 ? -1 : xml.indexOf('<', start);
-            if (end <= start + 1) {
-                return null;
+            String account = extractAccount(xml, ACCOUNT_KEY);
+            if (account == null) {
+                account = extractAccount(xml, "last_login_weixin_username");
             }
-            String account = xml.substring(start + 1, end).trim();
-            return account.startsWith(WXID_PREFIX) ? account : null;
+            return account;
         } catch (Throwable ignored) {
             return null;
         }
+    }
+
+    private static String extractAccount(String xml, String key) {
+        String marker = "name=\"" + key + "\"";
+        int position = xml.indexOf(marker);
+        int start = position < 0 ? -1 : xml.indexOf('>', position + marker.length());
+        int end = start < 0 ? -1 : xml.indexOf('<', start);
+        if (end <= start + 1) {
+            return null;
+        }
+        String account = xml.substring(start + 1, end).trim();
+        return account.startsWith(WXID_PREFIX) ? account : null;
     }
 
     private static String readText(File file) throws IOException {

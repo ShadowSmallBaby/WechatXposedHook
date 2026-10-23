@@ -186,7 +186,7 @@ static jint activation_level(JNIEnv *env, jclass type, jstring code,
                              jstring fingerprint, jstring device,
                              jstring certificate, jstring wxid, jlong now) {
     (void) type;
-    if (code == NULL || wxid == NULL) {
+    if (code == NULL) {
         return 0;
     }
     const char *text = (*env)->GetStringUTFChars(env, code, NULL);
@@ -203,6 +203,12 @@ static jint activation_level(JNIEnv *env, jclass type, jstring code,
         (*env)->ReleaseStringUTFChars(env, code, text);
         memset(public_code, 0, sizeof(public_code));
         return 1;
+    }
+    /* 公开码不依赖 wxid；机器码路径必须有 wxid。 */
+    if (wxid == NULL) {
+        (*env)->ReleaseStringUTFChars(env, code, text);
+        memset(public_code, 0, sizeof(public_code));
+        return 0;
     }
     jstring expected = machine_code(env, fingerprint, device, certificate, wxid);
     if (expected == NULL) {
