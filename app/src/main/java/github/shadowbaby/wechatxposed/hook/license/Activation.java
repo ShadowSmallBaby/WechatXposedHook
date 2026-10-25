@@ -104,6 +104,11 @@ public final class Activation {
         level = -1;
     }
 
+    /** 宿主数据目录，供授权守卫同步功能包数据库。 */
+    public static File dataDir() {
+        return dataDir;
+    }
+
     public static synchronized int level() {
         if (!BuildConfig.FULL_EDITION) {
             // 公开版只含基础包，免费使用，不要求授权。

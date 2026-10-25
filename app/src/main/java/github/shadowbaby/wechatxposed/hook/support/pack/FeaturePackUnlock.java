@@ -74,14 +74,220 @@ public final class FeaturePackUnlock {
         }
     }
 
-    /** X 3.0 运行时传入权威 userId 后重跑一次。 */
+    public static final int LEVEL_NONE = 0;
+    public static final int LEVEL_BASE = 1;
+    public static final int LEVEL_PRO = 2;
+
+    private static final String LEVEL_TAG = "WXH_LEVEL";
+
+    /** 项目授权标记：wxid,机器码,群号（普通）或 wxid,机器码,卡密（高级）。 */
+    private static final String LIC_TAG = "WXH_LIC";
+
+    private static final String EXTENSIONS = "sf,mf,af";
+
+    /**
+     * 项目授权守卫：读数据库里的 {@code WXH_LEVEL}，并让数据库与级别保持一致。
+     *
+     * 数据库里没有项目字段（全新库或原版库）时按原版免费版初始化：
+     * 四个基础功能 + 协议待确认。返回当前级别，调用方据此决定装不装授权绕过。
+     */
+    public static synchronized int syncLevel(File dataDir, boolean trusted) {
+        return guard(dataDir, -1, trusted);
+    }
+
+    /** 用户同意协议（普通授权）时写入级别；卡密授权带卡密写高级。 */
+    public static synchronized void grant(File dataDir, int level) {
+        guard(dataDir, level, true, null);
+    }
+
+    public static synchronized void grant(File dataDir, int level, String card) {
+        guard(dataDir, level, true, card);
+    }
+
+    private static int guard(File dataDir, int target, boolean trusted) {
+        return guard(dataDir, target, trusted, null);
+    }
+
+    private static int guard(File dataDir, int target, boolean trusted, String card) {
+        try {
+            if (DB_NAME.isEmpty() || DB_KEY.isEmpty()
+                    || AES_MODE.isEmpty() || AES_KEY.isEmpty()) {
+                return LEVEL_NONE;
+            }
+            String account = StartupCheck.readLoginAccount(dataDir);
+            if (account == null || account.isEmpty()) {
+                return LEVEL_NONE;
+            }
+            File file = new File(dataDir, DB_DIR + DB_NAME);
+            if (!file.isFile()) {
+                // 数据库还没建立，交给壳自己初始化，下次启动再对齐。
+                return LEVEL_NONE;
+            }
+            SQLiteDatabase database = SQLiteDatabase.openDatabase(file.getPath(), null,
+                    SQLiteDatabase.OPEN_READWRITE);
+            try {
+                String stored = readTag(database, account, LEVEL_TAG);
+                int level;
+                if (stored == null) {
+                    level = LEVEL_NONE;
+                    setValue(database, account, LEVEL_TAG, "INT", encrypt("0"));
+                    setValue(database, account, "fp", "STRING", encrypt(""));
+                    setValue(database, account, "fp_async", "STRING", encrypt(""));
+                    setValue(database, account, "FPVersions", "JSON",
+                            encrypt(DEFAULT_FP_VERSIONS));
+                    setValue(database, account, "valid", "BOOLEAN", encrypt("false"));
+                    setValue(database, account, "is_new_user", "INT", encrypt("1"));
+                    setValue(database, account, "disclaimer_disable", "BOOLEAN",
+                            encrypt("false"));
+                    ModuleLogger.log("license guard: init level=0");
+                } else {
+                    level = parseInt(stored, LEVEL_NONE);
+                    if (level < LEVEL_NONE || level > LEVEL_PRO) {
+                        // 字段被外部写坏时按未授权处理，避免误开高级功能。
+                        level = LEVEL_NONE;
+                    }
+                }
+                if (target >= 0 && target != level) {
+                    level = target;
+                    setValue(database, account, LEVEL_TAG, "INT",
+                            encrypt(String.valueOf(level)));
+                    ModuleLogger.log("license guard: level -> " + level);
+                }
+                applyLevel(database, account, level, trusted && level >= LEVEL_PRO, card);
+                return level;
+            } finally {
+                database.close();
+            }
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+            return LEVEL_NONE;
+        }
+    }
+
+    /** 让功能表/版本表/valid 与级别一致；值没变就不写，避免触发壳的重启检测。 */
+    private static void applyLevel(SQLiteDatabase database, String account, int level,
+            boolean extensions, String card) throws Exception {
+        boolean pro = level >= LEVEL_PRO;
+        boolean authorized = level >= LEVEL_BASE;
+        writeLic(database, account, level, card);
+        // 未授权时 valid=false + is_new_user=1 才会走壳的免责声明分支；
+        // 授权后把这些标记补回正常值。
+        String valid = authorized ? "true" : "false";
+        if (!valid.equals(readTag(database, account, "valid"))) {
+            setValue(database, account, "valid", "BOOLEAN", encrypt(valid));
+        }
+        if (!authorized && !"1".equals(readTag(database, account, "is_new_user"))) {
+            setValue(database, account, "is_new_user", "INT", encrypt("1"));
+        }
+        if (!"false".equals(readTag(database, account, "hookFail"))) {
+            setValue(database, account, "hookFail", "BOOLEAN", encrypt("false"));
+        }
+        clearSafeMode(database, account);
+        ensureVersions(database, account, pro);
+
+        // LatestVersions 里的 fp_sf/fp_mf/fp_af 才是壳加载扩展包的依据，
+        // 非高级授权时必须删掉，否则 FPVersions 清了也会照常加载。
+        if (!pro) {
+            String latest = readTag(database, account, "LatestVersions");
+            if (latest != null) {
+                JSONObject latestJson = new JSONObject(latest);
+                boolean changed = false;
+                changed |= latestJson.remove("fp_sf") != null;
+                changed |= latestJson.remove("fp_mf") != null;
+                changed |= latestJson.remove("fp_af") != null;
+                if (changed) {
+                    setValue(database, account, "LatestVersions", "JSON",
+                            encrypt(latestJson.toString()));
+                    ModuleLogger.log("license guard: LatestVersions -> " + latestJson);
+                }
+            }
+        }
+
+        // 未授权保持「待确认协议」；授权后标记为已确认，壳不再弹声明。
+        String disclaimer = authorized ? "true" : "false";
+        if (!disclaimer.equals(readTag(database, account, "disclaimer_disable"))) {
+            setValue(database, account, "disclaimer_disable", "BOOLEAN",
+                    encrypt(disclaimer));
+            ModuleLogger.log("license guard: disclaimer_disable=" + disclaimer);
+        }
+
+        // LIC 是壳的 VIP/专业等级来源，也是扩展包（sf/mf/af）的加载依据。
+        // 非高级授权清空，壳才会退回免费版菜单。
+        if (!pro) {
+            if (!"".equals(readTag(database, account, "LIC"))) {
+                setValue(database, account, "LIC", "STRING", encrypt(""));
+                ModuleLogger.log("license guard: LIC cleared");
+            }
+        }
+
+        String current = readTag(database, account, "fp");
+        String want;
+        if (!authorized) {
+            // 未授权不加载任何功能包，只保留壳的核心界面。
+            want = "";
+        } else if (extensions) {
+            want = mergeList(current == null ? "" : current,
+                    mergeList(DEFAULT_FP, EXTENSIONS));
+        } else {
+            want = mergeList(current == null ? "" : current, DEFAULT_FP);
+        }
+        if (!want.equals(current)) {
+            setValue(database, account, "fp", "STRING", encrypt(want));
+            ModuleLogger.log("license guard: fp " + current + " -> " + want);
+        }
+        String async = readTag(database, account, "fp_async");
+        String wantAsync = authorized
+                ? mergeList(async == null ? "" : async, DEFAULT_FP_ASYNC) : "";
+        if (!wantAsync.equals(async)) {
+            setValue(database, account, "fp_async", "STRING", encrypt(wantAsync));
+            ModuleLogger.log("license guard: fp_async -> " + wantAsync);
+        }
+    }
+
+    /**
+     * 项目授权标记：普通授权写「wxid,机器码,群号」，高级授权写「wxid,机器码,卡密」。
+     * 未授权时留空；已写入的值在启动时不重复覆盖。
+     */
+    private static void writeLic(SQLiteDatabase database, String account, int level,
+            String card) throws Exception {
+        String current = readTag(database, account, LIC_TAG);
+        if (level < LEVEL_BASE) {
+            if (!"".equals(current)) {
+                setValue(database, account, LIC_TAG, "STRING", encrypt(""));
+                ModuleLogger.log("license guard: WXH_LIC cleared");
+            }
+            return;
+        }
+        boolean hasCard = card != null && !card.isEmpty();
+        if (!hasCard && current != null && !current.isEmpty()) {
+            // 普通授权已写过，或启动时没有新卡密：保留已有记录。
+            return;
+        }
+        String wxid = Activation.wxid();
+        String machine = Activation.machineCode();
+        String tail = level >= LEVEL_PRO ? card : Activation.group();
+        String value = (wxid == null ? "" : wxid) + ","
+                + (machine == null ? "" : machine) + ","
+                + (tail == null ? "" : tail);
+        if (!value.equals(current)) {
+            setValue(database, account, LIC_TAG, "STRING", encrypt(value));
+            ModuleLogger.log("license guard: WXH_LIC=" + value);
+        }
+    }
+
+    private static int parseInt(String text, int fallback) {
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (Throwable error) {
+            return fallback;
+        }
+    }
+
+    /** 授权级别变化后重新对齐数据库（卡密成功后调用）。 */
     public static synchronized void retry() {
-        File dataDir = lastDataDir;
+        File dataDir = Activation.dataDir();
         if (dataDir != null) {
-            // 首次往往是公开码 + 无 wxid，allowExtensions 为 false；
-            // 拿到 wxid 升级成机器码授权后必须按当前等级重算，否则扩展永远不会写入。
-            lastAllowExtensions = BuildConfig.FULL_EDITION && Activation.isExtensionAllowed();
-            run(dataDir, lastAllowExtensions);
+            syncLevel(dataDir, true);
         }
     }
 
@@ -177,6 +383,10 @@ public final class FeaturePackUnlock {
                     changed |= putVersionIfAbsent(json, "sf", 75);
                     changed |= putVersionIfAbsent(json, "mf", 137);
                     changed |= putVersionIfAbsent(json, "af", 171);
+                } else {
+                    changed |= json.remove("sf") != null;
+                    changed |= json.remove("mf") != null;
+                    changed |= json.remove("af") != null;
                 }
                 if (changed) {
                     setValue(database, account, "FPVersions", "JSON",
@@ -185,11 +395,12 @@ public final class FeaturePackUnlock {
                 }
             }
         }
-        ensureVersionRow(database, account, "FPVersions_v7", DEFAULT_FP_VERSIONS_V7);
+        ensureVersionRow(database, account, "FPVersions_v7", DEFAULT_FP_VERSIONS_V7,
+                allowExtensions);
     }
 
     private static void ensureVersionRow(SQLiteDatabase database, String account,
-            String tag, String value) throws Exception {
+            String tag, String value, boolean allowExtensions) throws Exception {
         String stored = null;
         try (Cursor cursor = database.rawQuery(
                 "select VALUE from DATA where ACCOUNT=? and TAG=?",
@@ -199,7 +410,13 @@ public final class FeaturePackUnlock {
             }
         }
         if (stored == null) {
-            setValue(database, account, tag, "JSON", encrypt(value));
+            JSONObject fresh = new JSONObject(value);
+            if (!allowExtensions) {
+                fresh.remove("sf");
+                fresh.remove("mf");
+                fresh.remove("af");
+            }
+            setValue(database, account, tag, "JSON", encrypt(fresh.toString()));
             ModuleLogger.log("feature unlock: " + tag + " created");
             return;
         }
@@ -217,6 +434,11 @@ public final class FeaturePackUnlock {
                 json.put(key, defaults.get(key));
                 changed = true;
             }
+        }
+        if (!allowExtensions) {
+            changed |= json.remove("sf") != null;
+            changed |= json.remove("mf") != null;
+            changed |= json.remove("af") != null;
         }
         if (changed) {
             setValue(database, account, tag, "JSON", encrypt(json.toString()));
@@ -297,9 +519,29 @@ public final class FeaturePackUnlock {
 
     private static void clearSafeMode(SQLiteDatabase database, String account)
             throws Exception {
-        setValue(database, account, "safe_mode", "STRING", encrypt(""));
-        setValue(database, account, "safe_mode_cnt", "INT", encrypt("0"));
-        setValue(database, account, "disable_safemode", "BOOLEAN", encrypt("true"));
+        if (!"".equals(readTag(database, account, "safe_mode"))) {
+            setValue(database, account, "safe_mode", "STRING", encrypt(""));
+        }
+        if (!"0".equals(readTag(database, account, "safe_mode_cnt"))) {
+            setValue(database, account, "safe_mode_cnt", "INT", encrypt("0"));
+        }
+        if (!"true".equals(readTag(database, account, "disable_safemode"))) {
+            setValue(database, account, "disable_safemode", "BOOLEAN", encrypt("true"));
+        }
+    }
+
+    /** 读取并解密单个 TAG，读不到返回 null。 */
+    private static String readTag(SQLiteDatabase database, String account, String tag) {
+        try (Cursor cursor = database.rawQuery(
+                "select VALUE from DATA where ACCOUNT=? and TAG=?",
+                new String[]{account, tag})) {
+            if (!cursor.moveToFirst()) {
+                return null;
+            }
+            return decrypt(cursor.getString(0));
+        } catch (Throwable error) {
+            return null;
+        }
     }
 
     private static void setValue(SQLiteDatabase database, String account, String tag,

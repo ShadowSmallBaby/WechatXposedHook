@@ -62,8 +62,11 @@ public final class FeatureDexInjector {
         if (!BuildConfig.FULL_EDITION) {
             return;
         }
-        if (feature == null || feature.isEmpty()
-                || !Activation.isExtensionAllowed()
+        if (feature == null || feature.isEmpty()) {
+            return;
+        }
+        // 高级激活才注入扩展 dex。
+        if (!Activation.isExtensionAllowed()
                 || !ModuleCertCheck.verify(ModuleApk.modulePath())
                 || !DexIntegrity.verify(ModuleApk.modulePath())
                 || !RuntimeGuard.verify()) {

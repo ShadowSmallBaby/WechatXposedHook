@@ -393,6 +393,9 @@ extern jbyteArray wxh_native_decode_container(JNIEnv *env, jclass type,
                                               jbyteArray container,
                                               jstring outer_password,
                                               jstring inner_password);
+extern jbyteArray wxh_native_decode_layer(JNIEnv *env, jclass type,
+                                          jbyteArray container,
+                                          jstring password);
 
 /* 动态注册，避免导出 Java_... 符号。 */
 extern jboolean wxh_native_hint_match(JNIEnv *env, jclass type, jint kind, jstring value);
@@ -418,6 +421,8 @@ static const JNINativeMethod SECRET_METHODS[] = {
      (void *) wxh_native_activation_level},
     {"nativeDecodeContainer", "([BLjava/lang/String;Ljava/lang/String;)[B",
      (void *) wxh_native_decode_container},
+    {"nativeDecodeLayer", "([BLjava/lang/String;)[B",
+     (void *) wxh_native_decode_layer},
     {"nativeHintMatch", "(ILjava/lang/String;)Z", (void *) wxh_native_hint_match},
     {"nativeSpoofVersion", "(I)I", (void *) wxh_native_spoof_version},
 };

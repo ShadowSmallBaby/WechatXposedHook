@@ -62,7 +62,10 @@ public final class X3SettingsBypass {
                 }
                 ModuleLogger.debug(LOG_HOOKED + className + " (" + count + " method(s))");
             } catch (Throwable error) {
-                ModuleLogger.log(LOG_FAILED + className + " " + error);
+                // 目标类要等功能 dex 真正初始化后才可见，失败必须允许下一轮重试。
+                // 旧版类名在新 core 里本来就不存在，按 debug 记，避免每次启动刷 error。
+                DONE.remove(key);
+                ModuleLogger.debug(LOG_FAILED + className + " " + error);
             }
         }
     }

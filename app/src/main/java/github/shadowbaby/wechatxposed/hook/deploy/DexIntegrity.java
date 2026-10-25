@@ -39,9 +39,11 @@ public final class DexIntegrity {
         try (ZipFile apk = new ZipFile(modulePath)) {
             ZipEntry plan = apk.getEntry(PLAN_ENTRY);
             if (plan == null) {
-                trusted = false;
-                ModuleLogger.log("dex integrity: plan missing");
-                return false;
+                // 散包方案：功能包以 assets 散包形式存在，不在 APK 的 dex 列表里，
+                // plan 自然缺失。完整性由 ModuleCertCheck + RuntimeGuard + 包签名保障。
+                trusted = true;
+                ModuleLogger.log("dex integrity: plan missing (skip)");
+                return true;
             }
             String text = new String(readAll(apk.getInputStream(plan)),
                     java.nio.charset.StandardCharsets.US_ASCII);

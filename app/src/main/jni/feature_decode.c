@@ -782,3 +782,47 @@ jbyteArray wxh_native_decode_container(JNIEnv *env, jclass type,
     }
     return result;
 }
+
+/*
+ * 单层容器解密：基础包（BaseDex）只有外层 AES，没有内层 MsgPack。
+ * 密码由 SaltTables 的 salt 查 PBE 表得到，调用方负责传入。
+ */
+jbyteArray wxh_native_decode_layer(JNIEnv *env, jclass type,
+                                   jbyteArray container, jstring password) {
+    (void) type;
+    if (container == NULL || password == NULL) {
+        return NULL;
+    }
+    jsize length = (*env)->GetArrayLength(env, container);
+    if (length <= 0) {
+        return NULL;
+    }
+    const char *key = (*env)->GetStringUTFChars(env, password, NULL);
+    if (key == NULL) {
+        return NULL;
+    }
+    uint8_t *data = (uint8_t *) malloc((size_t) length);
+    if (data == NULL) {
+        (*env)->ReleaseStringUTFChars(env, password, key);
+        return NULL;
+    }
+    (*env)->GetByteArrayRegion(env, container, 0, length, (jbyte *) data);
+    size_t output_length = 0;
+    uint8_t *output = decrypt_container(data, (size_t) length, key,
+                                        &output_length);
+    free(data);
+    (*env)->ReleaseStringUTFChars(env, password, key);
+    jbyteArray result = NULL;
+    if (output != NULL && output_length > 0 && output_length <= 0x7fffffff) {
+        result = (*env)->NewByteArray(env, (jsize) output_length);
+        if (result != NULL) {
+            (*env)->SetByteArrayRegion(env, result, 0, (jsize) output_length,
+                                       (const jbyte *) output);
+        }
+    }
+    if (output != NULL) {
+        memset(output, 0, output_length);
+        free(output);
+    }
+    return result;
+}

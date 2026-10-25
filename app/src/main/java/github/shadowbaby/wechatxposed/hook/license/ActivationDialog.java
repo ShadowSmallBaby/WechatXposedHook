@@ -42,7 +42,9 @@ public final class ActivationDialog implements HookCallback {
 
     public static synchronized void install(HookFramework framework,
             ClassLoader classLoader) {
-        if (installed || !BuildConfig.FULL_EDITION || BuildConfig.DEBUG) {
+        // debug（VERBOSE_LOG）走功能包卡密窗口授权，不再弹本模块的窗口。
+        if (installed || !BuildConfig.FULL_EDITION || BuildConfig.DEBUG
+                || BuildConfig.VERBOSE_LOG) {
             return;
         }
         boolean hooked = false;
@@ -233,7 +235,7 @@ public final class ActivationDialog implements HookCallback {
     }
 
     /** 授权成功后拉起微信新进程，再结束当前进程，让授权/功能包立即生效。 */
-    private static void restartWechat(Activity activity) {
+    public static void restartWechat(Activity activity) {
         try {
             Intent intent = new Intent(Intent.ACTION_MAIN);
             intent.setClassName("com.tencent.mm", "com.tencent.mm.ui.LauncherUI");

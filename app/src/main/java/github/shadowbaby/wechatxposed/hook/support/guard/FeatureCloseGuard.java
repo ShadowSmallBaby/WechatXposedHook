@@ -111,6 +111,8 @@ public final class FeatureCloseGuard {
             try {
                 Class<?> target = framework.findClassIfExists(name, classLoader);
                 if (target == null) {
+                    // 功能 dex 里的类要等它自己 init 后才可见，保留重试机会。
+                    DONE.remove(key);
                     continue;
                 }
                 int count = 0;

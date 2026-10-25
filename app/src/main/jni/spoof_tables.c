@@ -88,6 +88,10 @@ static SpoofTable spoof_table_for(jint kind) {
             result.table = SPOOF_EXT_UNAVAILABLE_TABLE;
             result.count = SPOOF_EXT_UNAVAILABLE_COUNT;
             break;
+        case 8:
+            result.table = SPOOF_LOGIN_TABLE;
+            result.count = SPOOF_LOGIN_COUNT;
+            break;
         default:
             break;
     }

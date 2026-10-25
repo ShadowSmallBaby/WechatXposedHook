@@ -1,1 +1,3 @@
 github.shadowbaby.wechatxposed.hook.XposedInit
+github.shadowbaby.wechatxposed.hook.support.identity.X30Compat
+com.android.x.XposedInit

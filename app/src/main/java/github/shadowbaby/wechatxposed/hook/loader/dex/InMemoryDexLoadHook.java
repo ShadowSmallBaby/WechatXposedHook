@@ -23,9 +23,16 @@ import github.shadowbaby.wechatxposed.hook.support.guard.X3SettingsBypass;
 public final class InMemoryDexLoadHook implements HookCallback {
 
     private final HookFramework framework;
+    /** 未授权时不装任何授权/设置绕过，让功能包自己的校验（含协议弹窗）生效。 */
+    private final boolean licensed;
 
     public InMemoryDexLoadHook(HookFramework framework) {
+        this(framework, true);
+    }
+
+    public InMemoryDexLoadHook(HookFramework framework, boolean licensed) {
         this.framework = framework;
+        this.licensed = licensed;
     }
 
     @Override
@@ -35,15 +42,17 @@ public final class InMemoryDexLoadHook implements HookCallback {
         }
 
         DexDumper.maybeDump(param);
-        FeatureCloseGuard.probe(framework, hostClassLoader);
         CoreCertHook.install(framework, hostClassLoader);
-        DonationFeatureUnlock.installIfPresent(framework, hostClassLoader);
+        if (licensed) {
+            FeatureCloseGuard.probe(framework, hostClassLoader);
+            DonationFeatureUnlock.installIfPresent(framework, hostClassLoader);
+        }
 
         boolean x3Class = X3ComponentHooks.matches(framework, hostClassLoader);
         boolean x3Dex = X3ComponentHooks.matchesDex(param);
-        boolean licDex = X3LicenseBypass.matchesDex(param);
-        boolean guardDex = X3GuardBypass.matchesDex(param);
-        boolean settingsDex = X3SettingsBypass.matchesDex(param);
+        boolean licDex = licensed && X3LicenseBypass.matchesDex(param);
+        boolean guardDex = licensed && X3GuardBypass.matchesDex(param);
+        boolean settingsDex = licensed && X3SettingsBypass.matchesDex(param);
         ModuleLogger.debug("dex probe: x3class=" + x3Class + " x3dex=" + x3Dex
                 + " licdex=" + licDex + " guarddex=" + guardDex
                 + " settingsdex=" + settingsDex);
@@ -57,7 +66,7 @@ public final class InMemoryDexLoadHook implements HookCallback {
             X3SettingsBypass.install(framework, hostClassLoader);
         }
         if (x3Class || x3Dex) {
-            X3ComponentHooks.inject(framework, hostClassLoader);
+            X3ComponentHooks.inject(framework, hostClassLoader, licensed);
         }
     }
 

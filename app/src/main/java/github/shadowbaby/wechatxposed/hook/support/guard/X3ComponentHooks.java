@@ -23,7 +23,8 @@ public final class X3ComponentHooks {
     private static final String LOG_NOT_FOUND = "X3 bridge not found: ";
     private static final String LOG_FAILED = "X3 hook failed";
 
-    private static boolean injected;
+    private static final java.util.Set<String> BRIDGED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private X3ComponentHooks() {
     }
@@ -74,17 +75,28 @@ public final class X3ComponentHooks {
         return false;
     }
 
+    /**
+     * 每次功能 dex 加载后都会调用一次；桥只挂一次，各 Bypass 自己按类幂等，
+     * 找不到目标类时保留重试机会（功能 dex 里有些类要等它自己的 init 才可见）。
+     */
     public static synchronized void inject(HookFramework framework, ClassLoader classLoader) {
-        if (injected) {
-            return;
-        }
-        injected = true;
+        inject(framework, classLoader, true);
+    }
+
+    /**
+     * @param licensed 未授权时只挂组件桥，不装任何授权/设置绕过，
+     *                 否则壳会以为已授权而跳过自己的用户协议。
+     */
+    public static synchronized void inject(HookFramework framework, ClassLoader classLoader,
+            boolean licensed) {
         try {
             hookBridge(framework, classLoader, BRIDGE_CLASS);
             hookBridge(framework, classLoader, LOADER_CLASS);
-            X3LicenseBypass.install(framework, classLoader);
-            X3GuardBypass.install(framework, classLoader);
-            X3SettingsBypass.install(framework, classLoader);
+            if (licensed) {
+                X3LicenseBypass.install(framework, classLoader);
+                X3GuardBypass.install(framework, classLoader);
+                X3SettingsBypass.install(framework, classLoader);
+            }
         } catch (Throwable error) {
             ModuleLogger.debug(LOG_FAILED);
             ModuleLogger.log(error);
@@ -92,9 +104,14 @@ public final class X3ComponentHooks {
     }
 
     private static void hookBridge(HookFramework framework, ClassLoader classLoader, String className) {
+        String key = className + "@" + System.identityHashCode(classLoader);
+        if (!BRIDGED.add(key)) {
+            return;
+        }
         try {
             Class<?> bridge = framework.findClassIfExists(className, classLoader);
             if (bridge == null) {
+                BRIDGED.remove(key);
                 ModuleLogger.debug(LOG_NOT_FOUND + className);
                 return;
             }
@@ -105,6 +122,7 @@ public final class X3ComponentHooks {
                     new X3CallMethodHook());
             ModuleLogger.log(LOG_HOOKED + className + "." + CALL_METHOD);
         } catch (Throwable error) {
+            BRIDGED.remove(key);
             ModuleLogger.debug(LOG_FAILED + ": " + className);
             ModuleLogger.log(error);
         }

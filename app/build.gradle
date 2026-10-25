@@ -47,11 +47,21 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 壳会检查 ApplicationInfo.FLAG_DEBUGGABLE，为 true 时直接放弃安装 hook。
+            debuggable false
+            // debuggable=false 会让 BuildConfig.DEBUG 跟着变 false，过程日志全部静默；
+            // 这里单独给一个开关，排查时不用改 debuggable。
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'true'
+            // 实机验证要求与已装模块同签名，否则 install -r 会报签名冲突。
+            signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+        }
         release {
             minifyEnabled true
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'false'
         }
     }
 
@@ -91,6 +101,23 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packaging {
+        // 模块 so 由 Xposed 在宿主进程里按绝对路径加载，必须保持未压缩
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
+    }
+
+    // debug 变体关掉 debuggable 后 AGP 会把它当 release 跑 lintVital；
+    // 本模块没有 lint 门槛需求，直接关掉。
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
 }
 
 androidComponents {
@@ -101,14 +128,8 @@ androidComponents {
         def pack = 'wx30'
         def appVersion = android.defaultConfig.versionName
         def appVersionCode = android.defaultConfig.versionCode
-        variant.sources.assets?.addStaticSourceDirectory(
-                layout.buildDirectory.dir("generated/featurepacks/${pack}")
-                        .get().asFile.absolutePath)
-        if (flavors['edition'] == 'fullEdition') {
-            variant.sources.assets?.addStaticSourceDirectory(
-                    layout.buildDirectory.dir("generated/featurepacks/${pack}-ext")
-                            .get().asFile.absolutePath)
-        }
+        // 功能包以 WXH1 散包形式直接放在 src/main/assets（由 generateFeaturePacks 生成后
+        // 平铺），不再把 x7_3.0.zip / x7_3.0_ext.zip 合并进 assets，避免 APK 重复约 3MB。
         variant.outputs.each { output ->
             output.outputFileName.set(
                     "WeXposedHook-${framework}-v${appVersion}${edition}.apk")
@@ -480,4 +501,7 @@ tasks.named('preBuild') {
 dependencies {
     compileOnly 'de.robv.android.xposed:api:82'
     compileOnly 'io.github.libxposed:api:102.0.0'
+
+    // 壳的第三方运行时（kotlin stdlib / androidx）+ 4 个三反编译器均无法还原的壳类
+    implementation files('libs/shell-runtime.jar')
 }

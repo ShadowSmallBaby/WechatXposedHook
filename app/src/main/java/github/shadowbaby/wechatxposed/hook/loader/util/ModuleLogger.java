@@ -28,9 +28,12 @@ public abstract class ModuleLogger {
         }
     }
 
-    /** 仅调试构建输出的过程日志；release 构建里调用点会被 R8 裁掉。 */
+    /**
+     * 过程日志。开关跟 debuggable 解耦：debug 变体为了通过壳的检查把 debuggable
+     * 关掉了，那会连带让 BuildConfig.DEBUG 变 false，所以单独用 VERBOSE_LOG。
+     */
     public static void debug(Serializable message) {
-        if (!BuildConfig.DEBUG) {
+        if (!BuildConfig.VERBOSE_LOG) {
             return;
         }
         log(message);

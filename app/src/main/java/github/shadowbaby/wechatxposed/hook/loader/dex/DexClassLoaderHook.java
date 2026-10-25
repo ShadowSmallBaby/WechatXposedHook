@@ -19,9 +19,16 @@ import github.shadowbaby.wechatxposed.hook.support.guard.X3SettingsBypass;
 public final class DexClassLoaderHook implements HookCallback {
 
     private final HookFramework framework;
+    /** 未授权时只装基础组件 hook，不装授权绕过。 */
+    private final boolean licensed;
 
     public DexClassLoaderHook(HookFramework framework) {
+        this(framework, true);
+    }
+
+    public DexClassLoaderHook(HookFramework framework, boolean licensed) {
         this.framework = framework;
+        this.licensed = licensed;
     }
 
     @Override
@@ -31,17 +38,20 @@ public final class DexClassLoaderHook implements HookCallback {
         }
         try {
             String path = String.valueOf(param.arg(0));
-            FeatureCloseGuard.probe(framework, loader);
-            DonationFeatureUnlock.installIfPresent(framework, loader);
-            boolean license = X3LicenseBypass.matchesClass(framework, loader);
-            boolean guard = X3GuardBypass.matchesClass(framework, loader);
-            boolean settings = X3SettingsBypass.matchesClass(framework, loader);
+            // 授权绕过只在已授权时安装；未授权时让功能包自己的校验生效。
+            if (licensed) {
+                FeatureCloseGuard.probe(framework, loader);
+                DonationFeatureUnlock.installIfPresent(framework, loader);
+            }
+            boolean license = licensed && X3LicenseBypass.matchesClass(framework, loader);
+            boolean guard = licensed && X3GuardBypass.matchesClass(framework, loader);
+            boolean settings = licensed && X3SettingsBypass.matchesClass(framework, loader);
             boolean component = X3ComponentHooks.matches(framework, loader);
-            ModuleLogger.debug("dex loader: " + path
+            ModuleLogger.debug("dex loader" + (licensed ? "" : "(unlicensed)") + ": " + path
                     + " lic=" + license + " guard=" + guard
                     + " settings=" + settings + " component=" + component);
             if (component) {
-                X3ComponentHooks.inject(framework, loader);
+                X3ComponentHooks.inject(framework, loader, licensed);
             }
             if (license) {
                 X3LicenseBypass.install(framework, loader);

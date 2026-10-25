@@ -7,6 +7,7 @@ import github.shadowbaby.wechatxposed.hook.deploy.ModuleCertCheck;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
 import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.license.ActivationDialog;
+import github.shadowbaby.wechatxposed.hook.license.DisclaimerSkin;
 import github.shadowbaby.wechatxposed.hook.loader.dex.DexClassLoaderHook;
 import github.shadowbaby.wechatxposed.hook.loader.dex.DexDumper;
 import github.shadowbaby.wechatxposed.hook.loader.dex.InMemoryDexLoadHook;
@@ -43,6 +44,14 @@ public final class HookBootstrap {
     }
 
     public static synchronized void installZygote(HookFramework framework, String modulePath) {
+        installZygote(framework, modulePath, true);
+    }
+
+    /**
+     * @param licensed 已授权时安装授权绕过；未授权时只加载框架，让功能包自己的校验生效。
+     */
+    public static synchronized void installZygote(HookFramework framework, String modulePath,
+            boolean licensed) {
         ModuleApk.remember(modulePath);
         if (zygoteHooked) {
             return;
@@ -50,12 +59,13 @@ public final class HookBootstrap {
         zygoteHooked = true;
         String className = Secret.of(SecretConstants.IN_MEMORY_DEX_LOADER);
         Class<?> inMemoryDexClassLoader = framework.findClass(className, null);
-        framework.hookConstructors(inMemoryDexClassLoader, new InMemoryDexLoadHook(framework));
-        installDexClassLoaderHooks(framework);
+        framework.hookConstructors(inMemoryDexClassLoader,
+                new InMemoryDexLoadHook(framework, licensed));
+        installDexClassLoaderHooks(framework, licensed);
     }
 
-    private static void installDexClassLoaderHooks(HookFramework framework) {
-        DexClassLoaderHook hook = new DexClassLoaderHook(framework);
+    private static void installDexClassLoaderHooks(HookFramework framework, boolean licensed) {
+        DexClassLoaderHook hook = new DexClassLoaderHook(framework, licensed);
         for (String name : new String[]{"dalvik.system.DexClassLoader",
                 "dalvik.system.PathClassLoader"}) {
             try {
@@ -96,7 +106,8 @@ public final class HookBootstrap {
             installHostVersionSpoof(framework, classLoader, dataDir, false);
             return;
         }
-        if (WECHAT_PACKAGE.equals(processName)) {
+        // 8.0.79 起微信在 zygote64 / usap64 里预加载，processName 不是包名。
+        if (WECHAT_PACKAGE.equals(processName) || isUsapLikeProcess(processName)) {
             File data = new File(dataDir);
             long t0 = android.os.SystemClock.elapsedRealtime();
             // 诊断用：存在 marker 时把 InMemoryDexClassLoader 的 dex 落盘。
@@ -108,35 +119,49 @@ public final class HookBootstrap {
             FeatureDexInjector.setFilesDir(new File(data, "files"));
             Activation.install(data);
             ActivationDialog.install(framework, classLoader);
+            DisclaimerSkin.install(framework);
+            if (github.shadowbaby.wechatxposed.hook.BuildConfig.VERBOSE_LOG) {
+                try {
+                    github.shadowbaby.wechatxposed.hook.license.CardActivation
+                            .install(framework, classLoader);
+                } catch (Throwable error) {
+                    ModuleLogger.log(error);
+                }
+            }
             // MVVM 守卫只修正服务端下发的聊天配置，属于稳定性 hook；
             // 未授权也必须装，否则微信恢复到聊天页会直接 NPE。
             ChatMvvmGuard.install(framework, classLoader);
             ModuleLogger.log("activation: machine=" + Activation.machineCode());
-            boolean base = Activation.isBaseAllowed();
-            if (!base) {
-                ModuleLogger.log("activation: base not authorized");
-                return;
-            }
-            installZygote(framework, ModuleApk.modulePath());
+            // 壳始终启动（X3LicenseBypass 绕过壳自身授权）；
+            // 功能等级由 FPVersions 控制：未授权只写基础包，授权后追加 sf/mf/af。
+            boolean base = true;
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
             PackSignatureGuard.verifyInstalled(new File(data, "files"));
             boolean certOk = ModuleCertCheck.verify(ModuleApk.modulePath());
             boolean dexOk = DexIntegrity.verify(ModuleApk.modulePath());
             boolean runtimeOk = RuntimeGuard.verify();
             boolean trusted = certOk && dexOk && runtimeOk;
-            boolean extensions = trusted && Activation.isExtensionAllowed();
+            // 授权守卫：读取/初始化项目授权级别，并把数据库功能表对齐到该级别。
+            int level = FeaturePackUnlock.syncLevel(data, trusted);
+            // 只有高级授权才装授权绕过：普通授权要让壳按免费版走，
+            // 否则壳会认为 VIP/专业并加载 sf/mf/af 扩展。
+            boolean licensed = level >= FeaturePackUnlock.LEVEL_PRO;
+            boolean extensions = trusted && level >= FeaturePackUnlock.LEVEL_PRO;
+            ModuleLogger.log("activation: shell=on level=" + level
+                    + " licensed=" + licensed);
+            installZygote(framework, ModuleApk.modulePath(), licensed);
             ModuleLogger.log("integrity: cert=" + certOk + " dex=" + dexOk
-                    + " runtime=" + runtimeOk + " extLevel="
-                    + Activation.isExtensionAllowed());
+                    + " runtime=" + runtimeOk + " ext=" + extensions);
             if (!extensions) {
                 ModuleLogger.log("module cert: extension dex disabled");
             }
-            FeaturePackUnlock.run(data, extensions);
-            PbePasswordHook.install(framework);
-            PackGuard.install(framework);
-            NoticeSuppressor.install(framework);
             if (base) {
+                PbePasswordHook.install(framework);
+                PackGuard.install(framework);
+                NoticeSuppressor.install(framework);
                 installHostVersionSpoof(framework, classLoader, dataDir, true);
+            } else {
+                ModuleLogger.log("activation: unlicensed, skipping bypass hooks");
             }
         }
     }
@@ -148,6 +173,13 @@ public final class HookBootstrap {
         } catch (Throwable error) {
             framework.log(error);
         }
+    }
+
+    /** 8.0.79 的 usap 预加载进程名。 */
+    private static boolean isUsapLikeProcess(String processName) {
+        return processName != null
+                && (processName.endsWith("zygote64") || processName.endsWith("zygote")
+                    || processName.endsWith("usap64") || processName.endsWith("usap32"));
     }
 
     private static boolean isAppBrandProcess(String processName) {

@@ -22,6 +22,9 @@ public class XposedInit implements IXposedHookZygoteInit, IXposedHookLoadPackage
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam param) {
+        ModuleLogger.log("bootstrap: package=" + param.packageName
+                + " process=" + param.processName
+                + " appInfo=" + (param.appInfo != null));
         if (param.appInfo == null) {
             return;
         }

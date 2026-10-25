@@ -157,7 +157,10 @@ public final class X3GuardBypass implements HookCallback {
                 int count = hookAll(framework, target);
                 ModuleLogger.debug(LOG_HOOKED + className + " (" + count + " method(s))");
             } catch (Throwable error) {
-                ModuleLogger.log("X3 guard hook failed: " + className + " " + error);
+                // 功能 dex 的类要等它真正初始化后才可见，失败必须允许下一轮重试。
+                // 旧版类名在新 core 里本来就不存在，按 debug 记，避免每次启动刷 error。
+                DONE.remove(key);
+                ModuleLogger.debug("X3 guard hook failed: " + className + " " + error);
             }
         }
         hookWrapper(framework, classLoader, WRAPPER, WRAPPER_CALL);

@@ -46,6 +46,11 @@ public final class X3LicenseBypass {
     }
 
     public static synchronized void install(HookFramework framework, ClassLoader classLoader) {
+        // 实验：完全不绕过 3.0 自己的授权，验证未授权表现。
+        if (true) {
+            ModuleLogger.log("X3 license bypass disabled");
+            return;
+        }
         for (String className : LICENSE_CLASSES) {
             String key = className + "@" + System.identityHashCode(classLoader);
             if (!DONE.add(key)) {
@@ -56,6 +61,8 @@ public final class X3LicenseBypass {
                 try {
                     target = Class.forName(className, false, classLoader);
                 } catch (Throwable error) {
+                    // 类要等功能 dex 初始化后才可见，失败保留重试机会。
+                    DONE.remove(key);
                     ModuleLogger.debug("X3 license load failed: " + className + " / " + error);
                     continue;
                 }

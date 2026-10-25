@@ -166,6 +166,24 @@ public final class Secret {
     private static native byte[] nativeDecodeContainer(byte[] container,
             String outerPassword, String innerPassword);
 
+    /**
+     * 单层容器解密；基础包（BaseDex）没有内层 MsgPack。
+     * 明文是一份 APK，`classes.dex` 即壳的功能 dex。
+     */
+    public static byte[] decodeLayer(byte[] container, String password) {
+        if (container == null || password == null || password.isEmpty()
+                || !isNativeAvailable()) {
+            return null;
+        }
+        try {
+            return nativeDecodeLayer(container, password);
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    private static native byte[] nativeDecodeLayer(byte[] container, String password);
+
     // 版本伪装细节表（native）
     public static final int HINT_STARTUP = 0;
     public static final int HINT_CALL_START = 1;
@@ -175,6 +193,8 @@ public final class Secret {
     public static final int HINT_WALLET_CLASS = 5;
     public static final int HINT_CALL_SHUTDOWN = 6;
     public static final int HINT_EXT_UNAVAILABLE = 7;
+    /** 登录链路：服务端对低版本直接拒绝登录。 */
+    public static final int HINT_LOGIN = 8;
 
     public static boolean hintMatch(int kind, String value) {
         if (value == null || !isNativeAvailable()) {
