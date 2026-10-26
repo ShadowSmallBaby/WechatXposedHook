@@ -19,7 +19,7 @@ android {
         applicationId 'github.shadowbaby.wechatxposed.hook'
         minSdk 26
         targetSdk 37
-        versionCode 9
+        versionCode 10
         versionName '2.0-BETA'
 
         ndk {
@@ -65,19 +65,10 @@ android {
         }
     }
 
-    flavorDimensions 'framework', 'edition'
+    flavorDimensions 'framework'
     productFlavors {
         legacy { dimension 'framework' }
         modern { dimension 'framework' }
-
-        publicEdition {
-            dimension 'edition'
-            buildConfigField 'boolean', 'FULL_EDITION', 'false'
-        }
-        fullEdition {
-            dimension 'edition'
-            buildConfigField 'boolean', 'FULL_EDITION', 'true'
-        }
     }
 
     buildFeatures {
@@ -87,11 +78,6 @@ android {
     sourceSets {
         main {
             jniLibs.srcDirs = ['src/main/jniLibs']
-        }
-        publicEdition {
-            java.srcDirs += ["$buildDir/generated/secrets/publicEdition/java"]
-        }
-        fullEdition {
             java.srcDirs += ["$buildDir/generated/secrets/fullEdition/java"]
         }
     }
@@ -124,15 +110,11 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         def flavors = variant.productFlavors.collectEntries { [(it.first): it.second] }
         def framework = flavors['framework']
-        def edition = flavors['edition'] == 'fullEdition' ? '-full' : ''
-        def pack = 'wx30'
         def appVersion = android.defaultConfig.versionName
         def appVersionCode = android.defaultConfig.versionCode
-        // 功能包以 WXH1 散包形式直接放在 src/main/assets（由 generateFeaturePacks 生成后
-        // 平铺），不再把 x7_3.0.zip / x7_3.0_ext.zip 合并进 assets，避免 APK 重复约 3MB。
         variant.outputs.each { output ->
             output.outputFileName.set(
-                    "WeXposedHook-${framework}-v${appVersion}${edition}.apk")
+                    "WeXposedHook-${framework}-v${appVersion}.apk")
         }
     }
 }
@@ -263,48 +245,6 @@ def encodeSecrets = tasks.register('encodeSecrets') {
 
 tasks.named('preBuild') {
     dependsOn encodeSecrets
-}
-
-// x30 注入 dex 由 xmetadata/wx7 的扩展包容器在构建时解出（assets/featuredex/x30_*.dex）。
-abstract class ExtractFeatureDexTask extends DefaultTask {
-    @InputDirectory
-    abstract DirectoryProperty getSourceDir()
-
-    @InputFile
-    abstract RegularFileProperty getScriptFile()
-
-    @OutputDirectory
-    abstract DirectoryProperty getOutputDir()
-
-    @TaskAction
-    void extract() {
-        File target = new File(outputDir.get().asFile, 'featuredex')
-        target.mkdirs()
-        def python = System.getenv('WXH_PYTHON') ?: 'python'
-        def result = getProject().providers.exec {
-            commandLine python, '-X', 'utf8', scriptFile.get().asFile.absolutePath,
-                    '--source', sourceDir.get().asFile.absolutePath,
-                    '--output', target.absolutePath
-            ignoreExitValue = true
-        }
-        if (result.result.get().exitValue != 0) {
-            throw new GradleException('extract_featuredex.py 执行失败')
-        }
-    }
-}
-
-def extractFeatureDex = tasks.register('extractFeatureDex', ExtractFeatureDexTask) {
-    sourceDir.set(rootProject.layout.projectDirectory.dir('xmetadata/wx7'))
-    scriptFile.set(rootProject.layout.projectDirectory.file('scripts/extract_featuredex.py'))
-    inputs.file(rootProject.layout.projectDirectory.file('scripts/decrypt_wx244.py'))
-    outputDir.set(layout.buildDirectory.dir('generated/featuredex-assets'))
-}
-
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        variant.sources.assets?.addGeneratedSourceDirectory(
-                extractFeatureDex, { task -> task.outputDir })
-    }
 }
 
 def buildNative = tasks.register('buildNativeSecret') {
@@ -444,58 +384,50 @@ tasks.register('verifyNativeSecret') {
     }
 }
 
-def generateFeaturePacks = tasks.register('generateFeaturePacks', Exec) {
-    def script = rootProject.file('scripts/build_release_packs.py')
-    def packs = layout.buildDirectory.dir('generated/featurepacks')
-    def python = System.getProperty('os.name').toLowerCase().contains('windows')
-            ? 'python' : 'python3'
-    commandLine python, script.absolutePath, '--output-root', packs.get().asFile.absolutePath
-    onlyIf { script.isFile() && rootProject.file('xmetadata').isDirectory() }
-    inputs.file(script)
-    inputs.files(rootProject.fileTree('xmetadata') { include 'wx7/**' })
-    outputs.files(packs.get().file('wx30/x7_3.0.zip'),
-            packs.get().file('wx30-ext/x7_3.0_ext.zip'))
-}
+// 功能包资产：直接从 xmetadata 平铺成 assets/<hash>，body/_c/_s 合成 WXH1 容器。
+abstract class GenerateFeaturePacksTask extends DefaultTask {
+    @InputDirectory
+    abstract DirectoryProperty getSourceDir()
 
-// 阶段二：从源码构建 legacy hook 载荷（release），再与内置壳条目合成单 APK。
-def registerX30Replica = { String taskName, String variant, String edition,
-                               String outputName ->
-    tasks.register(taskName, Exec) {
-        dependsOn "assemble${variant.capitalize()}Release".toString(), 'generateFeaturePacks'
-        def script = rootProject.file('scripts/build_x30_replica.py')
-        def shellZip = rootProject.file('app/x30.zip')
-        def appVersion = android.defaultConfig.versionName
-        def appVersionCode = android.defaultConfig.versionCode
-        def hook = layout.buildDirectory.file(
-                "outputs/apk/${variant}/release/" +
-                "WeXposedHook-${variant.startsWith('legacy') ? 'legacy' : 'modern'}-v${appVersion}${edition}.apk")
-        def output = layout.buildDirectory.dir('outputs/apk/release')
-        def python = System.getProperty('os.name').toLowerCase().contains('windows')
-                ? 'python' : 'python3'
-        onlyIf { script.isFile() }
-        commandLine python, '-X', 'utf8', script.absolutePath,
-                '--shell-zip', shellZip.absolutePath,
-                '--hook-apk', hook.get().asFile.absolutePath,
-                '--package', 'github.shadowbaby.wechatxposed.hook',
-                '--app-name', 'WeXposedHook',
-                '--version-name', appVersion,
-                '--version-code', String.valueOf(appVersionCode),
-                '--icon', rootProject.file('app/src/main/res/mipmap/logo.png').absolutePath,
-                '--output', output.get().file(outputName).asFile.absolutePath
+    @InputFile
+    abstract RegularFileProperty getScriptFile()
+
+    @InputFile
+    abstract RegularFileProperty getNamesFile()
+
+    @InputFile
+    abstract RegularFileProperty getSidecarsFile()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void generate() {
+        def python = System.getenv('WXH_PYTHON') ?: 'python'
+        def result = getProject().providers.exec {
+            commandLine python, '-X', 'utf8', scriptFile.get().asFile.absolutePath,
+                    '--assets', outputDir.get().asFile.absolutePath
+            ignoreExitValue = true
+        }
+        if (result.result.get().exitValue != 0) {
+            throw new GradleException('build_release_packs.py 执行失败')
+        }
     }
 }
 
-registerX30Replica('assembleX30Replica', 'legacyFullEdition', '-full',
-        "WeXposedHook-legacy-v${android.defaultConfig.versionName}.apk")
-registerX30Replica('assembleX30ReplicaPublic', 'legacyPublicEdition', '',
-        "WeXposedHook-legacy-v${android.defaultConfig.versionName}-base.apk")
-registerX30Replica('assembleX30ReplicaModern', 'modernFullEdition', '-full',
-        "WeXposedHook-modern-v${android.defaultConfig.versionName}.apk")
-registerX30Replica('assembleX30ReplicaModernPublic', 'modernPublicEdition', '',
-        "WeXposedHook-modern-v${android.defaultConfig.versionName}-base.apk")
+def generateFeaturePacks = tasks.register('generateFeaturePacks', GenerateFeaturePacksTask) {
+    sourceDir.set(rootProject.layout.projectDirectory.dir('xmetadata/wx7'))
+    scriptFile.set(rootProject.layout.projectDirectory.file('scripts/build_release_packs.py'))
+    namesFile.set(rootProject.layout.projectDirectory.file('scripts/runtime_names.py'))
+    sidecarsFile.set(rootProject.layout.projectDirectory.file('scripts/sidecars.py'))
+    outputDir.set(layout.buildDirectory.dir('generated/pack-assets'))
+}
 
-tasks.named('preBuild') {
-    dependsOn generateFeaturePacks
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+                generateFeaturePacks, { task -> task.outputDir })
+    }
 }
 
 dependencies {

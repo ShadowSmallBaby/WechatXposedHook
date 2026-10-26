@@ -22,42 +22,37 @@ from pathlib import Path
 SECRETS = {
     # XposedInit
     "WECHAT_PACKAGE": "com.tencent.mm",
+    "WECHAT_LAUNCHER_CLASS": "com.tencent.mm.ui.LauncherUI",
     "APPBRAND_0": "com.tencent.mm:appbrand0",
     "APPBRAND_1": "com.tencent.mm:appbrand1",
     "IN_MEMORY_DEX_LOADER": "dalvik.system.InMemoryDexClassLoader",
+    # 壳身份与入口
+    "SHELL_PACKAGE": "cn.android.x",
+    "SHELL_ENTRY": "com.android.x.XposedInit",
+    "SHELL_CERT_PREFIX": "assets/8af2692bdcb8661da163b4204b5f5d5e",
+    "SHELL_GOTO_SETTINGS": "gotosettings",
+    "SHELL_UPDATE_HOST": "v.weixiaov.wang",
+    "SHELL_API_HOST": "wxp2022.vip",
 
     # InMemoryDexLoadHook
     # X 3.0（cn.android.x）
     "COMPONENT_X30": "com.android.xc.Wrapper.HookWrapper",
     "X30_BRIDGE_CLASS": "com.android.xc.WxJniCoreBridge",
     "X30_LOADER_CLASS": "com.android.x.xposed.hook.WxCoreLoader",
-    "X30_LICENSE_CLASS": "c.ـˉ.ˈʽ",
-    "X30_UPDATE_CLASS": "c.ـˉ.ⁱⁱ",
-    "X30_SETTINGS_CLASS": "c.יᴵ.ٴʻ",
-    # core v207 重新混淆后的名字（2.44 CoreDex 与 v206 一一对应的类）
-    "X30_LICENSE_CLASS_V207": "c.ˏᵎ.ـʼ",
-    "X30_UPDATE_CLASS_V207": "c.ˏᵎ.ˎ",
-    "X30_SETTINGS_CLASS_V207": "c.ˉˆ.ʼˊ",
-    # 更新类里的关键方法（旧名 / v207 名）
-    "X30_PARAMS_APPLY": "ʿʽ",
-    "X30_PARAMS_APPLY_V207": "ˋˉ",
-    "X30_PARAMS_VERIFY": "ʼﾞ",
-    "X30_PARAMS_VERIFY_V207": "ˑˏ",
-    "X30_VERIFIER_EXPIRED": "ﹶٴ",
-    "X30_VERIFIER_EXPIRED_V207": "ᵎᐧ",
-    "X30_DOWNLOAD_PARAMS": "ˊᵔ",
-    "X30_DOWNLOAD_PARAMS_V207": "ⁱᵔ",
-    "X30_DOWNLOAD_CORE": "ﹶˆ",
-    "X30_DOWNLOAD_CORE_V207": "ˈʽ",
-    # 核心调用 native 桥的统一包装类（v206 是 c.ˈⁱ.ᵔﹶ，v207 重命名）
-    "X30_BRIDGE_WRAPPER": "c.ˈⁱ.ᵔﹶ",
-    "X30_BRIDGE_WRAPPER_V207": "c.ˊﹶ.ˉˎ",
-    "X30_BRIDGE_CALL": "ʻᵢ",
-    "X30_BRIDGE_CALL_V207": "ﾞⁱ",
-    "X30_SET_DISABLE": "ـˑ",
-    "X30_SET_DISABLE_V207": "ﹳᵎ",
-    "X30_DISABLE_FEATURES": "ᵔʿ",
-    "X30_DISABLE_FEATURES_V207": "ᴵˎ",
+    # 核心已内置为 wxcore 212，类名/方法名只保留这一套（旧核心 202 已不再加载）
+    "X30_UPDATE_CLASS": "c.ˏᵎ.ˎ",
+    "X30_SETTINGS_CLASS": "c.ˉˆ.ʼˊ",
+    # 更新类里的关键方法
+    "X30_PARAMS_APPLY": "ˋˉ",
+    "X30_PARAMS_VERIFY": "ˑˏ",
+    "X30_VERIFIER_EXPIRED": "ᵎᐧ",
+    "X30_DOWNLOAD_PARAMS": "ⁱᵔ",
+    "X30_DOWNLOAD_CORE": "ˈʽ",
+    # 核心调用 native 桥的统一包装类
+    "X30_BRIDGE_WRAPPER": "c.ˊﹶ.ˉˎ",
+    "X30_BRIDGE_CALL": "ﾞⁱ",
+    "X30_SET_DISABLE": "ﹳᵎ",
+    "X30_DISABLE_FEATURES": "ᴵˎ",
     "X30_CALL_METHOD": "CallMethod",
     # X 3.0 guard / UI / feature registry
     "X30_GUARD_DISABLE_EXTRA": "ʿᴵ",
@@ -70,6 +65,37 @@ SECRETS = {
     "X30_ADAPTER_ITEMS": "ˋʼ",
     "X30_CORE_DATA_CLASS": "c.ˏᵎ.ٴˑ",
     "X30_CORE_DATA_GET": "ˋʼ",
+    # 更多页入口方法（类名复用 X30_UI_CLASS）
+    "X30_MORE_METHOD": "ʻᵔ",
+    # 功能包入口方法
+    "X30_ENTRY_FINISH": "finish",
+    "X30_ENTRY_INIT": "init",
+    "X30_ENTRY_PUBLISH": "publish",
+    "X30_ENTRY_GET_DATA": "getData",
+    "X30_ENTRY_REMITTANCE_SCENE": "on_RemittanceDetailUI_onSceneEnd",
+    # 更新任务
+    "X30_UPDATE_POST": "onPostExecute",
+    "X30_UPDATE_WORK": "doInBackground",
+    # 授权标签
+    "X30_TAG_VIP": "tag_vip",
+    "X30_TAG_PRO": "tag_pro",
+    # params 危险键（逗号分隔）
+    "X30_DANGEROUS_KEYS": "del_fp,del_param,disable_code,disable_features,"
+                          "disable_settings,disable_xm,eject,force_restart",
+    # DATA 表字段
+    "X30_TAG_FP": "fp",
+    "X30_TAG_FP_ASYNC": "fp_async",
+    "X30_TAG_FP_VERSIONS": "FPVersions",
+    "X30_TAG_FP_VERSIONS_V7": "FPVersions_v7",
+    "X30_TAG_LATEST_VERSIONS": "LatestVersions",
+    "X30_TAG_VALID": "valid",
+    "X30_TAG_S_VALID": "s_valid",
+    "X30_TAG_NEW_USER": "is_new_user",
+    "X30_TAG_DISCLAIMER": "disclaimer_disable",
+    "X30_TAG_HOOK_FAIL": "hookFail",
+    "X30_TAG_SAFE_MODE": "safe_mode",
+    "X30_TAG_SAFE_MODE_CNT": "safe_mode_cnt",
+    "X30_TAG_DISABLE_SAFEMODE": "disable_safemode",
     "X30_FEATURE_MANAGER": "c.ˎﹳ.ʾᐧ",
     "X30_FEATURE_UNLOAD": "ⁱʽ",
     "X30_FEATURE_UNLOAD_ONE": "ʼˋ",
@@ -93,17 +119,15 @@ SECRETS = {
     "X30_UPDATE_INIT_METHOD": "יˑ",
     "X30_BASE_UPDATE_TASK": "c.ˏᵎ.ᵢᵔ$ʾʻ",
     "X30_COMPONENT_NAME_METHOD": "ﾞʿ",
-    "X30_FORCE_FLAG_1": "ᵢʼ",
-    "X30_FORCE_FLAG_2": "ⁱי",
-    "X30_FORCE_FLAG_3": "ʿᵢ",
-    "X30_FORCE_FLAG_4": "ˏـ",
-    "X30_FORCE_FLAG_5": "ˉˆ",
-    "X30_FORCE_FLAG_6": "ᵎי",
     "X30_ENTRY_BASE": "com.android.xf.base.Wrapper.Init",
     "X30_ENTRY_DONATION": "com.android.xf.donation.Wrapper.Init",
     "X30_ENTRY_THEMES": "com.android.xf.themes.Wrapper.Init",
     "X30_BASE_SETTINGS": "b.ⁱᵔ.ˈˈ",
     "X30_BASE_REGISTRY": "b.ʾᵢ.ʾᵢ",
+    # base 包的文件列表刷新：宿主数据源返回 null 时内部会 addAll(null) 抛 NPE
+    "X30_BASE_FILE_REFRESH_CLASS": "b.ʾᵢ.ˉᐧ$ˆٴ",
+    "X30_BASE_FILE_REFRESH_METHOD": "ﾞᐧ",
+    "X30_BASE_DATA_GET_METHOD": "ˆʿ",
     "X30_INIT_GATE_CLASS": "b.ⁱᵔ.ˉˏ",
     "X30_INIT_GATE_METHOD": "ˑٴ",
     "X30_MENU_HIDDEN_METHOD": "ᵎˆ",
@@ -171,7 +195,6 @@ SECRETS = {
     "MODULE_CERT_SHA256": "",
     # 授权弹窗文案（明文只存在于本表，运行时由 native 解密）
     "ACTIVATION_GROUP": "1065821554",
-    "ACTIVATION_PROMISE": "免费模块我承诺不倒卖我承诺不用于商业用途及非法用途",
 
     # HostVersionSpoof / DexPaths
     "CLIENT_VERSION_CLASS": "c64.xe",
@@ -191,11 +214,7 @@ SECRETS = {
     "CORE_CERT_METHOD": "ʾʻ",
     "CORE_MD5_CLASS": "b.ʾᵢ.ˊˏ",
     "CORE_MD5_METHOD": "ᵔʾ",
-    "CORE_CERT_ASSET": "x30/original_cert.rsa",
-    "FEATURE_DEX_DIR": "featuredex/",
-    "FEATURE_DEX_INJECTED": "injected/",
-    "FEATURE_DEX_PREFIX": "x30_",
-    "FEATURE_DEX_SUFFIX": ".dex",
+    "CORE_CERT_ASSET": "8af2692bdcb8661da163b4204b5f5d5e",
     "FEATURE_PACK_DIR": "x7_3.0",
     "FEATURE_PACK_ASSET_DIR": "x7_3.0/",
     "AES_ALGORITHM": "AES/CBC/PKCS5Padding",

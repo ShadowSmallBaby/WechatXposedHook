@@ -2,6 +2,7 @@ package github.shadowbaby.wechatxposed.hook.support.guard;
 
 import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.support.feature.EditionFeatures;
+import github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
@@ -26,6 +27,19 @@ public final class X3CallMethodHook implements HookCallback {
     private static final String UNLIMITED = Secret.of(SecretConstants.UNLIMITED);
     private static final String REMOTE_COMMAND = Secret.of(SecretConstants.REMOTE_COMMAND);
     private static final String FEATURES = Secret.of(SecretConstants.FEATURES);
+
+    /** 头部两个授权标签的查询 key；只有高级授权才为真。 */
+    private static final String TAG_VIP = Secret.of(SecretConstants.X30_TAG_VIP);
+
+    private static final String TAG_PRO = Secret.of(SecretConstants.X30_TAG_PRO);
+
+    /** 只有高级授权才「已注册」的特性；普通授权要从 FEATURES 里剔掉。 */
+    private static final java.util.Set<String> ADVANCED_FEATURES = java.util.Set.of(
+            "multichat_autoforward",
+            "moments_auto_forward",
+            "secret_friend",
+            "auto_accept_chatroom_invite",
+            "integrated_mode");
 
     private static final String TRUE_TEXT = "true";
 
@@ -78,11 +92,30 @@ public final class X3CallMethodHook implements HookCallback {
 
             if (msgId == MSG_FEATURE_QUERY) {
                 Object queryType = params[0];
-                if (Integer.valueOf(0).equals(queryType) || Integer.valueOf(2).equals(queryType)) {
+                // 1 是「单个功能是否启用」，壳运行中定期复查，不返回 true 会逐个 closed。
+                if (Integer.valueOf(0).equals(queryType)
+                        || Integer.valueOf(1).equals(queryType)
+                        || Integer.valueOf(2).equals(queryType)) {
                     if (Integer.valueOf(2).equals(queryType)) {
                         String key = String.valueOf(params[2]);
                         if (REMOTE_COMMAND.equals(key)
                                 || EditionFeatures.isUnavailableExt(key)) {
+                            return;
+                        }
+                        // 头部的 [VIP][专业] 就是这两个标签查询换来的；
+                        // 普通授权不能置真，否则会冒充高级授权。
+                        if (TAG_VIP.equals(key) || TAG_PRO.equals(key)) {
+                            if (FeaturePackUnlock.currentLevel()
+                                    < FeaturePackUnlock.LEVEL_PRO) {
+                                param.setResult(Boolean.FALSE);
+                                return;
+                            }
+                        }
+                        // 关于页的「(已注册)」按功能名逐个查询，高级项普通授权返回 false。
+                        if (ADVANCED_FEATURES.contains(key)
+                                && FeaturePackUnlock.currentLevel()
+                                < FeaturePackUnlock.LEVEL_PRO) {
+                            param.setResult(Boolean.FALSE);
                             return;
                         }
                     }
@@ -90,12 +123,31 @@ public final class X3CallMethodHook implements HookCallback {
                 } else if (Integer.valueOf(4).equals(queryType)) {
                     param.setResult(UNLIMITED);
                 } else if (Integer.valueOf(6).equals(queryType)) {
-                    param.setResult(FEATURES);
+                    param.setResult(features());
                 }
             }
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
+    }
+
+    /** 普通授权只返回基础特性；高级项要等卡密授权后才「已注册」。 */
+    private static String features() {
+        if (FeaturePackUnlock.currentLevel() >= FeaturePackUnlock.LEVEL_PRO) {
+            return FEATURES;
+        }
+        StringBuilder text = new StringBuilder();
+        for (String item : FEATURES.split(",")) {
+            String value = item.trim();
+            if (value.isEmpty() || ADVANCED_FEATURES.contains(value)) {
+                continue;
+            }
+            if (text.length() > 0) {
+                text.append(',');
+            }
+            text.append(value);
+        }
+        return text.toString();
     }
 
     /**

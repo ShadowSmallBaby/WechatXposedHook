@@ -11,7 +11,6 @@ import github.shadowbaby.wechatxposed.hook.support.guard.CoreCertHook;
 import github.shadowbaby.wechatxposed.hook.support.pack.FeatureDexInjector;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3ComponentHooks;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3GuardBypass;
-import github.shadowbaby.wechatxposed.hook.support.guard.X3LicenseBypass;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3SettingsBypass;
 
 /**
@@ -50,15 +49,11 @@ public final class InMemoryDexLoadHook implements HookCallback {
 
         boolean x3Class = X3ComponentHooks.matches(framework, hostClassLoader);
         boolean x3Dex = X3ComponentHooks.matchesDex(param);
-        boolean licDex = licensed && X3LicenseBypass.matchesDex(param);
         boolean guardDex = licensed && X3GuardBypass.matchesDex(param);
         boolean settingsDex = licensed && X3SettingsBypass.matchesDex(param);
         ModuleLogger.debug("dex probe: x3class=" + x3Class + " x3dex=" + x3Dex
-                + " licdex=" + licDex + " guarddex=" + guardDex
+                + " guarddex=" + guardDex
                 + " settingsdex=" + settingsDex);
-        if (licDex) {
-            X3LicenseBypass.install(framework, hostClassLoader);
-        }
         if (guardDex) {
             X3GuardBypass.install(framework, hostClassLoader);
         }
@@ -67,6 +62,8 @@ public final class InMemoryDexLoadHook implements HookCallback {
         }
         if (x3Class || x3Dex) {
             X3ComponentHooks.inject(framework, hostClassLoader, licensed);
+            github.shadowbaby.wechatxposed.hook.license.DisclaimerSkin
+                    .hookMorePage(framework, hostClassLoader);
         }
     }
 

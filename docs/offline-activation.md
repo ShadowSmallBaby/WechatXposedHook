@@ -133,7 +133,7 @@ build/pack-venv/Scripts/python.exe -X utf8 scripts/build_activation_exe.py
 ## 7. 迁移步骤
 
 1. 新增 `support/license/Activation.java` + native `nativeVerifyActivation`。
-2. 合并 public/full 构建：删除 `FULL_EDITION` 分支，扩展包随 APK 携带但默认不注入。
+2. 合并 public/full 构建：删除 `FULL_EDITION` 分支，扩展包随 APK 携带但默认不注入。（已完成）
 3. 菜单加激活页；写 `files/activation.dat`。
 4. 用测试码在 A13/A16 验证：未激活无扩展、激活后菜单出现 sf/mf/af。
-5. 最后再决定是否移除 `publicEdition` flavor 与双 APK 发布流程。
+5. 最后再决定是否移除 `publicEdition` flavor 与双 APK 发布流程。（已移除，只保留 legacy/modern）

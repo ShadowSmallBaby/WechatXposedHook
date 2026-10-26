@@ -1,5 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.support.guard;
 
+import android.os.SystemClock;
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
@@ -10,6 +11,7 @@ import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -31,6 +33,19 @@ public final class FeatureCloseGuard {
     /** base 功能包的注册表/事件总线。 */
     private static final String BASE_REGISTRY = Secret.of(SecretConstants.X30_BASE_REGISTRY);
 
+    /** base 包刷新文件列表的入口；数据源返回 null 时内部会 addAll(null)。 */
+    private static final String BASE_REFRESH_CLASS =
+            Secret.of(SecretConstants.X30_BASE_FILE_REFRESH_CLASS);
+    private static final String BASE_REFRESH_METHOD =
+            Secret.of(SecretConstants.X30_BASE_FILE_REFRESH_METHOD);
+    /** 注册表里真正取数据的方法。 */
+    private static final String BASE_DATA_GET_METHOD =
+            Secret.of(SecretConstants.X30_BASE_DATA_GET_METHOD);
+
+    private static final ThreadLocal<Boolean> BASE_REFRESHING = new ThreadLocal<>();
+
+    private static final String LOG_SKIP_REFRESH = "base file refresh: null data -> empty";
+
     /** Wrapper.Init.init 的门禁：返回 true 会直接跳过 Context 保存。 */
     private static final String INIT_GATE_CLASS = Secret.of(SecretConstants.X30_INIT_GATE_CLASS);
 
@@ -38,14 +53,16 @@ public final class FeatureCloseGuard {
 
     private static final String LOG_INIT_GATE = "feature init gate: ";
 
-    private static final String FINISH = "finish";
+    private static final String FINISH = Secret.of(SecretConstants.X30_ENTRY_FINISH);
 
-    private static final String INIT = "init";
+    private static final String INIT = Secret.of(SecretConstants.X30_ENTRY_INIT);
 
     /** 微X 的 Wrapper.Init 从 objArr[2] 取 Context；为空时菜单构建会 NPE。 */
     private static final String LOG_INIT_CONTEXT = "feature init context: ";
 
-    private static final String PUBLISH_PREFIX = "publish";
+    private static final String PUBLISH_PREFIX = Secret.of(SecretConstants.X30_ENTRY_PUBLISH);
+
+    private static final String GET_DATA = Secret.of(SecretConstants.X30_ENTRY_GET_DATA);
 
     private static final String REGISTRY_REMOVE =
             Secret.of(SecretConstants.X30_REGISTRY_REMOVE);
@@ -124,7 +141,7 @@ public final class FeatureCloseGuard {
                     } else if (methodName.startsWith(PUBLISH_PREFIX)) {
                         framework.hookMethod(method, new PublishGuard(name));
                         count++;
-                    } else if ("getData".equals(methodName)) {
+                    } else if (GET_DATA.equals(methodName)) {
                         framework.hookMethod(method, new GetDataLogger());
                         count++;
                     } else if (INIT.equals(methodName)
@@ -138,6 +155,7 @@ public final class FeatureCloseGuard {
                 ModuleLogger.debug(LOG_HOOKED + name + " (" + count + " method(s))");
                 hookBaseSettings(framework, classLoader);
                 hookBaseRegistry(framework, classLoader);
+                hookBaseFileRefresh(framework, classLoader);
                 hookInitGate(framework, classLoader);
             } catch (Throwable ignored) {
                 // 该类不在这个 loader 里，下一个 loader 再试
@@ -176,6 +194,38 @@ public final class FeatureCloseGuard {
             ModuleLogger.debug(LOG_HOOKED + BASE_REGISTRY + " (" + count + " method(s))");
         } catch (Throwable ignored) {
             // 忽略，事件仍会从 entry.publish 走
+        }
+    }
+
+    /**
+     * base 包刷新文件列表时，注册表取数据可能直接返回 null，
+     * 内部拿它去 {@code addAll} 就抛 NPE。刷新期间把 null 补成空列表。
+     */
+    private static void hookBaseFileRefresh(HookFramework framework, ClassLoader classLoader) {
+        String key = "base-refresh@" + System.identityHashCode(classLoader);
+        if (!DONE.add(key)) {
+            return;
+        }
+        try {
+            Class<?> refresh = framework.findClassIfExists(BASE_REFRESH_CLASS, classLoader);
+            Class<?> hub = framework.findClassIfExists(BASE_REGISTRY, classLoader);
+            if (refresh == null || hub == null) {
+                DONE.remove(key);
+                return;
+            }
+            framework.hookMethod(refresh, BASE_REFRESH_METHOD, new Class<?>[]{},
+                    new FileRefreshGuard());
+            for (Method method : hub.getDeclaredMethods()) {
+                Class<?>[] types = method.getParameterTypes();
+                if (BASE_DATA_GET_METHOD.equals(method.getName()) && types.length == 3
+                        && types[0] == String.class && types[1] == String.class) {
+                    framework.hookMethod(method, new BaseDataGuard());
+                }
+            }
+            ModuleLogger.debug(LOG_HOOKED + BASE_REFRESH_CLASS + "." + BASE_REFRESH_METHOD);
+        } catch (Throwable error) {
+            DONE.remove(key);
+            ModuleLogger.debug("base file refresh hook failed: " + error);
         }
     }
 
@@ -378,6 +428,42 @@ public final class FeatureCloseGuard {
         }
     }
 
+    /** 标记「当前线程正在跑 base 的文件列表刷新」。 */
+    private static final class FileRefreshGuard implements HookCallback {
+
+        @Override
+        public void before(HookParam param) {
+            BASE_REFRESHING.remove();
+            BASE_REFRESHING.set(Boolean.TRUE);
+        }
+
+        @Override
+        public void after(HookParam param) {
+            BASE_REFRESHING.remove();
+        }
+    }
+
+    /** 刷新期间注册表取到 null 时补空列表，避免调用方 addAll(null)。 */
+    private static final class BaseDataGuard implements HookCallback {
+
+        private static final AtomicBoolean LOGGED = new AtomicBoolean();
+
+        @Override
+        public void after(HookParam param) {
+            if (!Boolean.TRUE.equals(BASE_REFRESHING.get())) {
+                return;
+            }
+            BASE_REFRESHING.remove();
+            if (param.result() != null) {
+                return;
+            }
+            if (LOGGED.compareAndSet(false, true)) {
+                ModuleLogger.debug(LOG_SKIP_REFRESH);
+            }
+            param.setResult(new java.util.ArrayList<>());
+        }
+    }
+
     private static final class Noop implements HookCallback {
 
         private final String message;
@@ -440,12 +526,14 @@ public final class FeatureCloseGuard {
             ModuleLogger.debug("feature getData: " + param.arg(0));
         }
 
+
         @Override
         public void after(HookParam param) {
+            String channel = String.valueOf(param.arg(0));
+            Object result = param.result();
             if (!interesting(param) && CALLS.get() > LIMIT) {
                 return;
             }
-            Object result = param.result();
             int size = result instanceof java.util.Collection<?> values ? values.size() : -1;
             String first = "";
             if (result instanceof java.util.Collection<?> values && !values.isEmpty()) {
@@ -455,28 +543,25 @@ public final class FeatureCloseGuard {
                     first = first.substring(0, 120);
                 }
             }
-            ModuleLogger.debug("feature getData result: " + param.arg(0)
+            ModuleLogger.debug("feature getData result: " + channel
                     + " size=" + size + " first=" + first);
         }
     }
 
-    private static final class PublishGuard implements HookCallback {
+    private record PublishGuard(String className) implements HookCallback {
 
-        /** 伪造转账金额的 hook 命令：回调里会同步读 WCDB，转账详情页会卡住主线程。 */
-        private static final String TRANSFER_SCENE_COMMAND = "on_RemittanceDetailUI_onSceneEnd";
-
-        private final String className;
-
-        PublishGuard(String className) {
-            this.className = className;
-        }
+        /**
+         * 伪造转账金额的 hook 命令：回调里会同步读 WCDB，转账详情页会卡住主线程。
+         */
+        private static final String TRANSFER_SCENE_COMMAND =
+                Secret.of(SecretConstants.X30_ENTRY_REMITTANCE_SCENE);
 
         @Override
         public void before(HookParam param) {
             String command = String.valueOf(param.arg(0));
             logChannels(param);
             PUBLISH_CMD.set(command);
-            PUBLISH_AT.set(android.os.SystemClock.elapsedRealtime());
+            PUBLISH_AT.set(SystemClock.elapsedRealtime());
             if (EVENTS.add(command)) {
                 ModuleLogger.log(LOG_EVENT + command + " -> " + className);
             }
@@ -509,7 +594,7 @@ public final class FeatureCloseGuard {
             if (command == null || at == null) {
                 return;
             }
-            long cost = android.os.SystemClock.elapsedRealtime() - at;
+            long cost = SystemClock.elapsedRealtime() - at;
             if (cost >= SLOW_MS) {
                 ModuleLogger.log(LOG_PUBLISH_SLOW + command + " " + cost + "ms -> " + className);
             }

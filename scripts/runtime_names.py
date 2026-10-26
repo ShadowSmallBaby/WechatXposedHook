@@ -39,6 +39,7 @@ UTILITY = {
     "Xmd": "739440c5d87b2b8095b99f9d2a1bbf9",
     "pr/P": "44c29edb103a2872f519adc9afdaaa",
     "pr/P_8049": "6d6586c9c5458ecfc98981b52ee662de",
+    "LD": "74fab57f825f1328df3d731f4de24d5",
     "LD64": "dc7be70f1898d3a58965a919740f97",
 }
 

@@ -90,12 +90,11 @@ A13 实测：`fp themes -> themes,af,sf,mf`；已有额外项时为
 | 壳基座 | `app/x30.zip`（从 `data/refs/X_3.0.apk` 抽取的必要条目，SHA-256 `671a9a8b…f93fdd5`） |
 | hook 载荷 | `app/build/outputs/apk/legacyFullEdition/release/WeXposedHook-legacy-v2.0-beta-full.apk`（源码构建，R8 混淆） |
 
-hook 载荷由 `:app:assembleLegacyWx30FullEditionX30` 生成，必须含：
-`FeatureDexInjector` / `FeaturePackUnlock`、`assets/featuredex/x30_{sf,mf,af}.dex`、
-`assets/x7_3.0*.zip`、两个 ABI 的 `libwexhook.so`。
+hook 载荷直接由 `:app:assembleLegacyRelease` 生成，含 `FeatureDexInjector` /
+`FeaturePackUnlock`、`assets/<hash>` 平铺功能包与两个 ABI 的 `libwexhook.so`。
 
-`assets/featuredex` 不再从 `data/refs` 读取：`extractFeatureDex` 在构建时从
-`xmetadata/wx7/r/fp/{sf,mf,af}` 的容器解出，输出与旧的离线 dex 逐字节一致。
+不再携带 `assets/featuredex/x30_{sf,mf,af}.dex`：`FeatureDexDecoder` 在运行时
+从扩展包容器解出 dex 后注入（A13/A16 实测 `decoded x30-af/sf/mf`）。
 
 壳基座已抽取到 `app/x30.zip`（manifest、`resources.arsc`、`classes.dex`、
 `res/`、Kotlin builtins、`assets/xposed_init`、壳独有的 32 位 loader、原版
@@ -125,7 +124,7 @@ assets/<hash>                 18 个平铺资产（15 个基础/壳资源 + 3 �
                               其中带 _c/_s 的条目在构建时合并为 WXH1，运行时拆开
                               写到 files/x7_3.0/；扩展包另一套命名的 3 个别名由
                               FeaturePackRestorer 运行时代拷
-assets/74fab57f…               壳内置 32 位 native loader（项目包没有）
+assets/74fab57f…               32 位 native loader（从 xmetadata/wx7/LD 生成）
 assets/dc7be70f…               64 位 native loader（从 x7_3.0 包取）
 assets/534a9729…               证书资源（从 x7_3.0 包取）
 assets/xposed_init             3 行：compat / 本项目 hook / com.android.x.XposedInit
@@ -143,7 +142,7 @@ resources.arsc / res/*         项目 logo / 自适应图标
 |---|---|
 | `dc7be70f…`（64 位 loader） | 与 `x7_3.0.zip/LD64` 逐字节一致，从项目包取 |
 | `534a9729…`（证书） | 与 `x7_3.0.zip` 同名文件一致，从项目包取 |
-| `74fab57f…`（32 位 loader） | 项目包没有，保留壳原文件 |
+| `74fab57f…`（32 位 loader） | 与 `xmetadata/wx7/LD` 逐字节一致，构建时生成 |
 | 其余 7 个（`36a76b97`/`44c29`/`5dbc98`/`69691c`/`c1d9f5f`/`d2caec3b`/`d61f`） | 旧版 fallback 容器，项目包已提供当前版本，构建时丢弃 |
 
 其余 7 个不是 `x7_3.0.zip` 的同格式资源（壳内是 `92c50100` fallback 容器），
@@ -153,6 +152,8 @@ resources.arsc / res/*         项目 logo / 自适应图标
 ### 3.1.1 功能包平铺、c/s 合一与运行时解密
 
 - `assets/<hash>` 下是 **18 个 hash 资产**（直接在 assets 根，不再有 x7_3.0 目录），不再使用 zip：
+  全部由 `scripts/build_release_packs.py --assets` 在构建时从 `xmetadata/wx7`
+  直接平铺（Gradle 任务 `generateFeaturePacks`），源码仓只保留 `assets/x30/*`：
   - 15 个基础/壳资源单文件直接复制；
   - 6 个带 `_c`/`_s` 的条目在构建时合并为 `WXH1` 容器
     （magic + body/c/s 三个长度 + 三段内容），运行时拆回

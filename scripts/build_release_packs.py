@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""从 xmetadata 生成两个运行时功能包 zip。
+"""从 xmetadata 生成运行时功能包。
 
 源文件格式为 SHA-256(body)[32] + body;边车从 sidecars/ 原样复制。
+默认输出 zip；加 `--assets <dir>` 直接平铺成 assets/<hash>
+（带 `_c`/`_s` 的条目合成 WXH1 容器，省去中间 zip）。
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -23,6 +26,7 @@ COMMON = [
     ("r/fp/donation", runtime("donation")),
     ("r/fp/themes", runtime("themes")),
     ("r/L", BRIDGE),
+    ("LD", UTILITY["LD"]),
     ("LD64", UTILITY["LD64"]),
     ("D", UTILITY["D"]),
     ("H_p", UTILITY["H_p"]),
@@ -82,9 +86,12 @@ def add(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
     archive.writestr(info, data)
 
 
-def build(product: str, zip_name: str, core_source: str | None, flavor: str,
-          common: list[tuple[str, str]], sidecars: dict[str, str],
-          output_root: Path) -> Path:
+MAGIC = b"WXH1"
+
+
+def collect(product: str, core_source: str | None,
+            common: list[tuple[str, str]],
+            sidecars: dict[str, str]) -> dict[str, bytes]:
     # X 3.0 用项目仓 xmetadata/wx7（与 117 模块匹配）。
     source = ROOT / "xmetadata" / product
     if not source.is_dir():
@@ -92,22 +99,39 @@ def build(product: str, zip_name: str, core_source: str | None, flavor: str,
     entries = list(common)
     if core_source is not None:
         entries.append((core_source, CORE))
-    output_dir = output_root / flavor
-    output_dir.mkdir(parents=True, exist_ok=True)
-    target = output_dir / zip_name
-    # X 3.0 运行时与 restorer 都期望 body（无 32B 前缀）。
-    keep_prefix = False
+    # 运行时与 restorer 都期望 body（无 32B 前缀）。
+    packed = {name: body(source / rel) for rel, name in entries}
+    # 旁车带厂商签名，原样从 sidecars/ 复制（见 sidecars.py）。
+    packed.update(build_sidecars(source, sidecars))
+    return packed
+
+
+def write_zip(entries: dict[str, bytes], target: Path) -> Path:
+    target.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(target, "w") as archive:
-        for rel, runtime in entries:
-            path = source / rel
-            add(archive, runtime, path.read_bytes() if keep_prefix else body(path))
-        # 旁车带厂商签名，原样从 sidecars/ 复制（见 sidecars.py）。
-        for name, data in build_sidecars(source, sidecars).items():
+        for name, data in entries.items():
             add(archive, name, data)
-    print(f"{flavor}/{zip_name}: "
-          f"{len(zipfile.ZipFile(target).infolist())} files, "
-          f"{target.stat().st_size} B")
+    print(f"{target}: {len(entries)} files, {target.stat().st_size} B")
     return target
+
+
+def write_assets(entries: dict[str, bytes], directory: Path) -> int:
+    """平铺成 assets/<hash>；带 _c/_s 的条目合并成 WXH1 容器。"""
+    directory.mkdir(parents=True, exist_ok=True)
+    written = 0
+    for name in sorted(entries):
+        if name.endswith("_c") or name.endswith("_s"):
+            continue
+        value = entries[name]
+        sidecar = entries.get(name + "_c")
+        signature = entries.get(name + "_s")
+        if sidecar is not None and signature is not None:
+            value = (MAGIC
+                     + struct.pack(">iii", len(value), len(sidecar), len(signature))
+                     + value + sidecar + signature)
+        (directory / name).write_bytes(value)
+        written += 1
+    return written
 
 
 def check_names() -> None:
@@ -138,15 +162,27 @@ def main(argv=None) -> int:
     check_names()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description="生成运行时功能包 zip")
+    parser = argparse.ArgumentParser(description="生成运行时功能包")
     parser.add_argument("--output-root", type=Path,
                         default=ROOT / "app" / "build" / "generated" / "featurepacks",
-                        help="输出目录（默认 app/build/generated/featurepacks）")
+                        help="zip 输出目录（未指定 --assets 时使用）")
+    parser.add_argument("--assets", type=Path, default=None,
+                        help="直接平铺到该 assets 目录，不再产生 zip")
     args = parser.parse_args(argv)
+    if args.assets is not None:
+        total = 0
+        for product, _, core, _, common, sidecars in BASE_TARGETS:
+            total += write_assets(collect(product, core, common, sidecars), args.assets)
+        for product, _, _, common in EXT_TARGETS:
+            total += write_assets(collect(product, None, common, {}), args.assets)
+        print(f"平铺功能包资产 {total} 个 -> {args.assets}")
+        return 0
     for product, name, core, flavor, common, sidecars in BASE_TARGETS:
-        build(product, name, core, flavor, common, sidecars, args.output_root)
+        write_zip(collect(product, core, common, sidecars),
+                  args.output_root / flavor / name)
     for product, name, flavor, common in EXT_TARGETS:
-        build(product, name, None, flavor, common, {}, args.output_root)
+        write_zip(collect(product, None, common, {}),
+                  args.output_root / flavor / name)
     return 0
 
 

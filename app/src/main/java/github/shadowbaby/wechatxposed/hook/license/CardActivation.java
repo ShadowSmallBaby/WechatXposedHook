@@ -3,18 +3,19 @@ package github.shadowbaby.wechatxposed.hook.license;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.util.Contexts;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 
 /**
  * 用功能包「关于 → 自助获取高级功能 → 输入卡密」的窗口做本模块授权。
  *
- * 用户在功能包的卡密窗口输入本模块的授权码，点「确定」时拦截，
- * 走 {@link Activation#activate(String, String)} 验证；通过即写 activation.dat。
- * 功能包自己的卡密校验照常跑（会失败，不影响）。
+ * 用户在功能包的卡密窗口输入授权码，点「确定」时拦截，交给 native 校验；
+ * 通过后写数据库授权级别（WXH_LEVEL），功能包自己的卡密校验照常跑。
  */
 public final class CardActivation {
 
     private static volatile boolean installed;
+    private static volatile boolean toastHooked;
 
     private CardActivation() {
     }
@@ -45,11 +46,9 @@ public final class CardActivation {
                     if (code == null || code.isEmpty()) {
                         return;
                     }
-                    boolean ok = Activation.activate(Activation.promise(), code);
+                    boolean ok = Activation.verifyCode(code) > Activation.LEVEL_NONE;
                     ModuleLogger.log("card activation: " + (ok ? "success" : "failed")
                             + " len=" + code.length()
-                            + " level=" + Activation.level()
-                            + " ext=" + Activation.isExtensionAllowed()
                             + " wxid=" + Activation.wxid());
                     android.content.Context context = textView.getContext();
                     if (ok) {
@@ -63,11 +62,11 @@ public final class CardActivation {
                         } catch (Throwable error) {
                             ModuleLogger.log(error);
                         }
-                        android.app.Activity activity = activityOf(context);
+                        android.app.Activity activity = Contexts.activityOf(context);
                         if (activity != null) {
                             new android.os.Handler(android.os.Looper.getMainLooper())
                                     .postDelayed(() ->
-                                            ActivationDialog.restartWechat(activity), 1200);
+                                            WeChatRestart.restart(activity), 1200);
                         }
                     } else {
                         toast(context, "授权码无效");
@@ -79,18 +78,6 @@ public final class CardActivation {
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
-    }
-
-    /** 从 Context 向上找 Activity，用于授权后重启微信。 */
-    private static android.app.Activity activityOf(android.content.Context context) {
-        android.content.Context current = context;
-        while (current instanceof android.content.ContextWrapper wrapper) {
-            if (current instanceof android.app.Activity activity) {
-                return activity;
-            }
-            current = wrapper.getBaseContext();
-        }
-        return null;
     }
 
     private static void toast(android.content.Context context, String text) {
@@ -114,6 +101,10 @@ public final class CardActivation {
 
     /** 屏蔽功能包自己的卡密提示（含「卡密」「复制不完整」的 Toast）。 */
     public static void hookShellToast(HookFramework framework) {
+        if (toastHooked) {
+            return;
+        }
+        toastHooked = true;
         try {
             Class<?> toast = framework.findClassIfExists("android.widget.Toast", null);
             if (toast == null) {
@@ -131,11 +122,16 @@ public final class CardActivation {
                                 .getDeclaredField("mText");
                         field.setAccessible(true);
                         Object text = field.get(self);
-                        if (text instanceof CharSequence
-                                && (text.toString().contains("卡密")
-                                    || text.toString().contains("复制不完整"))) {
-                            ModuleLogger.log("card toast blocked: " + text);
-                            param.setResult(null);
+                        if (text instanceof CharSequence) {
+                            String value = text.toString();
+                            // 卡密提示 + 壳联网更新失败的提示（服务器已下线）。
+                            if (value.contains("卡密")
+                                    || value.contains("复制不完整")
+                                    || value.contains("无法写入")
+                                    || value.contains("更新失败")) {
+                                ModuleLogger.log("shell toast blocked: " + value);
+                                param.setResult(null);
+                            }
                         }
                     } catch (Throwable ignored) {
                         // 字段不可读

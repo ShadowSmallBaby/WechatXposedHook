@@ -13,6 +13,8 @@ import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toolbar;
 import github.shadowbaby.wechatxposed.hook.R;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 
 /**
  * 模块主界面，对齐原版 X 3.0 的 MainActivity：
@@ -28,10 +30,15 @@ public class MainActivity extends Activity {
     private static final String ICON_ALIAS =
             "github.shadowbaby.wechatxposed.hook.ui.MainActivityAlias";
 
-    private static final String WECHAT = "com.tencent.mm";
+    private static final String WECHAT = Secret.of(SecretConstants.WECHAT_PACKAGE);
+
+    private static final String WECHAT_LAUNCHER =
+            Secret.of(SecretConstants.WECHAT_LAUNCHER_CLASS);
 
     /** 壳识别的模块标识，与壳包名一致。 */
-    private static final String SHELL_PACKAGE = "cn.android.x";
+    private static final String SHELL_PACKAGE = Secret.of(SecretConstants.SHELL_PACKAGE);
+
+    private static final String GOTO_SETTINGS = Secret.of(SecretConstants.SHELL_GOTO_SETTINGS);
 
     private MenuItem iconItem;
 
@@ -61,10 +68,10 @@ public class MainActivity extends Activity {
         Intent intent = getPackageManager().getLaunchIntentForPackage(WECHAT);
         if (intent == null) {
             intent = new Intent();
-            intent.setClassName(WECHAT, "com.tencent.mm.ui.LauncherUI");
+            intent.setClassName(WECHAT, WECHAT_LAUNCHER);
         }
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra("gotosettings", SHELL_PACKAGE);
+        intent.putExtra(GOTO_SETTINGS, SHELL_PACKAGE);
         startActivity(intent);
     }
 

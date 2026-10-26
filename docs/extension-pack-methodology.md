@@ -178,7 +178,7 @@ AES-CBC(IV=f1[:16]) 解 f1[16:]
   ```bash
   python -X utf8 scripts/build_x30_min.py --source xmetadata/wx7 \
       -o build/generated/x30_min --assets app/build/generated/featurepacks/wx30
-  ./gradlew :app:assembleLegacyWx30FullEditionDebug
+  ./gradlew :app:assembleLegacyDebug
   ```
 
 - Gradle 的 `generateFeaturePacks` 会调用 `build_release_packs.py`：

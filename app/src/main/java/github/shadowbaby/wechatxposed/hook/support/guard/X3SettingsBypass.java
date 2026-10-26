@@ -3,6 +3,7 @@ package github.shadowbaby.wechatxposed.hook.support.guard;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.util.ByteSearch;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
@@ -17,15 +18,21 @@ import java.util.Set;
  */
 public final class X3SettingsBypass {
 
-    private static final String SETTINGS_CLASS = Secret.of(SecretConstants.X30_SETTINGS_CLASS);
-    private static final String SETTINGS_CLASS_V207 =
-            Secret.of(SecretConstants.X30_SETTINGS_CLASS_V207);
-    private static final String[] SETTINGS_CLASSES = {SETTINGS_CLASS, SETTINGS_CLASS_V207};
+    /** 核心已内置为 wxcore 212，只保留这一套类名。 */
+    private static final String SETTINGS_CLASS =
+            Secret.of(SecretConstants.X30_SETTINGS_CLASS);
+    private static final String[] SETTINGS_CLASSES = {SETTINGS_CLASS};
 
     private static final String LOG_HOOKED = "X3 settings hooked: ";
     private static final String LOG_FAILED = "X3 settings hook failed: ";
 
     private static final Set<String> DONE = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** 声明与授权状态字段。 */
+    private static final String TAG_DISCLAIMER =
+            Secret.of(SecretConstants.X30_TAG_DISCLAIMER);
+    private static final String TAG_VALID = Secret.of(SecretConstants.X30_TAG_VALID);
+    private static final String TAG_S_VALID = Secret.of(SecretConstants.X30_TAG_S_VALID);
 
     private X3SettingsBypass() {
     }
@@ -74,11 +81,11 @@ public final class X3SettingsBypass {
         byte[] needle = SETTINGS_CLASS.replace('.', '/').getBytes();
         Object first = param.arg(0);
         if (first instanceof ByteBuffer buffer) {
-            return contains(buffer, needle);
+            return ByteSearch.contains(buffer, needle);
         }
         if (first instanceof ByteBuffer[] buffers) {
             for (ByteBuffer buffer : buffers) {
-                if (contains(buffer, needle)) {
+                if (ByteSearch.contains(buffer, needle)) {
                     return true;
                 }
             }
@@ -86,26 +93,6 @@ public final class X3SettingsBypass {
         return false;
     }
 
-    private static boolean contains(ByteBuffer source, byte[] needle) {
-        try {
-            ByteBuffer buffer = source.duplicate();
-            buffer.rewind();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
-            outer:
-            for (int index = 0; index <= data.length - needle.length; index++) {
-                for (int offset = 0; offset < needle.length; offset++) {
-                    if (data[index + offset] != needle[offset]) {
-                        continue outer;
-                    }
-                }
-                return true;
-            }
-        } catch (Throwable ignored) {
-            // 按未命中处理
-        }
-        return false;
-    }
 
     private static final class Callback implements HookCallback {
 
@@ -122,7 +109,7 @@ public final class X3SettingsBypass {
                 String lower = key.toLowerCase();
                 // disclaimer_disable 的语义是「已关闭免责声明」，必须给 true，
                 // 否则每次打开设置页都会重新弹倒计时。
-                if ("disclaimer_disable".equals(key)) {
+                if (TAG_DISCLAIMER.equals(key)) {
                     if (returnType == Boolean.TYPE || returnType == Boolean.class) {
                         param.setResult(Boolean.TRUE);
                     }
@@ -139,7 +126,7 @@ public final class X3SettingsBypass {
                         param.setResult("");
                     }
                     ModuleLogger.debug("X3 setting bypass: " + key);
-                } else if ("valid".equals(key) || "s_valid".equals(key)) {
+                } else if (TAG_VALID.equals(key) || TAG_S_VALID.equals(key)) {
                     if (returnType == Boolean.TYPE || returnType == Boolean.class) {
                         param.setResult(Boolean.TRUE);
                     }

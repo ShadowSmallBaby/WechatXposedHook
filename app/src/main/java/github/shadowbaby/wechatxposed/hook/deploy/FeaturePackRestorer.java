@@ -37,8 +37,7 @@ public abstract class FeaturePackRestorer {
     private static final String LOG_NOT_READABLE = "feature packs: cannot chmod ";
 
     /** 包清单由 native 生成：role|dir|name|size|...;alias|from|to|...。 */
-    private static final String RESTORE_PLAN =
-            Secret.restorePlan(BuildConfig.FULL_EDITION);
+    private static final String RESTORE_PLAN = Secret.restorePlan(true);
 
     private static final Pack[] PACKS = parsePacks(RESTORE_PLAN);
 
@@ -85,16 +84,11 @@ public abstract class FeaturePackRestorer {
     /** 删除扩展包文件，避免壳扫描目录时继续加载。 */
     private static void purge(File filesDir, Pack pack) {
         File directory = new File(filesDir, pack.dirName);
-        int removed = 0;
         for (String name : pack.names) {
             File file = new File(directory, name);
-            if (file.isFile() && file.delete()) {
-                removed++;
+            if (file.isFile()) {
+                file.delete();
             }
-        }
-        if (removed > 0) {
-            ModuleLogger.log("feature packs[" + pack.name + "]: purged " + removed
-                    + " file(s) (no extension license)");
         }
     }
 
@@ -349,18 +343,7 @@ public abstract class FeaturePackRestorer {
         return new String[0][];
     }
 
-    private static final class Pack {
+    private record Pack(String name, String dirName, String[] names, long[] sizes) {
 
-        final String name;
-        final String dirName;
-        final String[] names;
-        final long[] sizes;
-
-        Pack(String name, String dirName, String[] names, long[] sizes) {
-            this.name = name;
-            this.dirName = dirName;
-            this.names = names;
-            this.sizes = sizes;
-        }
     }
 }

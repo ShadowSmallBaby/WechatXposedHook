@@ -36,6 +36,7 @@ BASE_PACKS = [
     ("Xmd", UTILITY["Xmd"]),
     ("pr/P", UTILITY["pr/P"]),
     ("pr/P_8049", UTILITY["pr/P_8049"]),
+    ("LD", UTILITY["LD"]),
     ("LD64", UTILITY["LD64"]),
 ]
 

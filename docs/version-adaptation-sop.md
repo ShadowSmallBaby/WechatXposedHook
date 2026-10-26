@@ -306,7 +306,7 @@ python -X utf8 scripts/decrypt_wx244.py \
 ```bash
 python -X utf8 scripts/build_x30_min.py --source xmetadata/wx7 \
     -o build/generated/x30_min --assets app/build/generated/featurepacks/wx30
-./gradlew :app:assembleLegacyWx30FullEditionDebug
+./gradlew :app:assembleLegacyDebug
 ```
 
 > `scripts/verify_featurepack.py` 里的 `EXPECTED_NAMES` 是 **2.44 的 30 个文件**，

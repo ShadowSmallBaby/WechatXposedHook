@@ -4,6 +4,7 @@ import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.util.ByteSearch;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
@@ -22,37 +23,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class X3GuardBypass implements HookCallback {
 
+    /** 核心已内置为 wxcore 212，只保留这一套类名；旧版核心的类不存在。 */
     private static final String UPDATE_CLASS = Secret.of(SecretConstants.X30_UPDATE_CLASS);
-    private static final String UPDATE_CLASS_V207 =
-            Secret.of(SecretConstants.X30_UPDATE_CLASS_V207);
-    private static final String[] UPDATE_CLASSES = {UPDATE_CLASS, UPDATE_CLASS_V207};
+    private static final String[] UPDATE_CLASSES = {UPDATE_CLASS};
 
     private static final String[] PARAMS_APPLY = {
-            Secret.of(SecretConstants.X30_PARAMS_APPLY),
-            Secret.of(SecretConstants.X30_PARAMS_APPLY_V207)};
+            Secret.of(SecretConstants.X30_PARAMS_APPLY)};
     private static final String[] PARAMS_VERIFY = {
-            Secret.of(SecretConstants.X30_PARAMS_VERIFY),
-            Secret.of(SecretConstants.X30_PARAMS_VERIFY_V207)};
+            Secret.of(SecretConstants.X30_PARAMS_VERIFY)};
     private static final String[] VERIFIER_EXPIRED = {
-            Secret.of(SecretConstants.X30_VERIFIER_EXPIRED),
-            Secret.of(SecretConstants.X30_VERIFIER_EXPIRED_V207)};
+            Secret.of(SecretConstants.X30_VERIFIER_EXPIRED)};
     private static final String[] DOWNLOAD_PARAMS = {
-            Secret.of(SecretConstants.X30_DOWNLOAD_PARAMS),
-            Secret.of(SecretConstants.X30_DOWNLOAD_PARAMS_V207)};
+            Secret.of(SecretConstants.X30_DOWNLOAD_PARAMS)};
     private static final String[] DOWNLOAD_CORE = {
-            Secret.of(SecretConstants.X30_DOWNLOAD_CORE),
-            Secret.of(SecretConstants.X30_DOWNLOAD_CORE_V207)};
+            Secret.of(SecretConstants.X30_DOWNLOAD_CORE)};
 
     private static final String[] SET_DISABLE = {
-            Secret.of(SecretConstants.X30_SET_DISABLE),
-            Secret.of(SecretConstants.X30_SET_DISABLE_V207)};
+            Secret.of(SecretConstants.X30_SET_DISABLE)};
 
     private static final String[] DISABLE_FEATURES = {
             Secret.of(SecretConstants.X30_DISABLE_FEATURES),
-            Secret.of(SecretConstants.X30_DISABLE_FEATURES_V207),
             Secret.of(SecretConstants.X30_GUARD_DISABLE_EXTRA)};
-
-    private static final String LOG_TRUE = "X3 validity forced: ";
 
     /** 核心设置页的菜单构建入口。 */
     private static final String UI_CLASS = Secret.of(SecretConstants.X30_UI_CLASS);
@@ -97,11 +88,7 @@ public final class X3GuardBypass implements HookCallback {
     private static final String LOG_PARAMS_FILE = "params file path: ";
 
     private static final String WRAPPER = Secret.of(SecretConstants.X30_BRIDGE_WRAPPER);
-    private static final String WRAPPER_V207 =
-            Secret.of(SecretConstants.X30_BRIDGE_WRAPPER_V207);
     private static final String WRAPPER_CALL = Secret.of(SecretConstants.X30_BRIDGE_CALL);
-    private static final String WRAPPER_CALL_V207 =
-            Secret.of(SecretConstants.X30_BRIDGE_CALL_V207);
 
     private static final int MSG_PARAM = 130;
 
@@ -109,16 +96,17 @@ public final class X3GuardBypass implements HookCallback {
     private static final String MIN_SUPPORTED_VERSION =
             Secret.of(SecretConstants.MIN_SUPPORTED_VERSION);
 
-    private static final String[] DANGEROUS_KEYS = {
-            "del_fp", "del_param", "disable_code", "disable_features",
-            "disable_settings", "disable_xm", "eject", "force_restart"};
+    private static final String DANGEROUS_KEYS =
+            Secret.of(SecretConstants.X30_DANGEROUS_KEYS);
 
     private static final String LOG_HOOKED = "X3 guard hooked: ";
     private static final String LOG_SKIPPED = "X3 params apply skipped: ";
     private static final String LOG_PARAMS = "X3 params: ";
     private static final String BASE_UPDATE_TASK =
             Secret.of(SecretConstants.X30_BASE_UPDATE_TASK);
-    private static final String BASE_UPDATE_DONE = "onPostExecute";
+    private static final String BASE_UPDATE_DONE = Secret.of(SecretConstants.X30_UPDATE_POST);
+    /** 更新任务的后台线程；壳的更新域名已下线，发起请求只会得到解析失败。 */
+    private static final String BASE_UPDATE_WORK = Secret.of(SecretConstants.X30_UPDATE_WORK);
     private static final String MENU_HIDDEN_METHOD =
             Secret.of(SecretConstants.X30_MENU_HIDDEN_METHOD);
     private static final String MENU_VISIBLE_METHOD =
@@ -164,7 +152,6 @@ public final class X3GuardBypass implements HookCallback {
             }
         }
         hookWrapper(framework, classLoader, WRAPPER, WRAPPER_CALL);
-        hookWrapper(framework, classLoader, WRAPPER_V207, WRAPPER_CALL_V207);
         hookBaseUpdateTask(framework, classLoader);
         hookUi(framework, classLoader);
         if (BuildConfig.DEBUG) {
@@ -233,50 +220,6 @@ public final class X3GuardBypass implements HookCallback {
                         && isBoolean(method.getReturnType())) {
                     framework.hookMethod(method, new MenuBuildTrue());
                     ModuleLogger.debug("menu condition hooked: " + className + "." + methodName);
-                }
-            }
-        } catch (Throwable ignored) {
-            // 忽略
-        }
-    }
-
-    private static void hookForceTrue(HookFramework framework, ClassLoader classLoader,
-            String className, String methodName) {
-        String key = className + "#" + methodName + "@" + System.identityHashCode(classLoader);
-        if (!DONE.add(key)) {
-            return;
-        }
-        try {
-            Class<?> target = framework.findClassIfExists(className, classLoader);
-            if (target == null) {
-                return;
-            }
-            for (Method method : target.getDeclaredMethods()) {
-                if (methodName.equals(method.getName()) && method.getParameterCount() == 0
-                        && isBoolean(method.getReturnType())) {
-                    framework.hookMethod(method, new ForcedTrue(methodName));
-                }
-            }
-        } catch (Throwable ignored) {
-            // 忽略
-        }
-    }
-
-    private static void hookBoolProbe(HookFramework framework, ClassLoader classLoader,
-            String className, String methodName) {
-        String key = className + "#" + methodName + "@" + System.identityHashCode(classLoader);
-        if (!DONE.add(key)) {
-            return;
-        }
-        try {
-            Class<?> target = framework.findClassIfExists(className, classLoader);
-            if (target == null) {
-                return;
-            }
-            for (Method method : target.getDeclaredMethods()) {
-                if (methodName.equals(method.getName()) && method.getParameterCount() == 0
-                        && isBoolean(method.getReturnType())) {
-                    framework.hookMethod(method, new BoolProbe(methodName));
                 }
             }
         } catch (Throwable ignored) {
@@ -551,6 +494,12 @@ public final class X3GuardBypass implements HookCallback {
                         && method.getParameterCount() == 1) {
                     framework.hookMethod(method, new NoOp("base update done"));
                     ModuleLogger.debug("base update callback hooked");
+                } else if (BASE_UPDATE_WORK.equals(method.getName())
+                        && method.getParameterCount() == 1) {
+                    // 更新服务端已下线：请求必然解析失败，结果回调又已经置空，
+                    // 这里直接不联网，省掉两条 Unable to resolve host。
+                    framework.hookMethod(method, new NoOp("base update skipped"));
+                    ModuleLogger.debug("base update request skipped");
                 }
             }
         } catch (Throwable ignored) {
@@ -618,20 +567,6 @@ public final class X3GuardBypass implements HookCallback {
         return type == Boolean.TYPE || type == Boolean.class;
     }
 
-    /** 写入成功标志位与禁用码。 */
-    private static void forceFlags(Object target) {
-        if (target == null) {
-            return;
-        }
-        Class<?> type = target.getClass();
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_1), Boolean.TRUE);
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_2), Boolean.TRUE);
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_3), Boolean.TRUE);
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_4), Boolean.TRUE);
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_5), 0);
-        setField(type, target, Secret.of(SecretConstants.X30_FORCE_FLAG_6), 0);
-    }
-
     private static void setField(Class<?> type, Object target, String name, Object value) {
         for (Class<?> current = type; current != null && current != Object.class;
                 current = current.getSuperclass()) {
@@ -652,11 +587,11 @@ public final class X3GuardBypass implements HookCallback {
         byte[] needle = UPDATE_CLASS.replace('.', '/').getBytes();
         Object first = param.arg(0);
         if (first instanceof java.nio.ByteBuffer buffer) {
-            return contains(buffer, needle) || contains(buffer, UPDATE_CLASS_V207.getBytes());
+            return ByteSearch.contains(buffer, needle);
         }
         if (first instanceof java.nio.ByteBuffer[] buffers) {
             for (java.nio.ByteBuffer buffer : buffers) {
-                if (contains(buffer, needle) || contains(buffer, UPDATE_CLASS_V207.getBytes())) {
+                if (ByteSearch.contains(buffer, needle)) {
                     return true;
                 }
             }
@@ -664,26 +599,6 @@ public final class X3GuardBypass implements HookCallback {
         return false;
     }
 
-    private static boolean contains(java.nio.ByteBuffer source, byte[] needle) {
-        try {
-            java.nio.ByteBuffer buffer = source.duplicate();
-            buffer.rewind();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
-            outer:
-            for (int index = 0; index <= data.length - needle.length; index++) {
-                for (int offset = 0; offset < needle.length; offset++) {
-                    if (data[index + offset] != needle[offset]) {
-                        continue outer;
-                    }
-                }
-                return true;
-            }
-        } catch (Throwable ignored) {
-            // 按未命中处理
-        }
-        return false;
-    }
 
     @Override
     public void before(HookParam param) {
@@ -980,29 +895,6 @@ public final class X3GuardBypass implements HookCallback {
         }
     }
 
-    private static final class BoolProbe implements HookCallback {
-
-        private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
-
-        private final String name;
-
-        BoolProbe(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public void before(HookParam param) {
-            // 只看 after 的返回值
-        }
-
-        @Override
-        public void after(HookParam param) {
-            if (LOGGED.add(name)) {
-                ModuleLogger.log("bool probe: " + name + " = " + param.result());
-            }
-        }
-    }
-
     private static final class RegistrationGuard implements HookCallback {
 
         private static final AtomicBoolean LOGGED = new AtomicBoolean();
@@ -1041,60 +933,6 @@ public final class X3GuardBypass implements HookCallback {
             if (LOGGED.compareAndSet(false, true)) {
                 ModuleLogger.debug("params verify path entered");
             }
-        }
-    }
-
-    private static final class SetValid implements HookCallback {
-
-        private static final AtomicBoolean LOGGED = new AtomicBoolean();
-
-        @Override
-        public void before(HookParam param) {
-            if (!Boolean.FALSE.equals(param.arg(0))) {
-                return;
-            }
-            Object self = param.thisObject();
-            forceFlags(self);
-            if (self != null) {
-                setField(self.getClass(), self,
-                        Secret.of(SecretConstants.X30_FORCE_FLAG_4), Boolean.TRUE);
-            }
-            if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.debug("X3 invalid state forced valid");
-            }
-            param.setResult(null);
-        }
-    }
-
-    private static final class ForceFlags implements HookCallback {
-
-        private static final AtomicBoolean LOGGED = new AtomicBoolean();
-
-        @Override
-        public void before(HookParam param) {
-            if (LOGGED.compareAndSet(false, true)) {
-                ModuleLogger.debug("X3 success flags forced");
-            }
-            param.setResult(null);
-        }
-    }
-
-    private static final class TrueValue implements HookCallback {
-
-        private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
-
-        private final String methodName;
-
-        TrueValue(String methodName) {
-            this.methodName = methodName;
-        }
-
-        @Override
-        public void before(HookParam param) {
-            if (LOGGED.add(methodName)) {
-                ModuleLogger.debug(LOG_TRUE + methodName);
-            }
-            param.setResult(Boolean.TRUE);
         }
     }
 
@@ -1262,7 +1100,7 @@ public final class X3GuardBypass implements HookCallback {
     }
 
     private static String dangerousKey(String text) {
-        for (String key : DANGEROUS_KEYS) {
+        for (String key : DANGEROUS_KEYS.split(",")) {
             if (text.contains("\"" + key + "\"")) {
                 return key;
             }

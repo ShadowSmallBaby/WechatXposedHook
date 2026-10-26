@@ -1,8 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.license;
 
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -10,10 +8,7 @@ import android.os.Looper;
 import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
-import android.text.TextPaint;
-import android.text.method.LinkMovementMethod;
 import android.text.style.AlignmentSpan;
-import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
@@ -25,7 +20,10 @@ import android.widget.Toast;
 import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import github.shadowbaby.wechatxposed.hook.loader.util.Contexts;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.util.WeakHashMap;
 
 /**
@@ -56,12 +54,32 @@ public final class DisclaimerSkin implements HookCallback {
     /** 倒计时是否已经走完；未走完前不允许弹出签署窗口。 */
     private static volatile boolean countdownDone;
 
+    /** 当前正在展示的协议弹窗；只有「同意」或「退出」能关闭它。 */
+    private static volatile AlertDialog activeDialog;
+
+    private static volatile boolean allowDismiss;
+
+    private static volatile HookFramework frameworkRef;
+
+    private static volatile boolean moreHooked;
+
+    /** 限定尝试次数：类没加载时每次失败重试都会触发类加载，次数多了会 OOM。 */
+    private static volatile int moreAttempts;
+
+    private static final int MORE_MAX_ATTEMPTS = 3;
+
     private static volatile boolean installed;
+
+    /** 更多页类由 core dex 加载，类名复用 UI 入口常量。 */
+    private static final String MORE_CLASS = Secret.of(SecretConstants.X30_UI_CLASS);
+
+    private static final String MORE_METHOD = Secret.of(SecretConstants.X30_MORE_METHOD);
 
     private DisclaimerSkin() {
     }
 
-    public static synchronized void install(HookFramework framework) {
+    public static synchronized void install(HookFramework framework,
+            ClassLoader classLoader) {
         if (installed) {
             return;
         }
@@ -73,6 +91,19 @@ public final class DisclaimerSkin implements HookCallback {
                 return;
             }
             framework.hookMethod(dialog, "show", new Class<?>[]{}, new DisclaimerSkin());
+            // 协议只能靠「同意/退出」关闭；否则壳点一下就把窗口关掉，用户没有可操作入口。
+            framework.hookMethod(dialog, "dismiss", new Class<?>[]{}, new HookCallback() {
+                @Override
+                public void before(HookParam param) {
+                    if (param.thisObject() == activeDialog && !allowDismiss) {
+                        param.setResult(null);
+                    }
+                }
+            });
+            // 点「接受声明」那片区域时壳会走 mo876 -> C0150.m860 打开更多页，
+            // 协议没签成之前把这一跳拦掉。core dex 加载较晚，这里先记下 framework，
+            // 等弹窗真的出现（此时 core 已就绪）再挂。
+            frameworkRef = framework;
             installed = true;
             ModuleLogger.log("disclaimer: hooked");
         } catch (Throwable error) {
@@ -98,13 +129,15 @@ public final class DisclaimerSkin implements HookCallback {
                 return;
             }
             Context context = dialog.getContext();
-            // 协议只能由「同意」关闭，点外部/返回键都不允许。
-            dialog.setCancelable(false);
-            dialog.setCanceledOnTouchOutside(false);
             title.setText(TITLE);
-            body.setText(styleCopyRow(context, buildBody()));
-            body.setMovementMethod(LinkMovementMethod.getInstance());
-            body.setHighlightColor(0x00000000);
+            body.setText(styleCopyRow(buildBody()));
+            // 壳给内容区挂了关闭监听；这里在触摸层直接消费，避免点击被它吃掉。
+            body.setOnTouchListener((view, event) -> {
+                if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
+                    IdentityClipboard.copy(context);
+                }
+                return true;
+            });
 
             TextView tip = find(decor, ORIGINAL_TIP);
             if (tip != null) {
@@ -112,23 +145,10 @@ public final class DisclaimerSkin implements HookCallback {
             }
             countdownDone = false;
             Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-            if (tip != null && positive != null) {
-                tip.setOnClickListener(view -> {
-                    if (!countdownDone) {
-                        Toast.makeText(context, "倒计时结束后才能签署承诺",
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    showPromisePrompt(context, positive);
-                });
+            if (positive != null) {
+                bindSignClicks(decor, context, positive);
             }
             Button negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-            TextView countdown = findNumber(decor);
-            if (countdown != null) {
-                // 壳给倒计时数字挂了点击（点了会关协议），这里直接摘掉。
-                countdown.setClickable(false);
-                countdown.setOnClickListener(null);
-            }
             if (positive != null) {
                 positive.setText("同意");
                 // 接管点击：承诺没通过就不关闭，壳自己的 listener 不再执行。
@@ -139,9 +159,14 @@ public final class DisclaimerSkin implements HookCallback {
             }
             if (negative != null) {
                 negative.setText("退出");
-                negative.setOnClickListener(view -> dialog.dismiss());
+                negative.setOnClickListener(view -> {
+                    allowDismiss = true;
+                    dialog.dismiss();
+                });
             }
             ModuleLogger.log("disclaimer: skinned");
+            activeDialog = dialog;
+            allowDismiss = false;
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
@@ -149,11 +174,17 @@ public final class DisclaimerSkin implements HookCallback {
 
     private static final String COPY_ROW = "点击复制 机器码/WXID";
 
+    /** 第二块开头，同时用于分段对齐。 */
+    private static final String DECLARATION = "此软件是捐赠软件";
+
+    private static final java.util.regex.Pattern COUNTDOWN =
+            java.util.regex.Pattern.compile("\\d{1,2}");
+
     private static CharSequence buildBody() {
         String group = Activation.group();
         return "欢迎使用WXH模块, 交流群: "
                 + (group == null || group.isEmpty() ? "未配置" : group) + "\n\n"
-                + "此软件是捐赠软件，可以免费使用。\n"
+                + DECLARATION + "，可以免费使用。\n"
                 + "任何形式或渠道包括预装手机售卖此软件\n"
                 + "都是非法贩卖，别上当受骗！\n"
                 + "使用本模块存在账号风险，请谨慎使用、后果自负。\n\n"
@@ -162,7 +193,7 @@ public final class DisclaimerSkin implements HookCallback {
     }
 
     /** 第一块左对齐、第二块居中、复制行标红可点。 */
-    private static CharSequence styleCopyRow(Context context, CharSequence source) {
+    private static CharSequence styleCopyRow(CharSequence source) {
         String text = source.toString();
         int copyStart = text.indexOf(COPY_ROW);
         if (copyStart < 0) {
@@ -170,7 +201,7 @@ public final class DisclaimerSkin implements HookCallback {
         }
         SpannableString span = new SpannableString(text);
         int copyEnd = text.length();
-        int centerStart = text.indexOf("此软件是捐赠软件");
+        int centerStart = text.indexOf(DECLARATION);
         if (centerStart >= 0 && copyStart > centerStart) {
             // 三段都居中，和第二块保持一致的版式。
             span.setSpan(new AlignmentSpan.Standard(
@@ -182,18 +213,6 @@ public final class DisclaimerSkin implements HookCallback {
         }
         span.setSpan(new ForegroundColorSpan(0xFFFF5555), copyStart, copyEnd,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        span.setSpan(new ClickableSpan() {
-            @Override
-            public void onClick(View widget) {
-                copy(context);
-            }
-
-            @Override
-            public void updateDrawState(TextPaint ds) {
-                ds.setColor(0xFFFF5555);
-                ds.setUnderlineText(false);
-            }
-        }, copyStart, copyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return span;
     }
 
@@ -209,23 +228,14 @@ public final class DisclaimerSkin implements HookCallback {
                 if (!dialog.isShowing() || ticks++ > 120) {
                     return;
                 }
+                // 壳在倒计时刷新时会重设这一行的点击，每轮都补挂一次。
+                bindSignClicks(decor, context, positive);
                 TextView countdown = findNumber(decor);
                 if (countdown == null || "0".equals(countdown.getText().toString().trim())) {
                     countdownDone = true;
                     if (countdown != null) {
-                        // 归零后固定显示 0，并去掉壳在这个区域上的点击（点了会关协议）。
+                        // 归零后固定显示 0，文案保持不变。
                         countdown.setText("0");
-                        countdown.setClickable(false);
-                        countdown.setOnClickListener(null);
-                    }
-                    TextView hint = find(decor, "接受声明并点击签署承诺");
-                    if (hint == null) {
-                        hint = find(decor, "你可以点击签署承诺了");
-                    }
-                    if (hint != null) {
-                        hint.setText("你可以点击签署承诺了");
-                        hint.setClickable(true);
-                        hint.setOnClickListener(v -> showPromisePrompt(context, positive));
                     }
                     if (!APPROVED.containsKey(positive)) {
                         showPromisePrompt(context, positive);
@@ -236,6 +246,65 @@ public final class DisclaimerSkin implements HookCallback {
             }
         };
         handler.postDelayed(task, 500);
+    }
+
+    /** core dex 里的更多页类由独立 ClassLoader 加载，需要调用方传入那个 loader。 */
+    public static synchronized void hookMorePage(HookFramework framework,
+            ClassLoader classLoader) {
+        if (moreHooked || moreAttempts >= MORE_MAX_ATTEMPTS) {
+            return;
+        }
+        moreAttempts++;
+        try {
+            Class<?> more = framework.findClassIfExists(MORE_CLASS, classLoader);
+            if (more == null) {
+                ModuleLogger.debug("disclaimer: more class not found: "
+                        + (classLoader == null ? "null" : classLoader.getClass().getName()));
+                return;
+            }
+            moreHooked = true;
+            framework.hookMethod(more, MORE_METHOD,
+                    new Class<?>[]{android.app.Activity.class}, new HookCallback() {
+                        @Override
+                        public void before(HookParam param) {
+                            if (activeDialog != null && !allowDismiss) {
+                                param.setResult(null);
+                                ModuleLogger.log("disclaimer: more page blocked");
+                            }
+                        }
+                    });
+            ModuleLogger.log("disclaimer: more page hook installed");
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+        }
+    }
+
+    /** 「接受声明并点击签署承诺」与倒计时数字共用同一个点击逻辑。 */
+    private static void bindSignClicks(View decor, Context context, Button positive) {
+        View.OnClickListener listener = view -> {
+            if (!countdownDone) {
+                Toast.makeText(context, "倒计时结束后才能签署承诺",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showPromisePrompt(context, positive);
+        };
+        TextView hint = find(decor, "接受声明并点击签署承诺");
+        if (hint != null) {
+            hint.setOnClickListener(listener);
+            hint.setOnLongClickListener(view -> true);
+            // 这一整行（含倒计时数字）的父容器也挂着壳的关闭逻辑，一并接管。
+            if (hint.getParent() instanceof View parent) {
+                parent.setClickable(true);
+                parent.setOnClickListener(listener);
+                parent.setOnLongClickListener(view -> true);
+            }
+        }
+        TextView countdown = findNumber(decor);
+        if (countdown != null) {
+            countdown.setOnClickListener(listener);
+            countdown.setOnLongClickListener(view -> true);
+        }
     }
 
     private static void showPromisePrompt(Context context, View positive) {
@@ -308,6 +377,7 @@ public final class DisclaimerSkin implements HookCallback {
             return;
         }
         grantBase(view);
+        allowDismiss = true;
         dialog.dismiss();
     }
 
@@ -325,40 +395,10 @@ public final class DisclaimerSkin implements HookCallback {
         Context context = source.getContext();
         Toast.makeText(context, "基础功能已激活，即将重启微信",
                 Toast.LENGTH_SHORT).show();
-        android.app.Activity activity = activityOf(context);
+        android.app.Activity activity = Contexts.activityOf(context);
         if (activity != null) {
             new Handler(Looper.getMainLooper())
-                    .postDelayed(() -> ActivationDialog.restartWechat(activity), 1200);
-        }
-    }
-
-    /** 从 Context 向上找 Activity。 */
-    private static android.app.Activity activityOf(Context context) {
-        Context current = context;
-        while (current instanceof android.content.ContextWrapper wrapper) {
-            if (current instanceof android.app.Activity activity) {
-                return activity;
-            }
-            current = wrapper.getBaseContext();
-        }
-        return null;
-    }
-
-    private static void copy(Context context) {
-        String machine = Activation.machineCode();
-        String wxid = Activation.wxid();
-        String value = "机器码: " + (machine == null ? "" : machine)
-                + "\nWXID: " + (wxid == null ? "" : wxid);
-        try {
-            ClipboardManager manager =
-                    (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (manager == null) {
-                return;
-            }
-            manager.setPrimaryClip(ClipData.newPlainText("机器码", value));
-            Toast.makeText(context, "已复制机器码与 WXID", Toast.LENGTH_SHORT).show();
-        } catch (Throwable error) {
-            ModuleLogger.log(error);
+                    .postDelayed(() -> WeChatRestart.restart(activity), 1200);
         }
     }
 
@@ -366,7 +406,7 @@ public final class DisclaimerSkin implements HookCallback {
     private static TextView findNumber(View view) {
         if (view instanceof TextView label) {
             CharSequence text = label.getText();
-            if (text != null && text.toString().matches("\\d{1,2}")) {
+            if (text != null && COUNTDOWN.matcher(text).matches()) {
                 return label;
             }
         }

@@ -29,7 +29,6 @@ public final class Secret {
     public static final int PACK_DEFAULT_FP_ASYNC = 3;
     public static final int PACK_DEFAULT_VERSIONS = 4;
     public static final int PACK_DEFAULT_VERSIONS_V7 = 5;
-    public static final int PACK_PUBLIC_CODE = 6;
 
     public static String packValue(int index) {
         if (!isNativeAvailable()) {

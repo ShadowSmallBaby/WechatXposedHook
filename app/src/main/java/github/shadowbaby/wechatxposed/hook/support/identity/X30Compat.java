@@ -1,7 +1,6 @@
 package github.shadowbaby.wechatxposed.hook.support.identity;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.Signature;
 import android.util.Base64;
@@ -9,11 +8,14 @@ import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 
@@ -30,15 +32,18 @@ import java.security.cert.CertificateFactory;
  */
 public final class X30Compat implements IXposedHookZygoteInit {
 
-    private static final String SHELL_PACKAGE = "cn.android.x";
+    private static final String SHELL_PACKAGE = Secret.of(SecretConstants.SHELL_PACKAGE);
 
-    private static final String MODULE_PACKAGE = "github.shadowbaby.wechatxposed.hook";
+    private static final String SHELL_ENTRY = Secret.of(SecretConstants.SHELL_ENTRY);
+
+    private static final String MODULE_PACKAGE = Secret.of(SecretConstants.MODULE_PACKAGE);
 
     private static final String ORIGINAL_CERT_B64 = "MIIE6AYJKoZIhvcNAQcCoIIE2TCCBNUCAQExCzAJBgUrDgMCGgUAMAsGCSqGSIb3DQEHAaCCAzcwggMzMIICG6ADAgECAgRGfFhrMA0GCSqGSIb3DQEBCwUAMEoxCzAJBgNVBAYTAk5MMRMwEQYDVQQIEwpHZWxkZXJsYW5kMQ8wDQYDVQQHEwZBcm5oZW0xFTATBgNVBAMTDEZhbmthaSBaaGFuZzAeFw0xNTExMjAxNzI5MzlaFw00MDExMTMxNzI5MzlaMEoxCzAJBgNVBAYTAk5MMRMwEQYDVQQIEwpHZWxkZXJsYW5kMQ8wDQYDVQQHEwZBcm5oZW0xFTATBgNVBAMTDEZhbmthaSBaaGFuZzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJvHN88d5rBMxfSMvXRTiMF3lTisjhF3qb6IDhuBbVEMLb6hB57JatkLp9QxbUIc4nGM9LRib++WWm2q3Nr2qYrCtqwYCqoZy35HIfWxx+AbzPSK3lYJU0FBAokelbWBMGF28Iyc2IFN1B/WbTsqeeuhll3pggBXKknmWM76utDBKDR494r/7EgpfkHQU6MmvSVjc8WfuNWBdQPprbn/fIxlLaKoH3mL8f9V/SSjKYP1sf8oRK2gBpiwlOcUx0jA/AHhVDr8kOf99kkYWXcM+200j0/+3Yr16Fjo8d+c8T52rHZrVpn1fR8iT5BvM7N25Xh/hOIUGnUkXzSYPxXrdp0CAwEAAaMhMB8wHQYDVR0OBBYEFPjNRzmSD1bnrpFnuV4+YGLTH8rnMA0GCSqGSIb3DQEBCwUAA4IBAQAqpUD47S9uJ5u65gLk1ZzrXHwUxUJXHUR+LrQgtyhANF5r2LW14MXMiHAc6DbJNYYrafI1MHu0fWkNwr0LVsQh5R5HERV1H5KJ5ZCVpsFNDMNEHqhKYOgSqjkmnA+1fIVvUZKkxJRt0bBkd0KluOdO+chLKPtrhyzZF/E4YaYGxUbjZPOmbk3Cre9DhrjdKP/PqA4HCcTm4S9SgZBn1fJNqCnTn2H86JIs5zngrsUItoGRvwsLA7DhBOwI3QgA9+o6w4+PjTO4lJjsXSIWT/aywaWXkHIudkI6yzYpxxz81sLyYqf/t6Zm7qMX2HcStwSYZm4/QsKu9lwioqc1q7PpMYIBeTCCAXUCAQEwUjBKMQswCQYDVQQGEwJOTDETMBEGA1UECBMKR2VsZGVybGFuZDEPMA0GA1UEBxMGQXJuaGVtMRUwEwYDVQQDEwxGYW5rYWkgWmhhbmcCBEZ8WGswCQYFKw4DAhoFADANBgkqhkiG9w0BAQEFAASCAQAbJVDLy9xdW8dmpKbUX3rr8HS9S5mFO/VQIK1Kxt3PehFrmYzlnmVp3tRG0mqaleeUbx7UlSMPOpnGMHNvIt/hmZaYXrIHbEmZuKxsCkXnIlmkgdGb4HAhbfuv8HeqG7HYcFc5JF3w247v1+ITsus+l6buKZ+gCo5FE411S+aeeI+moYUb4CM7AsYO0kq+uEolXTUYEhDpd3bKPYDIOqpfVF7ADw+302zNDnGYJx5xKfuDDmhzKe1iTIyNV7tUhpayWdmxzQ38V8C5HX5ofPUuA+EjQGZZi83GmzVQonXqCHP50eaX/BkiFiv09XraqYKJN9joZLQzXDZN0UoXNSy8";
 
     private static final String MODULE_CERT_B64 = "MIIEhDCCAuygAwIBAgIJANqI/MnszZ5kMA0GCSqGSIb3DQEBDAUAMG8xCzAJBgNVBAYTAkNOMREwDwYDVQQIEwhaaGVKaWFuZzEPMA0GA1UEBxMGTmluZ0JvMRMwEQYDVQQKEwpCYWJ5IEdyb3VwMRMwEQYDVQQLEwpCYWJ5IEdyb3VwMRIwEAYDVQQDEwlTbWFsbGJhYnkwIBcNMjYxMDE1MDYxNDU5WhgPMjA1NDAzMDIwNjE0NTlaMG8xCzAJBgNVBAYTAkNOMREwDwYDVQQIEwhaaGVKaWFuZzEPMA0GA1UEBxMGTmluZ0JvMRMwEQYDVQQKEwpCYWJ5IEdyb3VwMRMwEQYDVQQLEwpCYWJ5IEdyb3VwMRIwEAYDVQQDEwlTbWFsbGJhYnkwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQC3auBn3WsFSYW5rZup64FY6Ic/4zDt9BP1oIRFA9RuA3+InPojokwZNHMSZdTICw4Tlc9QnCjR4SrsjkLlLSGk4vlhME3NtW5RarIRQ3FNPpgLnlU6xePTHrpy8+/S73N2hVO29B6IROLNGCFx0jGCSHdlt1LaevsBeNnOhOesXsUiUhyAPsqdzT3Q/hM+0c/exOMFJ/yZ7hLTlAy8Wn5v6oKOZCKMQoanQaIBTuwvI1cpgP6rcoifdJ5ksdYddvtE2lDvIq4dnoOJrmnub3/jLwymqVNc9HkiYPdXuXhijaOI9KCWbnksHHoHOWx7G9tkXaQMkzB+0OrDoYqVHBt8ST/3uZdfjGTLmigY+OdIjbJtAS+JITjTA4Oz6kVQgeIJlb93FsveEcpA9tr/kAvk3wj/lCu2tUxjyM8zBSX/svF+T2nX3CleKSzrepmWE/ZOEW8bAaceujqE7rxN8uMC4DyVFUjxhLuziC5xg/k+OKlXZGW7EPOgG5sTgWtWizMCAwEAAaMhMB8wHQYDVR0OBBYEFBnnMlUW0/h5rR5AWjB8abgifvPeMA0GCSqGSIb3DQEBDAUAA4IBgQChQ5pKOUV8ts+1ZNiQQ8rk/Ce+elwSJv8oPUJQytisnI/U8CN+kbgi16PTsJWL78VgOMRJavNDX+kOiNvFEGdkB+vhnDVhwYCGyjiImKS27P5aB1TNWFNCbTdyfBEM2gDuKOnaILIrk/8bLutQNG9Xsew66fNds+u18JTThpjFp+CC4RK7idX+e9QpMwkWmmucyHSEOoDOdYPkeEyIX23tW7m06L9p1PybyU4sC9SNg1v/BJsdBIDAO1zSZBHvEZLVAUOzuNYDJCNlwtQhlRoTn9sTid6GMJht8OlFxn2QrIDDk/EBPT8Qatf38jienvWxLYAamXAeVA7h07FHCXI1i5dpoBEg13CXmJ2SzcPclN2ELfsqPAxpqiX+uwuFsAgavVwCwJP1uYQKB2aEzosgoVnqZRm6jmBYkTQQExcQCE5UhcMBcdyquuMgzRVjlAZZpHF0KhbxIW3ARIx14vyUkhrpmx6w0Fjtuh4RAm7SIN03rWa0akflpjgsK8j2t5A=";
 
-    private static final String ORIGINAL_CERT_ASSET = "assets/x30/original_cert.rsa";
+    private static final String ORIGINAL_CERT_ASSET =
+            Secret.of(SecretConstants.SHELL_CERT_PREFIX);
 
     private static final String[] PACKAGE_LOOKUPS = {
             "getPackageInfo", "getApplicationInfo", "getLaunchIntentForPackage"};
@@ -67,14 +72,6 @@ public final class X30Compat implements IXposedHookZygoteInit {
                 return;
             }
             moduleApkPath = startupParam == null ? null : startupParam.modulePath;
-            boolean licensed = baseAllowed();
-            if (!licensed) {
-                // 未授权：壳解密会踩 native 空指针（SIGSEGV），必须阻止壳初始化。
-                hookShellModulePath();
-                hookShellInitGate();
-                XposedBridge.log("WeXposedHook-> x30 compat deferred: not authorized");
-                return;
-            }
             captureModuleCert(moduleApkPath);
             hookPackageContext("android.content.ContextWrapper");
             hookPackageContext("android.app.ContextImpl");
@@ -89,9 +86,7 @@ public final class X30Compat implements IXposedHookZygoteInit {
             hookArchiveInfo();
             // 壳已合并进本 APK：modulePath 必须指向真实 APK，否则壳取不到自己的
             // assets（loader / xposed_init）。包名与证书仍由上面的 hooks 伪装。
-            hookShellInitGate();
-            XposedBridge.log("WeXposedHook-> x30 compat installed: " + MODULE_PACKAGE
-                    + (licensed ? "" : " (unlicensed)"));
+            XposedBridge.log("WeXposedHook-> x30 compat installed: " + MODULE_PACKAGE);
         } catch (Throwable error) {
             XposedBridge.log(error);
         }
@@ -104,16 +99,17 @@ public final class X30Compat implements IXposedHookZygoteInit {
         if (cached != null) {
             return cached;
         }
-        try {
-            Class<?> thread = Class.forName("android.app.ActivityThread");
-            Object name = thread.getMethod("currentProcessName").invoke(null);
-            if (name instanceof String && !((String) name).isEmpty()
-                    && !"usap64".equals(name)) {
-                processNameCache = (String) name;
-                return processNameCache;
+        // API 28 起是公开接口，不再反射 ActivityThread。
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            try {
+                String name = android.app.Application.getProcessName();
+                if (name != null && !name.isEmpty() && !"usap64".equals(name)) {
+                    processNameCache = name;
+                    return name;
+                }
+            } catch (Throwable ignored) {
+                // 落到 /proc 兜底
             }
-        } catch (Throwable ignored) {
-            // 低版本没有 currentProcessName
         }
         try (java.io.FileInputStream input =
                      new java.io.FileInputStream("/proc/self/cmdline")) {
@@ -124,7 +120,7 @@ public final class X30Compat implements IXposedHookZygoteInit {
                 while (end < read && data[end] != 0) {
                     end++;
                 }
-                String name = new String(data, 0, end, "UTF-8");
+                String name = new String(data, 0, end, StandardCharsets.UTF_8);
                 if (!name.isEmpty() && !"usap64".equals(name)) {
                     processNameCache = name;
                 }
@@ -198,8 +194,7 @@ public final class X30Compat implements IXposedHookZygoteInit {
             return;
         }
         Object first = param.args[0];
-        if (first instanceof String) {
-            String path = (String) first;
+        if (first instanceof String path) {
             if (isStaleModulePath(path, current)) {
                 param.args[0] = current;
             }
@@ -236,10 +231,9 @@ public final class X30Compat implements IXposedHookZygoteInit {
         if (isModuleProcessRuntime()) {
             return;
         }
-        if (param.args.length == 0 || !(param.args[0] instanceof String)) {
+        if (param.args.length == 0 || !(param.args[0] instanceof String name)) {
             return;
         }
-        String name = (String) param.args[0];
         String upper = name.toUpperCase();
         if (!upper.startsWith("META-INF/") || !upper.endsWith(".RSA")
                 || upper.contains("COM_TENC")) {
@@ -266,15 +260,12 @@ public final class X30Compat implements IXposedHookZygoteInit {
             return;
         }
         try {
-            java.util.jar.JarFile jar = new java.util.jar.JarFile(modulePath);
-            try {
+            try (java.util.jar.JarFile jar = new java.util.jar.JarFile(modulePath)) {
                 java.util.jar.JarEntry entry = jar.getJarEntry("AndroidManifest.xml");
                 Certificate[] certificates = entry == null ? null : entry.getCertificates();
                 if (certificates != null && certificates.length > 0) {
                     moduleCertificateDer = certificates[0].getEncoded();
                 }
-            } finally {
-                jar.close();
             }
             if (moduleCertificateDer == null) {
                 moduleCertificateDer = decodeModuleCert();
@@ -366,10 +357,9 @@ public final class X30Compat implements IXposedHookZygoteInit {
         XposedBridge.hookAllMethods(target, "setComponent", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (param.args.length == 0 || !(param.args[0] instanceof ComponentName)) {
+                if (param.args.length == 0 || !(param.args[0] instanceof ComponentName component)) {
                     return;
                 }
-                ComponentName component = (ComponentName) param.args[0];
                 if (SHELL_PACKAGE.equals(component.getPackageName())) {
                     param.args[0] = new ComponentName(MODULE_PACKAGE, component.getClassName());
                 }
@@ -442,8 +432,7 @@ public final class X30Compat implements IXposedHookZygoteInit {
             return;
         }
         Object result = param.getResult();
-        if (result instanceof Certificate[]) {
-            Certificate[] certificates = (Certificate[]) result;
+        if (result instanceof Certificate[] certificates) {
             for (Certificate certificate : certificates) {
                 if (isModuleCertificate(certificate)) {
                     Certificate original = originalCertificate();
@@ -491,11 +480,8 @@ public final class X30Compat implements IXposedHookZygoteInit {
             if (name == null) {
                 return false;
             }
-            // 壳会读取 modulePath（files/x30/identity.apk）里 classes.dex 的证书；
-            // 这个文件不含本模块包名，也要走证书替换。
-            return name.contains(MODULE_PACKAGE)
-                    || name.endsWith("x30/identity.apk")
-                    || name.endsWith("x30\\identity.apk");
+            // 只认本模块自己的 APK；壳用的就是它的路径。
+            return name.contains(MODULE_PACKAGE);
         } catch (Throwable ignored) {
             return false;
         }
@@ -526,171 +512,6 @@ public final class X30Compat implements IXposedHookZygoteInit {
         return true;
     }
 
-    /** 未授权时直接跳过壳的 initZygote，避免 3.0 native 初始化后绕过授权。 */
-    /**
-     * 壳初始化门禁。
-     *
-     * 现在未授权也允许壳初始化（只是不装授权绕过），所以这里只做记录，
-     * 不再拦截 initZygote。
-     */
-    private static void hookShellInitGate() {
-        Class<?> shell = XposedHelpers.findClassIfExists(
-                "com.android.x.XposedInit", X30Compat.class.getClassLoader());
-        if (shell == null) {
-            return;
-        }
-        try {
-            java.util.Set<?> hooks = XposedBridge.hookAllMethods(
-                    shell, "initZygote", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
-                    if (!baseAllowed()) {
-                        param.setResult(null);
-                    }
-                }
-            });
-            XposedBridge.log("WeXposedHook-> x30 init gate hooks=" + hooks.size());
-        } catch (Throwable error) {
-            XposedBridge.log(error);
-        }
-    }
-
-    /** 未授权时不让 3.0 壳的 handleLoadPackage 继续，避免绕过授权。 */
-    private static boolean baseAllowed() {
-        // 壳始终加载；3.0 自己的授权由 X3LicenseBypass 决定是否绕过。
-        return true;
-    }
-
-    /**
-     * 壳把 initZygote 里的 modulePath 存成实例字段；native 可能用该路径派生密钥。
-     * 在壳的 handleLoadPackage 执行前，把它换成原版 X 3.0 的已安装 APK 路径。
-     */
-    private static void hookShellModulePath() {
-        ClassLoader loader = X30Compat.class.getClassLoader();
-        Class<?> shell = XposedHelpers.findClassIfExists("com.android.x.XposedInit", loader);
-        if (shell == null) {
-            XposedBridge.log("WeXposedHook-> x30 XposedInit not found");
-            return;
-        }
-        try {
-            XposedBridge.hookAllMethods(shell, "handleLoadPackage", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
-                    try {
-                        if (!baseAllowed()) {
-                            param.setResult(null);
-                            return;
-                        }
-                        String path = originalShellApk(param.args.length > 0 ? param.args[0] : null);
-                        if (path == null || param.thisObject == null) {
-                            return;
-                        }
-                        java.lang.reflect.Field field = param.thisObject.getClass()
-                                .getField("wxhModulePath");
-                        field.set(param.thisObject, path);
-                        XposedBridge.log("WeXposedHook-> x30 modulePath -> " + path);
-                    } catch (Throwable error) {
-                        XposedBridge.log(error);
-                    }
-                }
-            });
-        } catch (Throwable error) {
-            XposedBridge.log(error);
-        }
-    }
-
-    private static String originalShellApk(Object loadParam) {
-        // 优先用内置 identity.apk，避免设备上装了原版 X 时误用它。
-        // 原版未安装时，从本 APK 的 assets/x30/identity.apk 解出，作为壳的 modulePath。
-        try {
-            Object appInfo = loadParam == null ? null
-                    : XposedHelpers.getObjectField(loadParam, "appInfo");
-            Object dataDir = appInfo == null ? null
-                    : XposedHelpers.getObjectField(appInfo, "dataDir");
-            if (dataDir instanceof String && moduleApkPath != null) {
-                File target = new File((String) dataDir, "files/x30/identity.apk");
-                File parent = target.getParentFile();
-                if (parent != null && (parent.isDirectory() || parent.mkdirs())) {
-                    java.util.zip.ZipFile zip = new java.util.zip.ZipFile(moduleApkPath);
-                    try {
-                        java.util.zip.ZipEntry entry =
-                                zip.getEntry("assets/x30/identity.apk");
-                        if (entry != null
-                                && (!target.isFile() || target.length() != entry.getSize())) {
-                            File temp = new File(parent, "identity.apk.tmp");
-                            try (InputStream input = zip.getInputStream(entry);
-                                    OutputStream output = new FileOutputStream(temp)) {
-                                byte[] buffer = new byte[64 * 1024];
-                                int read;
-                                while ((read = input.read(buffer)) > 0) {
-                                    output.write(buffer, 0, read);
-                                }
-                            }
-                            if (!temp.renameTo(target)) {
-                                if (target.delete()) {
-                                    temp.renameTo(target);
-                                }
-                            }
-                        }
-                    } finally {
-                        zip.close();
-                    }
-                }
-                if (target.isFile() && target.length() > 1_000L) {
-                    return target.getAbsolutePath();
-                }
-            }
-        } catch (Throwable error) {
-            XposedBridge.log(error);
-        }
-        // 最后才回退到设备上安装的原版 X 3.0。
-        File[] entries = new File("/data/app").listFiles();
-        if (entries != null) {
-            for (File entry : entries) {
-                if (entry.getName().contains(SHELL_PACKAGE)) {
-                    File base = new File(entry, "base.apk");
-                    if (base.isFile()) {
-                        return base.getAbsolutePath();
-                    }
-                }
-            }
-        }
-        try {
-            android.app.Application app = android.app.AndroidAppHelper.currentApplication();
-            if (app != null) {
-                RAW_LOOKUP.set(Boolean.TRUE);
-                try {
-                    return app.getPackageManager()
-                            .getPackageInfo(SHELL_PACKAGE, 0).applicationInfo.sourceDir;
-                } finally {
-                    RAW_LOOKUP.set(Boolean.FALSE);
-                }
-            }
-        } catch (Throwable ignored) {
-            // 继续用 ActivityThread 反射
-        }
-        try {
-            Class<?> threadClass = XposedHelpers.findClass("android.app.ActivityThread", null);
-            Object thread = XposedHelpers.callStaticMethod(threadClass, "currentActivityThread");
-            Object systemContext = XposedHelpers.callMethod(thread, "getSystemContext");
-            Object manager = XposedHelpers.callMethod(systemContext, "getPackageManager");
-            RAW_LOOKUP.set(Boolean.TRUE);
-            try {
-                Object info = XposedHelpers.callMethod(manager, "getPackageInfo", SHELL_PACKAGE, 0);
-                Object applicationInfo = XposedHelpers.getObjectField(info, "applicationInfo");
-                Object source = XposedHelpers.getObjectField(applicationInfo, "sourceDir");
-                if (source instanceof String) {
-                    return (String) source;
-                }
-            } finally {
-                RAW_LOOKUP.set(Boolean.FALSE);
-            }
-        } catch (Throwable error) {
-            XposedBridge.log(error);
-        }
-        return null;
-    }
-
     /** 壳也可能通过 PackageManager 取 signatures；同样换回原版。 */
     private static void hookPackageInfoSignatures() {
         Class<?> manager = XposedHelpers.findClassIfExists(
@@ -713,13 +534,11 @@ public final class X30Compat implements IXposedHookZygoteInit {
                     if (!MODULE_PACKAGE.equals(requested) && !isShellPackage(requested)) {
                         return;
                     }
-                    if (!(param.getResult() instanceof PackageInfo)) {
+                    if (!(param.getResult() instanceof PackageInfo info)) {
                         return;
                     }
-                    PackageInfo info = (PackageInfo) param.getResult();
                     // 壳用隐藏包名查询后还会比对 PackageInfo.packageName。
-                    info.packageName = SHELL_PACKAGE;
-                    info.signatures = new Signature[]{new Signature(originalCertificateDer())};
+                    disguiseAsShell(info);
                 }
             });
             XposedBridge.log("WeXposedHook-> x30 package info hooked");
@@ -747,19 +566,16 @@ public final class X30Compat implements IXposedHookZygoteInit {
                             return;
                         }
                         if (param.args.length == 0
-                                || !(param.args[0] instanceof String)) {
+                                || !(param.args[0] instanceof String path)) {
                             return;
                         }
-                        String path = (String) param.args[0];
                         if (!path.contains(MODULE_PACKAGE) && !path.contains(SHELL_PACKAGE)) {
                             return;
                         }
-                        if (!(param.getResult() instanceof PackageInfo)) {
+                        if (!(param.getResult() instanceof PackageInfo info)) {
                             return;
                         }
-                        PackageInfo info = (PackageInfo) param.getResult();
-                        info.packageName = SHELL_PACKAGE;
-                        info.signatures = new Signature[]{new Signature(originalCertificateDer())};
+                        disguiseAsShell(info);
                         XposedBridge.log("WeXposedHook-> x30 archive info mapped: " + path);
                     }
                 });
@@ -767,6 +583,17 @@ public final class X30Compat implements IXposedHookZygoteInit {
                 // 该方法在这个系统版本不存在
             }
         }
+    }
+
+    /**
+     * 把查询结果伪装成壳：包名 + 原版证书。
+     * {@code signatures} 虽被标记弃用，但 {@code signingInfo} 是只读对象，
+     * 运行期只能改这个字段。
+     */
+    @SuppressWarnings("deprecation")
+    private static void disguiseAsShell(PackageInfo info) {
+        info.packageName = SHELL_PACKAGE;
+        info.signatures = new Signature[]{new Signature(originalCertificateDer())};
     }
 
     private static Certificate originalCertificate() {
@@ -804,10 +631,9 @@ public final class X30Compat implements IXposedHookZygoteInit {
     /** 把第一个字符串参数里的壳包名换成本项目包名。 */
     /** 壳可能用 "!#!%" + Base64("cn.android.x") 之类的隐藏形式查询包名。 */
     private static boolean isShellPackage(Object value) {
-        if (!(value instanceof String)) {
+        if (!(value instanceof String text)) {
             return false;
         }
-        String text = (String) value;
         if (SHELL_PACKAGE.equals(text)) {
             return true;
         }

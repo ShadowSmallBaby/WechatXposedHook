@@ -176,7 +176,7 @@ body     = 97 c4 01 30 + msgpack 7 元组
 ```bash
 python -X utf8 scripts/build_x30_min.py --source xmetadata/wx7 \
     -o build/generated/x30_min --assets app/build/generated/featurepacks/wx30
-./gradlew :app:assembleLegacyWx30FullEditionDebug
+./gradlew :app:assembleLegacyDebug
 ```
 
 ### Step 5 验证

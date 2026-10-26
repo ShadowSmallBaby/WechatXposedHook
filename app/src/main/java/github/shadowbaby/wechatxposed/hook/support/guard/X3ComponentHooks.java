@@ -2,6 +2,7 @@ package github.shadowbaby.wechatxposed.hook.support.guard;
 
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
+import github.shadowbaby.wechatxposed.hook.loader.util.ByteSearch;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
@@ -42,35 +43,14 @@ public final class X3ComponentHooks {
         byte[] needle = ENTRY_CLASS.replace('.', '/').getBytes();
         Object first = param.arg(0);
         if (first instanceof ByteBuffer buffer) {
-            return contains(buffer, needle);
+            return ByteSearch.contains(buffer, needle);
         }
         if (first instanceof ByteBuffer[] buffers) {
             for (ByteBuffer buffer : buffers) {
-                if (contains(buffer, needle)) {
+                if (ByteSearch.contains(buffer, needle)) {
                     return true;
                 }
             }
-        }
-        return false;
-    }
-
-    private static boolean contains(ByteBuffer source, byte[] needle) {
-        try {
-            ByteBuffer buffer = source.duplicate();
-            buffer.rewind();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
-            outer:
-            for (int index = 0; index <= data.length - needle.length; index++) {
-                for (int offset = 0; offset < needle.length; offset++) {
-                    if (data[index + offset] != needle[offset]) {
-                        continue outer;
-                    }
-                }
-                return true;
-            }
-        } catch (Throwable ignored) {
-            // 忽略，按未命中处理
         }
         return false;
     }
@@ -93,7 +73,6 @@ public final class X3ComponentHooks {
             hookBridge(framework, classLoader, BRIDGE_CLASS);
             hookBridge(framework, classLoader, LOADER_CLASS);
             if (licensed) {
-                X3LicenseBypass.install(framework, classLoader);
                 X3GuardBypass.install(framework, classLoader);
                 X3SettingsBypass.install(framework, classLoader);
             }

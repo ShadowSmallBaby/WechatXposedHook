@@ -1,18 +1,12 @@
 package github.shadowbaby.wechatxposed.hook.license;
 
 import android.os.Build;
-import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
 import github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import org.json.JSONObject;
 
 /**
  * 离线授权：公开码启用基础功能，机器码短令牌启用 sf/mf/af。
@@ -25,11 +19,8 @@ public final class Activation {
     public static final int LEVEL_NONE = 0;
     public static final int LEVEL_BASE = 1;
     public static final int LEVEL_EXT = 2;
-    private static final int LEVEL_UNKNOWN = -1;
 
     private static volatile String group;
-
-    private static volatile String promise;
 
     /** 群号由 native 解密，避免明文常量留在 dex。 */
     public static String group() {
@@ -42,20 +33,6 @@ public final class Activation {
         }
         return value;
     }
-
-    /** 承诺文案由 native 解密，避免明文常量留在 dex。 */
-    public static String promise() {
-        String value = promise;
-        if (value == null || value.isEmpty()) {
-            value = Secret.of(SecretConstants.ACTIVATION_PROMISE);
-            if (!value.isEmpty()) {
-                promise = value;
-            }
-        }
-        return value;
-    }
-
-    private static final String FILE_NAME = "files/activation.dat";
 
     private static volatile File dataDir;
 
@@ -109,28 +86,20 @@ public final class Activation {
         return dataDir;
     }
 
+    /** 授权级别统一来自数据库（WXH_LEVEL）；本进程未同步时只读查询兜底。 */
     public static synchronized int level() {
-        if (!BuildConfig.FULL_EDITION) {
-            // 公开版只含基础包，免费使用，不要求授权。
-            return LEVEL_BASE;
-        }
-        if (BuildConfig.DEBUG) {
-            return LEVEL_EXT;
+        int current = FeaturePackUnlock.currentLevel();
+        if (current > FeaturePackUnlock.LEVEL_NONE) {
+            return current;
         }
         int cached = level;
         if (cached >= 0) {
             return cached;
         }
-        try {
-            int result = readLevel();
-            if (result >= 0) {
-                level = result;
-            }
-            return result;
-        } catch (Throwable error) {
-            ModuleLogger.log("activation: level " + error);
-            return LEVEL_NONE;
-        }
+        int result = dataDir == null
+                ? LEVEL_NONE : FeaturePackUnlock.readLevel(dataDir);
+        level = result;
+        return result;
     }
 
     public static boolean isBaseAllowed() {
@@ -138,25 +107,7 @@ public final class Activation {
     }
 
     public static boolean isExtensionAllowed() {
-        return BuildConfig.FULL_EDITION && level() >= LEVEL_EXT;
-    }
-
-    public static boolean hasAuthorization() {
-        try {
-            int current = level();
-            if (current > LEVEL_NONE) {
-                return true;
-            }
-            // 账号/prefs 尚未就绪时不误弹；下次检查再判定。
-            return current == LEVEL_UNKNOWN && hasCodeFile();
-        } catch (Throwable error) {
-            ModuleLogger.log("activation: hasAuthorization " + error);
-            return false;
-        }
-    }
-
-    public static boolean hasCodeFile() {
-        return dataDir != null && new File(dataDir, FILE_NAME).isFile();
+        return level() >= LEVEL_EXT;
     }
 
     public static String wxid() {
@@ -216,30 +167,6 @@ public final class Activation {
         }
     }
 
-    private static int readLevel() {
-        if (dataDir == null) {
-            return LEVEL_UNKNOWN;
-        }
-        String code = readCode();
-        if (code.isEmpty()) {
-            ModuleLogger.log("activation: no code machine=" + machineCode());
-            return LEVEL_NONE;
-        }
-        int result = verifyCode(code);
-        if (result > LEVEL_NONE) {
-            return result;
-        }
-        // 机器码在 wxid 尚未就绪时先不缓存失败；公开码不依赖 wxid。
-        String publicCode = Secret.packValue(Secret.PACK_PUBLIC_CODE);
-        int publicLength = publicCode == null || publicCode.isEmpty()
-                ? 10 : publicCode.length();
-        if (wxid() == null && code.length() != publicLength) {
-            return LEVEL_UNKNOWN;
-        }
-        ModuleLogger.debug("activation: level=" + result);
-        return result;
-    }
-
     /** 校验授权码，返回 LEVEL_NONE / LEVEL_BASE / LEVEL_EXT（全部在 native）。 */
     public static int verifyCode(String code) {
         try {
@@ -257,77 +184,5 @@ public final class Activation {
             return LEVEL_NONE;
         }
     }
-
-    /** 校验承诺与授权码并写入文件；成功返回 true。 */
-    public static boolean activate(String promise, String code) {
-        String expected = promise();
-        if (dataDir == null || promise == null
-                || !expected.equals(promise.trim())) {
-            ModuleLogger.log("activation: promise mismatch exp=" + expected.length()
-                    + " in=" + (promise == null ? -1 : promise.trim().length()));
-            return false;
-        }
-        int newLevel = verifyCode(code);
-        if (newLevel <= LEVEL_NONE) {
-            ModuleLogger.log("activation: verify failed len="
-                    + (code == null ? -1 : code.trim().length()));
-            return false;
-        }
-        try {
-            JSONObject json = new JSONObject();
-            json.put("promise", expected);
-            json.put("code", code == null ? "" : code.trim());
-            File file = new File(dataDir, FILE_NAME);
-            File parent = file.getParentFile();
-            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
-                ModuleLogger.log("activation: parent " + parent);
-                return false;
-            }
-            try (java.io.FileOutputStream output = new java.io.FileOutputStream(file)) {
-                output.write(json.toString().getBytes(StandardCharsets.UTF_8));
-            }
-            file.setReadable(true, false);
-            level = newLevel;
-            // 授权已落盘，重新读一次宿主账号，机器码授权紧接着要用。
-            cachedWxid = null;
-            return true;
-        } catch (Throwable error) {
-            File probe = new File(dataDir, FILE_NAME);
-            ModuleLogger.log("activation: write " + error + " r=" + probe.canRead()
-                    + " w=" + probe.canWrite() + " len=" + probe.length());
-            return false;
-        }
-    }
-
-    private static String readCode() {
-        if (dataDir == null) {
-            return "";
-        }
-        File file = new File(dataDir, FILE_NAME);
-        if (!file.isFile()) {
-            return "";
-        }
-        try {
-            String text = readText(file).trim();
-            if (text.startsWith("{")) {
-                return new JSONObject(text).optString("code").trim();
-            }
-            return text;
-        } catch (Throwable error) {
-            ModuleLogger.log("activation: " + error);
-            return "";
-        }
-    }
-
-    private static String readText(File file) throws Exception {
-        try (InputStream input = new FileInputStream(file);
-                ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[4096];
-            int read;
-            while ((read = input.read(buffer)) > 0) {
-                output.write(buffer, 0, read);
-            }
-            return output.toString("UTF-8");
-        }
-    }
 }
+

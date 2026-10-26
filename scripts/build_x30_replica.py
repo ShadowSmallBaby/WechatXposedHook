@@ -773,10 +773,6 @@ def build_unsigned(shell: Path, hook: Path, compat: Path, output: Path, package:
 
             write_entry(merged, "classes2.dex", compat.read_bytes(), ZIP_DEFLATED)
             written.add("classes2.dex")
-            integrity = {
-                "classes.dex": hashlib.sha256(base.read("classes.dex")).hexdigest(),
-                "classes2.dex": hashlib.sha256(compat.read_bytes()).hexdigest(),
-            }
             for index, name in enumerate(hook_dexes):
                 target = "classes%d.dex" % (index + 3)
                 if target in written:
@@ -784,15 +780,7 @@ def build_unsigned(shell: Path, hook: Path, compat: Path, output: Path, package:
                 data = payload.read(name)
                 write_entry(merged, target, data, ZIP_DEFLATED)
                 written.add(target)
-                integrity[target] = hashlib.sha256(data).hexdigest()
-            integrity_name = "assets/wxh_integrity"
-            if integrity_name in written:
-                raise BuildError("资产名称冲突: " + integrity_name)
-            integrity_text = "\n".join(
-                "%s:%s" % (name, digest) for name, digest in integrity.items())
-            write_entry(merged, integrity_name, integrity_text.encode("ascii"),
-                        ZIP_DEFLATED)
-            written.add(integrity_name)
+                written.add(target)
 
             for name in REQUIRED_HOOK_LIBS:
                 source = payload.getinfo(name)

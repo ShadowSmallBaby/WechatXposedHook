@@ -1,13 +1,12 @@
 package github.shadowbaby.wechatxposed.hook.framework;
 
 import github.shadowbaby.wechatxposed.hook.BuildConfig;
-import github.shadowbaby.wechatxposed.hook.deploy.DexIntegrity;
 import github.shadowbaby.wechatxposed.hook.deploy.ModuleApk;
 import github.shadowbaby.wechatxposed.hook.deploy.ModuleCertCheck;
 import github.shadowbaby.wechatxposed.hook.deploy.StartupCheck;
 import github.shadowbaby.wechatxposed.hook.license.Activation;
-import github.shadowbaby.wechatxposed.hook.license.ActivationDialog;
 import github.shadowbaby.wechatxposed.hook.license.DisclaimerSkin;
+import github.shadowbaby.wechatxposed.hook.license.QuickCopy;
 import github.shadowbaby.wechatxposed.hook.loader.dex.DexClassLoaderHook;
 import github.shadowbaby.wechatxposed.hook.loader.dex.DexDumper;
 import github.shadowbaby.wechatxposed.hook.loader.dex.InMemoryDexLoadHook;
@@ -21,6 +20,7 @@ import github.shadowbaby.wechatxposed.hook.support.feature.ChatMvvmGuard;
 import github.shadowbaby.wechatxposed.hook.support.feature.HostVersionSpoof;
 import github.shadowbaby.wechatxposed.hook.support.guard.NoticeSuppressor;
 import github.shadowbaby.wechatxposed.hook.support.guard.RuntimeGuard;
+import github.shadowbaby.wechatxposed.hook.support.guard.ShellHostProbe;
 import github.shadowbaby.wechatxposed.hook.support.pack.PackGuard;
 import github.shadowbaby.wechatxposed.hook.support.pack.PackSignatureGuard;
 import github.shadowbaby.wechatxposed.hook.support.pack.PbePasswordHook;
@@ -118,8 +118,15 @@ public final class HookBootstrap {
             }
             FeatureDexInjector.setFilesDir(new File(data, "files"));
             Activation.install(data);
-            ActivationDialog.install(framework, classLoader);
-            DisclaimerSkin.install(framework);
+            DisclaimerSkin.install(framework, classLoader);
+            QuickCopy.install(framework);
+            // Toast 过滤（卡密提示 + 壳更新失败提示）与调试开关无关，正式包也要生效。
+            try {
+                github.shadowbaby.wechatxposed.hook.license.CardActivation
+                        .hookShellToast(framework);
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
+            }
             if (github.shadowbaby.wechatxposed.hook.BuildConfig.VERBOSE_LOG) {
                 try {
                     github.shadowbaby.wechatxposed.hook.license.CardActivation
@@ -132,37 +139,35 @@ public final class HookBootstrap {
             // 未授权也必须装，否则微信恢复到聊天页会直接 NPE。
             ChatMvvmGuard.install(framework, classLoader);
             ModuleLogger.log("activation: machine=" + Activation.machineCode());
-            // 壳始终启动（X3LicenseBypass 绕过壳自身授权）；
-            // 功能等级由 FPVersions 控制：未授权只写基础包，授权后追加 sf/mf/af。
-            boolean base = true;
+            // 壳始终启动；功能等级由 FPVersions 控制：
             StartupCheck.run(data, StartupCheck.readLoginAccount(data));
             PackSignatureGuard.verifyInstalled(new File(data, "files"));
             boolean certOk = ModuleCertCheck.verify(ModuleApk.modulePath());
-            boolean dexOk = DexIntegrity.verify(ModuleApk.modulePath());
             boolean runtimeOk = RuntimeGuard.verify();
-            boolean trusted = certOk && dexOk && runtimeOk;
+            boolean trusted = certOk && runtimeOk;
             // 授权守卫：读取/初始化项目授权级别，并把数据库功能表对齐到该级别。
             int level = FeaturePackUnlock.syncLevel(data, trusted);
-            // 只有高级授权才装授权绕过：普通授权要让壳按免费版走，
-            // 否则壳会认为 VIP/专业并加载 sf/mf/af 扩展。
-            boolean licensed = level >= FeaturePackUnlock.LEVEL_PRO;
+            // 普通授权也要装授权守卫：不装的话壳按未授权处理，
+            // 运行中会把 themes/base/donation/vidurlparser 逐个 closed。
+            // VIP/专业 与 sf/mf/af 扩展另由 msg 150 的标签查询和功能表分级控制。
+            boolean licensed = level >= FeaturePackUnlock.LEVEL_BASE;
             boolean extensions = trusted && level >= FeaturePackUnlock.LEVEL_PRO;
+            if (BuildConfig.VERBOSE_LOG) {
+                // 壳的更新/公告域名解析失败时只能看到一行日志，先抓调用栈定位。
+                ShellHostProbe.install(framework);
+            }
             ModuleLogger.log("activation: shell=on level=" + level
                     + " licensed=" + licensed);
             installZygote(framework, ModuleApk.modulePath(), licensed);
-            ModuleLogger.log("integrity: cert=" + certOk + " dex=" + dexOk
+            ModuleLogger.log("integrity: cert=" + certOk
                     + " runtime=" + runtimeOk + " ext=" + extensions);
             if (!extensions) {
                 ModuleLogger.log("module cert: extension dex disabled");
             }
-            if (base) {
-                PbePasswordHook.install(framework);
-                PackGuard.install(framework);
-                NoticeSuppressor.install(framework);
-                installHostVersionSpoof(framework, classLoader, dataDir, true);
-            } else {
-                ModuleLogger.log("activation: unlicensed, skipping bypass hooks");
-            }
+            PbePasswordHook.install(framework);
+            PackGuard.install(framework);
+            NoticeSuppressor.install(framework);
+            installHostVersionSpoof(framework, classLoader, dataDir, true);
         }
     }
 

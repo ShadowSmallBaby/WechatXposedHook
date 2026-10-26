@@ -20,8 +20,8 @@
   -> password 映射已下沉 native 表。
 - `FeatureDexDecoder` 的容器结构、magic、permutation、PBE/AES 已迁 native；
   Java 只保留文件读取与标准 zip 取 `classes.dex`。
-- dex 段完整性：构建时把最终 `classes*.dex` 的 SHA-256 写入
-  `assets/wxh_integrity`，启动时重算；同签名篡改 dex 会关闭扩展注入。
+- dex 段完整性：已移除。壳合并进本 APK 后 dex 就是自己的 `classes.dex`，
+  同一 APK 内的 hash 清单可被同步篡改，改由证书固定 + `RuntimeGuard` 兜底。
 - 运行时防护：`RuntimeGuard` 检查 `TracerPid` 与 frida/substrate 映射，
   命中时只降级扩展功能。
 - 版本标记强制刷新运行目录，避免旧包残留。
@@ -75,10 +75,8 @@
    只把 `fp` 收窄到 `themes` 并停止扩展 dex 注入；**不能**跳过
    `FeaturePackUnlock` 或 `PbePasswordHook`，否则 3.0 native 在
    `attachBaseContext` 会因 null 对象触发 JNI abort。
-2. **dex 完整性（已完成）**：`build_x30_replica.py` 在合并后计算
-   `classes.dex` / `classes2.dex` / `classes3..N.dex` 的 SHA-256，写入
-   `assets/wxh_integrity`；`DexIntegrity` 启动时重算。证书固定挡住换签名，
-   dex 完整性挡住同签名篡改；失败只关闭扩展注入。
+2. ~~dex 完整性~~（已移除）：壳合并后 dex 属于本 APK，同 APK 内的 hash
+   清单挡不住同签名篡改，收益不足；由证书固定与 `RuntimeGuard` 覆盖。
 3. **资源完整性**：功能包 body 已有 `_s` 项目签名，覆盖了资源层。
 4. **运行目录**：`wxh_pack_version` + 本地签名校验，防止替换。
 
@@ -107,7 +105,7 @@
 2. ~~APK 证书自检（native 内置 SHA-256）~~（已完成）。
 3. ~~`_s` 验签迁 native~~（已完成）。
 4. ~~激活码验签迁 native~~（已完成，RSA-SHA256 + 机器码/wxid 绑定）。
-5. ~~dex 段完整性~~（已完成，assets/wxh_integrity + DexIntegrity）。
+5. ~~dex 段完整性~~（已移除，自校验无意义）。
 6. ~~`FeaturePackRestorer` / `PackGuard` 的包名表并入 native~~（已完成）。
 7. ~~`FeatureDexDecoder` 容器解密 native 化~~（已完成）。
 8. ~~TracerPid / frida 轻量检测~~（已完成，RuntimeGuard）。

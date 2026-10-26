@@ -5,6 +5,7 @@ import github.shadowbaby.wechatxposed.hook.framework.HookCallback;
 import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock;
 
 /**
  * 屏蔽 X 3.0 菜单顶部的更新失败提示。
@@ -46,6 +47,8 @@ public final class NoticeSuppressor {
 
     private static final class Callback implements HookCallback {
 
+        private static final String REGISTERED = "(已注册)";
+
         @Override
         public void before(HookParam param) {
             Object value = param.arg(0);
@@ -60,6 +63,19 @@ public final class NoticeSuppressor {
                     return;
                 }
             }
+            if (!message.contains(REGISTERED)) {
+                return;
+            }
+            // donation 包自己按 LIC 拼这段列表，数据层没有插口，只能在显示层处理。
+            if (FeaturePackUnlock.currentLevel() < FeaturePackUnlock.LEVEL_PRO) {
+                param.setArg(0, "");
+                return;
+            }
+            String replaced = message.replace("\n\n" + REGISTERED, "\n\n密友" + REGISTERED);
+            if (!replaced.equals(message)) {
+                param.setArg(0, replaced);
+            }
         }
+
     }
 }

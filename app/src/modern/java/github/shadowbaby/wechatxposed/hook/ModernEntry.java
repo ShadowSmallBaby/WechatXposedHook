@@ -11,6 +11,8 @@ import github.shadowbaby.wechatxposed.hook.framework.HookBootstrap;
 import github.shadowbaby.wechatxposed.hook.framework.ModernFramework;
 import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
+import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam;
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam;
@@ -18,7 +20,7 @@ import java.lang.reflect.Method;
 
 public class ModernEntry extends XposedModule {
 
-    private static final String WECHAT_PACKAGE = "com.tencent.mm";
+    private static final String WECHAT_PACKAGE = Secret.of(SecretConstants.WECHAT_PACKAGE);
 
     private final ModernFramework framework = new ModernFramework(this);
 
@@ -32,7 +34,8 @@ public class ModernEntry extends XposedModule {
         ModuleLogger.attach(framework);
         XposedBridge.init(framework);
         modulePath = getModuleApplicationInfo().sourceDir;
-        initLegacy("github.shadowbaby.wechatxposed.x30.X30Compat", modulePath);
+        initLegacy("github.shadowbaby.wechatxposed.hook.support.identity.X30Compat",
+                modulePath);
         HookBootstrap.remember(modulePath);
     }
 
@@ -53,14 +56,12 @@ public class ModernEntry extends XposedModule {
         String processName = currentProcessName();
         ApplicationInfo info = targetInfo(param);
         Activation.install(new java.io.File(info.dataDir));
-        if (Activation.isBaseAllowed() && shellEntry == null) {
-            shellEntry = initLegacy("com.android.x.XposedInit", modulePath);
+        // 未授权也要加载壳：免责声明弹窗由壳在「更多」入口触发。
+        if (shellEntry == null) {
+            shellEntry = initLegacy(Secret.of(SecretConstants.SHELL_ENTRY), modulePath);
         }
         HookBootstrap.onProcessReady(framework, param.getPackageName(), processName,
                 param.getClassLoader(), info.dataDir, info.sourceDir);
-        if (!Activation.isBaseAllowed()) {
-            return;
-        }
         if (shellEntry instanceof IXposedHookLoadPackage shell) {
             try {
                 XC_LoadPackage.LoadPackageParam load = new XC_LoadPackage.LoadPackageParam();

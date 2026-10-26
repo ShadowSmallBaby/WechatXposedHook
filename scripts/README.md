@@ -420,19 +420,17 @@ body 大小/哈希/类型。
   `InMemoryDexClassLoader` 传入的 dex 落到 `files/dex_dump/`。
 - `FeaturePackRestorer`：每个 APK 只携带对应版本的载荷；2.44 为 24 个文件，
   3.0 为 26 基础 + 6 扩展。`build_release_packs.py` 从项目仓 `xmetadata/wx7`
-  生成 zip 并打进 assets（X30 自动去 32B 前缀；`_c`/`_s` 带厂商签名，从 `xmetadata/wx7/cfg/<role>.{c,s}` 原样复制）。
+  生成并平铺成 `assets/<hash>`（`--assets`，X30 自动去 32B 前缀；
+  `_c`/`_s` 带厂商签名，从 `xmetadata/wx7/cfg/<role>.{c,s}` 原样复制）。
 - `extract_shell_entries.py`：从原版壳 APK 抽取构建所需条目到 `app/x30.zip`（可重复执行）。
 - `sign_sidecars.py`：用项目私钥重签 base/themes/donation/vidurlparser 的 `_s`（C/L 保持厂商签名）。
-- `extract_featuredex.py`：构建时从 `xmetadata/wx7` 的扩展包容器解出 `x30_{sf,mf,af}.dex`，
-  不再依赖本地 `data/refs/featuredex`。
-- `build_x30_min.py`：从项目仓生成 32 文件 / 4,292,161B 的最小运行目录，
+- `build_x30_min.py`：从项目仓生成最小运行目录（含 32/64 位 loader），
   并输出 `x7_3.0.zip` / `x7_3.0_ext.zip`。
 - `runtime_names.py`：运行文件名的确定性规则
   （`trim(MD5("FP_<role>"))` / `trim(MD5("<role>"))`，core=`MD5("C")`）。
 - `X3ComponentHooks`：识别 `com.android.xc.Wrapper.HookWrapper`，hook
   `com.android.xc.WxJniCoreBridge.CallMethod(I,Object[])Object` 与
   `com.android.x.xposed.hook.WxCoreLoader.CallMethod`。
-- `X3LicenseBypass`：hook `c.ـˉ.ˈʽ`（LIC 类）的布尔/授权列表方法。
 - `X3CallMethodHook`：处理 3.0 的消息号（0 init、111 状态、130 验签、
   150 功能查询、2 类名查询等）。
 

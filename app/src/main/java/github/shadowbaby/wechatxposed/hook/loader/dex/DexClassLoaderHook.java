@@ -8,7 +8,6 @@ import github.shadowbaby.wechatxposed.hook.support.pack.DonationFeatureUnlock;
 import github.shadowbaby.wechatxposed.hook.support.guard.FeatureCloseGuard;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3ComponentHooks;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3GuardBypass;
-import github.shadowbaby.wechatxposed.hook.support.guard.X3LicenseBypass;
 import github.shadowbaby.wechatxposed.hook.support.guard.X3SettingsBypass;
 
 /**
@@ -43,18 +42,16 @@ public final class DexClassLoaderHook implements HookCallback {
                 FeatureCloseGuard.probe(framework, loader);
                 DonationFeatureUnlock.installIfPresent(framework, loader);
             }
-            boolean license = licensed && X3LicenseBypass.matchesClass(framework, loader);
             boolean guard = licensed && X3GuardBypass.matchesClass(framework, loader);
             boolean settings = licensed && X3SettingsBypass.matchesClass(framework, loader);
             boolean component = X3ComponentHooks.matches(framework, loader);
             ModuleLogger.debug("dex loader" + (licensed ? "" : "(unlicensed)") + ": " + path
-                    + " lic=" + license + " guard=" + guard
+                    + " guard=" + guard
                     + " settings=" + settings + " component=" + component);
             if (component) {
                 X3ComponentHooks.inject(framework, loader, licensed);
-            }
-            if (license) {
-                X3LicenseBypass.install(framework, loader);
+                github.shadowbaby.wechatxposed.hook.license.DisclaimerSkin
+                        .hookMorePage(framework, loader);
             }
             if (guard) {
                 X3GuardBypass.install(framework, loader);

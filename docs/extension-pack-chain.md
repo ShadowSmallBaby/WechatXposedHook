@@ -16,7 +16,7 @@
   ```bash
   python -X utf8 scripts/build_x30_min.py --source xmetadata/wx7 \
       -o build/generated/x30_min --assets app/build/generated/featurepacks/wx30
-  ./gradlew :app:assembleLegacyWx30FullEditionDebug
+  ./gradlew :app:assembleLegacyDebug
   ```
 
   Gradle 的 `generateFeaturePacks` 也会从项目仓生成 X30 资产
@@ -375,7 +375,7 @@ python -X utf8 scripts/build_x30_min.py --source xmetadata/wx7 \
     -o build/generated/x30_min \
     --assets app/build/generated/featurepacks/wx30
 # 32 个文件, 4,292,161 B (4.09 MiB)
-./gradlew :app:assembleLegacyWx30FullEditionDebug
+./gradlew :app:assembleLegacyDebug
 ```
 
 | 运行文件 | 项目仓源（带 32B 前缀） | 运行大小 |
