@@ -58,7 +58,7 @@ public final class NoticeSuppressor {
             String message = text.toString();
             for (String blocked : BLOCKED) {
                 if (message.contains(blocked)) {
-                    ModuleLogger.log(LOG_BLOCKED);
+                    ModuleLogger.debug(LOG_BLOCKED);
                     param.setResult(null);
                     return;
                 }

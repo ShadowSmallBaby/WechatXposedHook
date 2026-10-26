@@ -14,8 +14,14 @@ public final class IdentityClipboard {
 
     public static void copy(Context context) {
         String machine = Activation.machineCode();
+        if (machine == null || machine.isEmpty()) {
+            // 机器码绑定 wxid；读不到账号时不要往剪贴板塞一条空记录。
+            Toast.makeText(context, "未读取到微信账号，请登录后重试",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         String wxid = Activation.wxid();
-        String value = "机器码: " + (machine == null ? "" : machine)
+        String value = "机器码: " + machine
                 + "\nWXID: " + (wxid == null ? "" : wxid);
         try {
             ClipboardManager manager =

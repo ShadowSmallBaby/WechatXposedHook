@@ -308,7 +308,7 @@ public final class FeatureCloseGuard {
         try {
             java.lang.reflect.Method method = instance.getClass().getMethod(name);
             Object value = method.invoke(instance);
-            ModuleLogger.log(LOG_CHANNELS + name + " count=" + channelSize(value));
+            ModuleLogger.debug(LOG_CHANNELS + name + " count=" + channelSize(value));
             if (value instanceof java.util.Collection<?> collection) {
                 // 逐批打印，单条日志保持在 logcat 的 4KB 限制以内。
                 java.util.List<String> items = new java.util.ArrayList<>();
@@ -317,12 +317,12 @@ public final class FeatureCloseGuard {
                 }
                 for (int start = 0; start < items.size(); start += CHANNEL_LIMIT) {
                     int end = Math.min(items.size(), start + CHANNEL_LIMIT);
-                    ModuleLogger.log(LOG_CHANNELS + name + " [" + start + "-" + (end - 1)
+                    ModuleLogger.debug(LOG_CHANNELS + name + " [" + start + "-" + (end - 1)
                             + "] " + String.join(", ", items.subList(start, end)));
                 }
                 return;
             }
-            ModuleLogger.log(LOG_CHANNELS + name + " " + channelBrief(value));
+            ModuleLogger.debug(LOG_CHANNELS + name + " " + channelBrief(value));
         } catch (Throwable error) {
             ModuleLogger.debug(LOG_CHANNELS + name + " failed: " + error);
         }
@@ -563,7 +563,7 @@ public final class FeatureCloseGuard {
             PUBLISH_CMD.set(command);
             PUBLISH_AT.set(SystemClock.elapsedRealtime());
             if (EVENTS.add(command)) {
-                ModuleLogger.log(LOG_EVENT + command + " -> " + className);
+                ModuleLogger.debug(LOG_EVENT + command + " -> " + className);
             }
             // 只拦详情页这一个场景；聊天卡片的金额伪装走消息渲染链路，不受影响。
             if (TRANSFER_SCENE_COMMAND.equals(command)) {

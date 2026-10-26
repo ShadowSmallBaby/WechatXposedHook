@@ -104,6 +104,15 @@ public final class HookBootstrap {
             }
             installZygote(framework, ModuleApk.modulePath());
             installHostVersionSpoof(framework, classLoader, dataDir, false);
+            // 小程序运行时也要版本窗口，否则启动场景和 getSystemInfo 仍是真版本。
+            // PackageInfo 伪装只放在 appbrand，主进程的转账/钱包保持真实版本。
+            try {
+                HostVersionSpoof.installAppBrand(framework, classLoader);
+                github.shadowbaby.wechatxposed.hook.support.feature.version.PackageVersionSpoof
+                        .install(framework, classLoader);
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
+            }
             return;
         }
         // 8.0.79 起微信在 zygote64 / usap64 里预加载，processName 不是包名。
@@ -118,6 +127,8 @@ public final class HookBootstrap {
             }
             FeatureDexInjector.setFilesDir(new File(data, "files"));
             Activation.install(data);
+            ModuleLogger.log("module " + BuildConfig.VERSION_NAME
+                    + " (" + BuildConfig.VERSION_CODE + ")");
             DisclaimerSkin.install(framework, classLoader);
             QuickCopy.install(framework);
             // Toast 过滤（卡密提示 + 壳更新失败提示）与调试开关无关，正式包也要生效。
@@ -167,6 +178,34 @@ public final class HookBootstrap {
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
             installHostVersionSpoof(framework, classLoader, dataDir, true);
+            // MMKV 在启动早期可能还没初始化；延迟再探一次，文件层读不到时补上账号。
+            // 探测会反射/读若干文件，放到子线程，别压主线程。
+            try {
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                        () -> new Thread(HookBootstrap::probeAccount, "wxh-probe").start(),
+                        5000);
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
+            }
+        }
+    }
+
+    /** 壳加载完成后补问一次账号：成功就落盘并触发授权重算。 */
+    private static void probeAccount() {
+        try {
+            String account = Activation.probeShell();
+            if (account != null) {
+                Activation.setRuntimeWxid(account);
+                return;
+            }
+            if (Activation.wxid() == null) {
+                File dataDir = Activation.dataDir();
+                if (dataDir != null) {
+                    ModuleLogger.log("login diag: " + StartupCheck.diagnose(dataDir));
+                }
+            }
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
         }
     }
 

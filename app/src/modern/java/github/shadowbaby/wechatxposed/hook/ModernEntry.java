@@ -55,6 +55,7 @@ public class ModernEntry extends XposedModule {
         }
         String processName = currentProcessName();
         ApplicationInfo info = targetInfo(param);
+        ModuleLogger.debug("modern: process=" + processName + " data=" + info.dataDir);
         Activation.install(new java.io.File(info.dataDir));
         // 未授权也要加载壳：免责声明弹窗由壳在「更多」入口触发。
         if (shellEntry == null) {
@@ -125,6 +126,17 @@ public class ModernEntry extends XposedModule {
     }
 
     private static String currentProcessName() {
+        // ActivityThread.currentProcessName 是 hidden API，新版系统上会拿不到；
+        // 先用公开的 Application.getProcessName。
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            try {
+                String name = android.app.Application.getProcessName();
+                if (name != null && !name.isEmpty()) {
+                    return name;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
         try {
             Class<?> activityThread = Class.forName("android.app.ActivityThread");
             Method method = activityThread.getDeclaredMethod("currentProcessName");

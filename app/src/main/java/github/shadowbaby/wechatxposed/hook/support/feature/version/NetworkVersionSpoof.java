@@ -69,7 +69,7 @@ public final class NetworkVersionSpoof {
                             spoofRequest(framework, classLoader, param);
                         }
                     });
-                    ModuleLogger.log("network version: base request hooked " + name);
+                    ModuleLogger.debug("network version: base request hooked " + name);
                 }
             } catch (Throwable error) {
                 ModuleLogger.log(error);
@@ -99,7 +99,7 @@ public final class NetworkVersionSpoof {
                             ModuleLogger.log("call context: off (ui)");
                         }
                     });
-            ModuleLogger.log("network version: call ui hooked " + className);
+            ModuleLogger.debug("network version: call ui hooked " + className);
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
@@ -177,6 +177,11 @@ public final class NetworkVersionSpoof {
      */
     private static void spoofLogin(HookFramework framework, ClassLoader classLoader,
             Object request, String uri) {
+        // 钱包/转账页面存活期间保持真实版本：这里只改请求对象，
+        // WalletVersionGuard 恢复的全局字段盖不住它，头体不一致会直接判繁忙。
+        if (VersionWindow.isWalletActive()) {
+            return;
+        }
         int before = readClientVersion(request);
         int real = before;
         int spoofed;

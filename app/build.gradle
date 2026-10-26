@@ -19,7 +19,7 @@ android {
         applicationId 'github.shadowbaby.wechatxposed.hook'
         minSdk 26
         targetSdk 37
-        versionCode 10
+        versionCode 12
         versionName '2.0-BETA'
 
         ndk {

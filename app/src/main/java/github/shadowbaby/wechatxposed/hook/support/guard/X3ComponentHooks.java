@@ -70,6 +70,8 @@ public final class X3ComponentHooks {
     public static synchronized void inject(HookFramework framework, ClassLoader classLoader,
             boolean licensed) {
         try {
+            // 壳的 ClassLoader 能加载 c.**，后面直接问壳要账号。
+            github.shadowbaby.wechatxposed.hook.license.Activation.setShellLoader(classLoader);
             hookBridge(framework, classLoader, BRIDGE_CLASS);
             hookBridge(framework, classLoader, LOADER_CLASS);
             if (licensed) {
@@ -99,7 +101,7 @@ public final class X3ComponentHooks {
                     CALL_METHOD,
                     new Class<?>[]{Integer.TYPE, Object[].class},
                     new X3CallMethodHook());
-            ModuleLogger.log(LOG_HOOKED + className + "." + CALL_METHOD);
+            ModuleLogger.debug(LOG_HOOKED + className + "." + CALL_METHOD);
         } catch (Throwable error) {
             BRIDGED.remove(key);
             ModuleLogger.debug(LOG_FAILED + ": " + className);

@@ -48,6 +48,13 @@ public final class X3CallMethodHook implements HookCallback {
     private static final java.util.Set<Integer> SEEN =
             java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /** 每个消息号只记一次原始返回值，账号有可能从这里下来。 */
+    private static final java.util.Set<Integer> RESULTS =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** 启动阶段记录前这么多次 CallMethod，确认账号到底有没有随参数下来。 */
+    private static final int ENTRY_LOG_LIMIT = 30;
+
     public X3CallMethodHook() {
     }
 
@@ -57,18 +64,16 @@ public final class X3CallMethodHook implements HookCallback {
             int msgId = (Integer) param.arg(0);
             int call = CALLS.incrementAndGet();
             Object[] params = (Object[]) param.arg(1);
-            if (msgId == MSG_LICENSE_BLOB || msgId == MSG_FEATURE_QUERY) {
-                ModuleLogger.debug("X3 msg " + msgId + " params="
-                        + java.util.Arrays.deepToString(params));
+            // 排查用：启动阶段记录前若干次调用，确认 132/150 有没有把账号带过来。
+            if (call <= ENTRY_LOG_LIMIT) {
+                ModuleLogger.debug("X3 call #" + call + " msg=" + msgId
+                        + " args=" + briefArgs(params));
             }
             // 132/150 只在首次授权时出现，重启后 X3 不再发，wxid 会永远拿不到。
             // 任何一次 CallMethod 都顺手捞一遍，机器码授权才能算出来。
-            captureAccount(params);
+            captureAccount(msgId, params);
             if (SEEN.add(msgId)) {
-                ModuleLogger.debug("X3 msg new: " + msgId
-                        + " args=" + java.util.Arrays.toString(params));
-            } else if (call <= 3) {
-                ModuleLogger.debug("X3 call #" + call + " msg=" + msgId);
+                ModuleLogger.debug("X3 msg new: " + msgId);
             }
 
             // 130 的 param 是版本握手，返回本机支持的版本。
@@ -131,6 +136,56 @@ public final class X3CallMethodHook implements HookCallback {
         }
     }
 
+    /** 记录壳自己返回的内容：账号可能是在返回值里传下来的。 */
+    @Override
+    public void after(HookParam param) {
+        try {
+            int msgId = (Integer) param.arg(0);
+            if (!RESULTS.add(msgId)) {
+                return;
+            }
+            ModuleLogger.debug("X3 result " + msgId + " = " + brief(param.result()));
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+        }
+    }
+
+    private static String brief(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof byte[] bytes) {
+            return "byte[" + bytes.length + "]";
+        }
+        if (value instanceof Object[] array) {
+            return briefArgs(array);
+        }
+        String text = String.valueOf(value);
+        return text.length() > 200 ? text.substring(0, 200) + "..." : text;
+    }
+
+    private static String briefArgs(Object[] args) {
+        if (args == null) {
+            return "null";
+        }
+        StringBuilder text = new StringBuilder("[");
+        for (int i = 0; i < args.length; i++) {
+            if (i > 0) {
+                text.append(", ");
+            }
+            Object value = args[i];
+            if (value instanceof byte[] bytes) {
+                text.append("byte[").append(bytes.length).append(']');
+            } else if (value instanceof Object[] nested) {
+                text.append(briefArgs(nested));
+            } else {
+                String item = String.valueOf(value);
+                text.append(item.length() > 120 ? item.substring(0, 120) + "..." : item);
+            }
+        }
+        return text.append(']').toString();
+    }
+
     /** 普通授权只返回基础特性；高级项要等卡密授权后才「已注册」。 */
     private static String features() {
         if (FeaturePackUnlock.currentLevel() >= FeaturePackUnlock.LEVEL_PRO) {
@@ -151,41 +206,30 @@ public final class X3CallMethodHook implements HookCallback {
     }
 
     /**
-     * X3 参数里混着 wxid_friend_req / wxid_missing / wxid_invalid 这类内部占位符，
-     * 它们同样以 wxid_ 开头。真实 wxid 的尾部是字母数字，占位符尾部带下划线，
-     * 用这一点区分，避免机器码绑定到假账号。
+     * 150 的 args[1]、132 的 args[2] 是当前账号。
+     * 只从这两个固定位置取，避免把参数里的功能名/配置项当成账号。
      */
-    private static boolean isRealWxid(String text) {
-        if (text == null || !text.startsWith("wxid_") || text.length() < 13) {
-            return false;
-        }
-        return text.indexOf('_', 5) < 0;
-    }
-
-    /** 从 X 3.0 传入的参数里捞出当前登录 wxid，作为授权账号的权威来源。 */
-    private static void captureAccount(Object[] params) {
-        java.util.Set<String> found = new java.util.LinkedHashSet<>();
-        collectWxid(params, found);
-        if (found.isEmpty()) {
+    private static void captureAccount(int msgId, Object[] params) {
+        if (params == null) {
             return;
         }
-        String preferred = Activation.wxid();
-        if (preferred != null && found.contains(preferred)) {
-            Activation.setRuntimeWxid(preferred);
-            return;
+        String account = null;
+        if (msgId == MSG_FEATURE_QUERY && params.length > 1) {
+            account = asAccount(params[1]);
+        } else if (msgId == MSG_LICENSE_BLOB && params.length > 2) {
+            account = asAccount(params[2]);
         }
-        Activation.setRuntimeWxid(found.iterator().next());
+        if (account != null) {
+            Activation.setRuntimeWxid(account);
+        }
     }
 
-    private static void collectWxid(Object value, java.util.Set<String> out) {
-        if (value instanceof String text) {
-            if (isRealWxid(text)) {
-                out.add(text);
-            }
-        } else if (value instanceof Object[] array) {
-            for (Object item : array) {
-                collectWxid(item, out);
-            }
+    private static String asAccount(Object value) {
+        if (!(value instanceof String text)) {
+            return null;
         }
+        String trimmed = text.trim();
+        return github.shadowbaby.wechatxposed.hook.license.Wxid.isReal(trimmed)
+                ? trimmed : null;
     }
 }

@@ -51,7 +51,7 @@ public final class WalletVersionGuard {
                                 VersionWindow.exitWallet(framework, classLoader);
                             }
                         });
-                ModuleLogger.log("wallet version: hooked " + name);
+                ModuleLogger.debug("wallet version: hooked " + name);
             } catch (Throwable error) {
                 ModuleLogger.debug("wallet version: failed " + name);
             }

@@ -164,8 +164,48 @@ public abstract class FeaturePackRestorer {
             if (pack != BASE_PACK) {
                 ensureAliases(directory);
             }
+            pruneSidecars(directory, pack);
         } catch (Throwable error) {
             ModuleLogger.log(error);
+        }
+    }
+
+    /**
+     * 新版容器不再带 _c/_s，但旧版留下的签名文件不会被上面的恢复覆盖；
+     * 壳扫到「主文件 + 旧签名」会判定该包损坏，整批 fp 都不加载。
+     */
+    private static void pruneSidecars(File directory, Pack pack) {
+        java.util.Set<String> bases = new java.util.LinkedHashSet<>();
+        for (String name : pack.names) {
+            bases.add(hasSuffix(name) ? name.substring(0, name.length() - 2) : name);
+        }
+        for (String base : bases) {
+            if (!contains(pack.names, base + "_c")) {
+                prune(directory, base + "_c");
+            }
+            if (!contains(pack.names, base + "_s")) {
+                prune(directory, base + "_s");
+            }
+        }
+    }
+
+    private static boolean hasSuffix(String name) {
+        return name.endsWith("_c") || name.endsWith("_s");
+    }
+
+    private static boolean contains(String[] names, String target) {
+        for (String name : names) {
+            if (name.equals(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void prune(File directory, String name) {
+        File file = new File(directory, name);
+        if (file.isFile() && file.delete()) {
+            ModuleLogger.debug("feature packs: pruned stale " + name);
         }
     }
 

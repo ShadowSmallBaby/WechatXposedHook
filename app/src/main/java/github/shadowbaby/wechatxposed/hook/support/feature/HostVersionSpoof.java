@@ -32,8 +32,26 @@ public final class HostVersionSpoof {
         ChatMvvmGuard.install(framework, classLoader);
         VersionWindow.install(framework, classLoader);
         WalletVersionGuard.install(framework, classLoader);
-        MiniProgramVersionSpoof.install(framework, classLoader);
+        // 小程序启动窗口只在 appbrand 装：主进程的 launch 场景会被转账/支付误触发，
+        // 把 CGI 版本抬到 8.0.79 后服务端直接判系统繁忙。
         NetworkVersionSpoof.install(framework, classLoader);
         ModuleLogger.log("version spoof: installed (network-only)");
+    }
+
+    /**
+     * 小程序运行时（appbrand 进程）只装版本窗口。
+     *
+     * 小程序的启动场景和 getSystemInfo 都在这个进程里，主进程的窗口覆盖不到；
+     * 钱包/网络链路仍保持真版本，不在这里装。
+     */
+    public static synchronized void installAppBrand(HookFramework framework,
+            ClassLoader classLoader) {
+        if (installed) {
+            return;
+        }
+        installed = true;
+        VersionWindow.install(framework, classLoader);
+        MiniProgramVersionSpoof.install(framework, classLoader);
+        ModuleLogger.log("version spoof: appbrand window installed");
     }
 }

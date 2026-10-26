@@ -1,33 +1,35 @@
 package github.shadowbaby.wechatxposed.hook.deploy;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
 import github.shadowbaby.wechatxposed.hook.license.Activation;
 import github.shadowbaby.wechatxposed.hook.license.LicenseDatabase;
 import github.shadowbaby.wechatxposed.hook.license.LicenseInstaller;
+import github.shadowbaby.wechatxposed.hook.license.Wxid;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
-import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
-import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * 账号优先向壳要：先调壳自己的账号查询，再退回壳 CallMethod 传下来的值。
+ *
+ * 手动文件只是兜底：模块只读不写，内容由用户自己填写。
+ * 不扫描微信的 XML prefs，也不读 MMKV 库文件。
+ */
 public abstract class StartupCheck {
 
     private static final String FILES_DIR = "files";
 
     private static final String DATABASE_PATH = "databases/" + LicenseDatabase.DB_FILE_NAME;
 
-    private static final String PREFS_PATH = Secret.of(SecretConstants.PREFS_PATH);
+    private static final int BUFFER_SIZE = 256;
 
-    private static final String ACCOUNT_KEY = Secret.of(SecretConstants.ACCOUNT_KEY);
+    /** 查询结果在这个窗口内复用，避免 UI 线程反复反射。 */
+    private static final long SCAN_TTL_MS = 2000;
 
-    private static final String WXID_PREFIX = "wxid_";
+    private static volatile long lastScanAt = -SCAN_TTL_MS;
 
-    private static final int BUFFER_SIZE = 8 * 1024;
+    private static volatile String lastScanResult;
 
     private static volatile File weChatData;
 
@@ -43,7 +45,7 @@ public abstract class StartupCheck {
         long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
         long license = android.os.SystemClock.elapsedRealtime();
-        github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger.debug(
+        ModuleLogger.debug(
                 "perf: packs=" + (packs - start) + "ms, license=" + (license - packs) + "ms");
     }
 
@@ -56,118 +58,52 @@ public abstract class StartupCheck {
     }
 
     public static String readLoginAccount(File dataDir) {
-        String runtime = Activation.runtimeWxid();
-        if (runtime != null) {
-            return runtime;
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastScanAt < SCAN_TTL_MS) {
+            return lastScanResult;
         }
-        // 宿主进程的 Application Context 最权威；读不到再退到磁盘扫描。
-        String fromContext = readFromContext();
-        if (fromContext != null) {
-            return fromContext;
+        String account = Activation.probeShell();
+        if (account == null) {
+            account = Activation.runtimeWxid();
         }
-        File primary = new File(dataDir, PREFS_PATH);
-        ModuleLogger.log("login scan dir=" + dataDir + " pref=" + primary.isFile());
-        String account = scanLoginAccount(dataDir);
-        ModuleLogger.log("login account=" + (account == null ? "null" : account));
-        if (account != null) {
-            return account;
+        if (account == null) {
+            account = readManualAccount(dataDir);
         }
-        // 部分机型把登录账号写在设备加密目录。
-        String path = dataDir.getAbsolutePath();
-        String decrypted = path.replace("/data/user/", "/data/user_de/");
-        if (!decrypted.equals(path)) {
-            File deviceDir = new File(decrypted);
-            if (deviceDir.isDirectory()) {
-                String fallback = scanLoginAccount(deviceDir);
-                ModuleLogger.log("login de=" + fallback);
-                return fallback;
-            }
-        }
-        return null;
+        ModuleLogger.log("login account=" + Wxid.mask(account));
+        lastScanAt = android.os.SystemClock.elapsedRealtime();
+        lastScanResult = account;
+        return account;
     }
 
-    /** 从宿主 Application 的 SharedPreferences 直接读账号，自动适配双开/多用户。 */
-    private static String readFromContext() {
-        try {
-            Class<?> activityThread = Class.forName("android.app.ActivityThread");
-            Object application = activityThread
-                    .getDeclaredMethod("currentApplication").invoke(null);
-            if (!(application instanceof Context context)) {
-                return null;
-            }
-            SharedPreferences prefs = context.getSharedPreferences(
-                    "com.tencent.mm_preferences", Context.MODE_PRIVATE);
-            String account = prefs.getString("login_weixin_username", "");
-            return account != null && account.startsWith(WXID_PREFIX) ? account : null;
-        } catch (Throwable ignored) {
+    /**
+     * 用户手动填写的兜底账号。模块只读，不会覆盖或删除这个文件。
+     * 路径：{@code /data/user/<uid>/com.tencent.mm/files/wxh_account}
+     */
+    private static String readManualAccount(File dataDir) {
+        if (!Activation.isManualAccountEnabled()) {
             return null;
         }
-    }
-
-    private static String scanLoginAccount(File dataDir) {
-        String account = readAccount(new File(dataDir, PREFS_PATH));
-        if (account != null) {
-            return account;
-        }
-        // 部分微信版本把 login_weixin_username 写到其他 shared_prefs 文件。
-        File prefs = new File(dataDir, "shared_prefs");
-        File[] files = prefs.listFiles();
-        if (files == null) {
-            return null;
-        }
-        for (File file : files) {
-            if (!file.isFile() || !file.getName().endsWith(".xml")) {
-                continue;
-            }
-            account = readAccount(file);
-            if (account != null) {
-                return account;
-            }
-        }
-        return null;
-    }
-
-    private static String readAccount(File file) {
-        try {
-            String xml = readText(file);
-            if (xml == null) {
-                return null;
-            }
-            String account = extractAccount(xml, ACCOUNT_KEY);
-            if (account == null) {
-                account = extractAccount(xml, "last_login_weixin_username");
-            }
-            return account;
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
-    private static String extractAccount(String xml, String key) {
-        String marker = "name=\"" + key + "\"";
-        int position = xml.indexOf(marker);
-        int start = position < 0 ? -1 : xml.indexOf('>', position + marker.length());
-        int end = start < 0 ? -1 : xml.indexOf('<', start);
-        if (end <= start + 1) {
-            return null;
-        }
-        String account = xml.substring(start + 1, end).trim();
-        return account.startsWith(WXID_PREFIX) ? account : null;
-    }
-
-    private static String readText(File file) throws IOException {
-        if (!file.isFile()) {
-            return null;
-        }
-        try (InputStream input = new FileInputStream(file)) {
-            StringBuilder text = new StringBuilder();
+        try (InputStream input = new FileInputStream(
+                new File(dataDir, "files/" + Activation.ACCOUNT_CACHE))) {
             byte[] buffer = new byte[BUFFER_SIZE];
-            int read;
-            while ((read = input.read(buffer)) > 0) {
-                text.append(new String(buffer, 0, read, StandardCharsets.UTF_8));
+            int read = input.read(buffer);
+            if (read <= 0) {
+                return null;
             }
-            return text.toString();
+            String value = new String(buffer, 0, read, StandardCharsets.UTF_8).trim();
+            if (Wxid.isReal(value)) {
+                ModuleLogger.log("login manual account");
+                return value;
+            }
+        } catch (Throwable ignored) {
+            // 文件不存在或不可读时按未登录处理
         }
+        return null;
     }
 
+    /** 账号仍然为空时输出一条摘要，便于定位（不含账号本身）。 */
+    public static String diagnose(File dataDir) {
+        return "shell=" + (Activation.runtimeWxid() != null)
+                + " manual=" + new File(dataDir, "files/" + Activation.ACCOUNT_CACHE).isFile();
+    }
 }

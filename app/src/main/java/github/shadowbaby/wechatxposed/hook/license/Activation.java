@@ -20,6 +20,9 @@ public final class Activation {
     public static final int LEVEL_BASE = 1;
     public static final int LEVEL_EXT = 2;
 
+    /** 文件层读不到账号时的落盘缓存（位于微信 files 目录）。 */
+    public static final String ACCOUNT_CACHE = "wxh_account";
+
     private static volatile String group;
 
     /** 群号由 native 解密，避免明文常量留在 dex。 */
@@ -38,9 +41,52 @@ public final class Activation {
 
     private static volatile int level = -1;
 
-    private static volatile String cachedWxid;
 
     private static volatile String runtimeWxid;
+
+    private static volatile String probedWxid;
+
+    /** 是否读取用户手动填写的账号兜底文件；模块只读不写，默认开启。 */
+    private static volatile boolean manualAccountEnabled = true;
+
+    public static void setManualAccountEnabled(boolean enabled) {
+        manualAccountEnabled = enabled;
+    }
+
+    public static boolean isManualAccountEnabled() {
+        return manualAccountEnabled;
+    }
+
+    /** 壳（功能 dex）的 ClassLoader，用来调用壳自己的账号查询。 */
+    private static volatile ClassLoader shellLoader;
+
+    public static void setShellLoader(ClassLoader loader) {
+        if (loader != null) {
+            shellLoader = loader;
+        }
+    }
+
+    /**
+     * 壳的 c.ˊﹶ.ˉˎ.יⁱ() 会依次尝试反射微信的账号 API，不依赖 prefs/MMKV。
+     * 这里直接复用壳的实现，作为最稳的账号来源。
+     */
+    public static String probeShell() {
+        ClassLoader loader = shellLoader;
+        if (loader == null) {
+            return null;
+        }
+        try {
+            Class<?> clazz = Class.forName("c.ˊﹶ.ˉˎ", false, loader);
+            Object value = clazz.getDeclaredMethod("יⁱ").invoke(null);
+            if (value instanceof String text && Wxid.isReal(text)) {
+                probedWxid = text;
+                ModuleLogger.log("activation: account from shell api");
+                return text;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
 
     private Activation() {
     }
@@ -58,14 +104,13 @@ public final class Activation {
             return;
         }
         String account = value.trim();
-        if (!account.startsWith("wxid_")
-                || account.equals(runtimeWxid)) {
+        // 账号可能是自定义微信号，不再只认 wxid_ 前缀。
+        if (!Wxid.isReal(account) || account.equals(runtimeWxid)) {
             return;
         }
         runtimeWxid = account;
-        cachedWxid = account;
         level = -1;
-        ModuleLogger.log("activation: runtime account=" + account);
+        ModuleLogger.log("activation: runtime account=" + Wxid.mask(account));
         try {
             if (dataDir != null) {
                 StartupCheck.run(dataDir, account);
@@ -110,21 +155,12 @@ public final class Activation {
         return level() >= LEVEL_EXT;
     }
 
+    /** 统一走 StartupCheck 的顺序：壳查询 → 壳 CallMethod → 手动兜底。 */
     public static String wxid() {
-        String runtime = runtimeWxid;
-        if (runtime != null) {
-            return runtime;
+        if (dataDir == null) {
+            return runtimeWxid;
         }
-        String cached = cachedWxid;
-        if (cached != null) {
-            return cached;
-        }
-        String account = dataDir == null ? null
-                : StartupCheck.readLoginAccount(dataDir);
-        if (account != null && !account.isEmpty()) {
-            cachedWxid = account;
-        }
-        return account;
+        return StartupCheck.readLoginAccount(dataDir);
     }
 
     private static volatile String bindingFingerprint;
