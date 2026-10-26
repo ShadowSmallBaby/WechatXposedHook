@@ -127,13 +127,12 @@ public final class HookBootstrap {
             } catch (Throwable error) {
                 ModuleLogger.log(error);
             }
-            if (github.shadowbaby.wechatxposed.hook.BuildConfig.VERBOSE_LOG) {
-                try {
-                    github.shadowbaby.wechatxposed.hook.license.CardActivation
-                            .install(framework, classLoader);
-                } catch (Throwable error) {
-                    ModuleLogger.log(error);
-                }
+            // 卡密激活：正式包（VERBOSE_LOG=false）也必须可用。
+            try {
+                github.shadowbaby.wechatxposed.hook.license.CardActivation
+                        .install(framework, classLoader);
+            } catch (Throwable error) {
+                ModuleLogger.log(error);
             }
             // MVVM 守卫只修正服务端下发的聊天配置，属于稳定性 hook；
             // 未授权也必须装，否则微信恢复到聊天页会直接 NPE。
