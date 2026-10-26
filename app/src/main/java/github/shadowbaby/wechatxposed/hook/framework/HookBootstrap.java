@@ -157,6 +157,12 @@ public final class HookBootstrap {
             boolean trusted = certOk && runtimeOk;
             // 授权守卫：读取/初始化项目授权级别，并把数据库功能表对齐到该级别。
             int level = FeaturePackUnlock.syncLevel(data, trusted);
+            if (level < FeaturePackUnlock.LEVEL_BASE) {
+                // 账号还没解析出来时 syncLevel 会直接早退，但只读查询能读到库里
+                // 已有的账号行。漏了这步，授权 hook 会按未授权装死，
+                // 壳随后把 themes/base/donation/vidurlparser 全部关掉。
+                level = Math.max(level, FeaturePackUnlock.readLevel(data));
+            }
             // 普通授权也要装授权守卫：不装的话壳按未授权处理，
             // 运行中会把 themes/base/donation/vidurlparser 逐个 closed。
             // VIP/专业 与 sf/mf/af 扩展另由 msg 150 的标签查询和功能表分级控制。

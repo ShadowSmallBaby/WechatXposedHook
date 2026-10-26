@@ -124,13 +124,17 @@ public final class FeaturePackUnlock {
                     || AES_MODE.isEmpty() || AES_KEY.isEmpty()) {
                 return LEVEL_NONE;
             }
-            String account = StartupCheck.readLoginAccount(dataDir);
-            if (account == null || account.isEmpty()) {
-                return LEVEL_NONE;
-            }
             File file = new File(dataDir, DB_DIR + DB_NAME);
             if (!file.isFile()) {
                 return LEVEL_NONE;
+            }
+            String account = StartupCheck.readLoginAccount(dataDir);
+            if (account == null || account.isEmpty()) {
+                // 启动早期壳还没加载完，账号必然解析不出来。这时按普通授权处理：
+                // 普通授权只是点一下协议，代价最低；判成 0 会让壳把扩展包清掉、
+                // 授权绕过也不装，运行中直接把功能全部关掉。
+                // 账号到达后 setRuntimeWxid 会重算，高级授权再补恢复扩展包。
+                return LEVEL_BASE;
             }
             SQLiteDatabase database = SQLiteDatabase.openDatabase(file.getPath(), null,
                     SQLiteDatabase.OPEN_READONLY);
@@ -211,6 +215,10 @@ public final class FeaturePackUnlock {
                         // 字段被外部写坏时按未授权处理，避免误开高级功能。
                         level = LEVEL_NONE;
                     }
+                    // 显式授予（target >= 0）刚刚验过签，只有启动路径需要复核。
+                    if (target < 0 && level >= LEVEL_PRO) {
+                        level = recheckCard(database, account, level);
+                    }
                 }
                 if (target >= 0 && target != level) {
                     level = target;
@@ -284,6 +292,45 @@ public final class FeaturePackUnlock {
             setValue(database, account, TAG_FP_ASYNC, "STRING", encrypt(wantAsync));
             ModuleLogger.log("license guard: fp_async -> " + wantAsync);
         }
+    }
+
+    /**
+     * 启动时复核高级授权。
+     *
+     * 数据库里的 WXH_LEVEL 只是个整数：改库、整目录迁移到新设备、卡密到期
+     * 都不会被发现。这里用 WXH_LIC 第三段的卡密重新验一次签，验不过就落回
+     * 普通授权；公开码时代遗留的「群号当卡密」也会在这里自然失效。
+     */
+    private static int recheckCard(SQLiteDatabase database, String account, int level)
+            throws Exception {
+        String lic = readTag(database, account, LIC_TAG);
+        String card = licPart(lic, 2);
+        if (Activation.verifyCode(card, account) >= LEVEL_PRO) {
+            return level;
+        }
+        // 机器码变了说明换了设备，或构建时证书固定值丢了（机器码哈希少一段）。
+        // 后者属于发布事故，日志里单独标出来便于定位。
+        String now = Activation.machineCode(account);
+        String recorded = licPart(lic, 1);
+        ModuleLogger.log("license guard: card recheck failed"
+                + " card=" + (card == null ? "none" : card.length() + " chars")
+                + " machine=" + (now != null && now.equals(recorded) ? "same" : "changed")
+                + ", drop to base");
+        setValue(database, account, LEVEL_TAG, "INT", encrypt(String.valueOf(LEVEL_BASE)));
+        return LEVEL_BASE;
+    }
+
+    /** 从 WXH_LIC「wxid,机器码,卡密」里取第 index 段（0 起）。 */
+    private static String licPart(String lic, int index) {
+        if (lic == null || lic.isEmpty()) {
+            return null;
+        }
+        String[] parts = lic.split(",", 3);
+        if (parts.length <= index) {
+            return null;
+        }
+        String value = parts[index].trim();
+        return value.isEmpty() ? null : value;
     }
 
     /**

@@ -30,15 +30,9 @@ android {
     signingConfigs {
         release {
             if (hasSigning) {
-                def keystore = layout.buildDirectory.file('keystore/release.jks').get().asFile
-                keystore.parentFile.mkdirs()
-                try {
-                    keystore.bytes = Base64.getDecoder().decode(ksBase64.replaceAll('\\s', ''))
-                } catch (IllegalArgumentException error) {
-                    throw new GradleException('WXH_KEYSTORE_BASE64 不是合法 Base64: '
-                            + error.message)
-                }
-                storeFile keystore
+                // 只登记路径；实际还原放在 prepareKeystore 任务里。
+                // 配置阶段写文件会被紧随其后的 clean 删掉，签名时报文件缺失。
+                storeFile layout.buildDirectory.file('keystore/release.jks').get().asFile
                 storePassword signingStorePassword
                 keyAlias signingKeyAlias
                 keyPassword signingKeyPassword
@@ -164,44 +158,84 @@ def signingCertSha256 = { ->
         return certPinOverride.toLowerCase()
     }
     try {
-        File store
+        byte[] material
         String storePassword
         String alias
         if (hasSigning) {
-            store = layout.buildDirectory.file('keystore/release.jks').get().asFile
+            // 直接从 WXH_KEYSTORE_BASE64 读字节流，不碰 build/keystore/release.jks。
+            // 那个文件由 signingConfigs 在配置阶段写出，`clean assemble` 会被 clean
+            // 删掉，证书固定值随之静默变成空串——机器码的哈希少一段，老卡密全部失效。
+            material = Base64.getDecoder().decode(ksBase64.replaceAll('\\s', ''))
             storePassword = signingStorePassword
             alias = signingKeyAlias
         } else {
-            store = new File(System.getProperty('user.home'), '.android/debug.keystore')
+            File store = new File(System.getProperty('user.home'), '.android/debug.keystore')
+            if (!store.isFile()) {
+                return ''
+            }
+            material = store.bytes
             storePassword = 'android'
             alias = 'androiddebugkey'
-        }
-        if (!store.isFile()) {
-            return ''
         }
         java.security.KeyStore keyStore = null
         for (String type : ['JKS', 'PKCS12']) {
             try {
                 def candidate = java.security.KeyStore.getInstance(type)
-                candidate.load(new java.io.FileInputStream(store), storePassword.toCharArray())
+                candidate.load(new java.io.ByteArrayInputStream(material),
+                        storePassword.toCharArray())
                 keyStore = candidate
                 break
             } catch (Throwable ignored) {
             }
         }
         if (keyStore == null) {
+            // 正式签名算不出指纹说明密钥库有问题；静默留空会直接改变机器码，必须中断。
+            if (hasSigning) {
+                throw new GradleException('无法打开签名密钥库，证书固定值不可用')
+            }
             return ''
         }
         def certificate = keyStore.getCertificate(alias)
         if (certificate == null) {
+            if (hasSigning) {
+                throw new GradleException('密钥库缺少别名 ' + alias + ' 的证书')
+            }
             return ''
         }
         return java.security.MessageDigest.getInstance('SHA-256')
                 .digest(certificate.encoded)
                 .collect { String.format('%02x', it) }.join()
+    } catch (GradleException error) {
+        throw error
     } catch (Throwable error) {
         logger.lifecycle('无法计算签名证书指纹: ' + error.message)
         return ''
+    }
+}
+
+// 密钥库在任务执行期从 WXH_KEYSTORE_BASE64 还原。
+// clean 与 assemble 同一次调用时，配置阶段写出的文件会被 clean 删掉，
+// 这里保证签名任务真正跑之前文件一定存在。
+def prepareKeystore = tasks.register('prepareKeystore') {
+    def target = layout.buildDirectory.file('keystore/release.jks')
+    outputs.file(target)
+    onlyIf { hasSigning }
+    doLast {
+        File file = target.get().asFile
+        file.parentFile.mkdirs()
+        try {
+            file.bytes = Base64.getDecoder().decode(ksBase64.replaceAll('\\s', ''))
+        } catch (IllegalArgumentException error) {
+            throw new GradleException('WXH_KEYSTORE_BASE64 不是合法 Base64: '
+                    + error.message)
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (hasSigning
+            && (task.name.startsWith('package') || task.name.startsWith('validateSigning'))) {
+        task.dependsOn(prepareKeystore)
     }
 }
 

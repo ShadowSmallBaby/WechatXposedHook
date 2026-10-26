@@ -9,9 +9,9 @@ import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.io.File;
 
 /**
- * 离线授权：公开码启用基础功能，机器码短令牌启用 sf/mf/af。
+ * 离线授权：免责声明页写普通授权，机器码绑定的卡密写 sf/mf/af。
  *
- * 机器码、公开码比对、短令牌 HMAC、mid/wxid/有效期全部在 native；
+ * 机器码、Ed25519 验签、mid/wxid/有效期全部在 native；
  * Java 只负责读取授权文件、保存用户承诺和展示状态。
  */
 public final class Activation {
@@ -80,6 +80,8 @@ public final class Activation {
             Object value = clazz.getDeclaredMethod("יⁱ").invoke(null);
             if (value instanceof String text && Wxid.isReal(text)) {
                 probedWxid = text;
+                // 之前缓存的多半是启动早期的 null，必须让它重新解析。
+                StartupCheck.invalidate();
                 ModuleLogger.log("activation: account from shell api");
                 return text;
             }
@@ -110,12 +112,19 @@ public final class Activation {
         }
         runtimeWxid = account;
         level = -1;
+        // 必须先失效缓存：启动时的那次查询大概率是 null，
+        // 它在 TTL 内会把授权重算挡回去，级别一直停在 0。
+        StartupCheck.invalidate();
         ModuleLogger.log("activation: runtime account=" + Wxid.mask(account));
         try {
             if (dataDir != null) {
                 StartupCheck.run(dataDir, account);
             }
             FeaturePackUnlock.retry();
+            // 启动早期壳加载 core dex 时账号还没到，授权绕过可能被跳过；
+            // 现在账号确定了，按最新级别补装一次。
+            github.shadowbaby.wechatxposed.hook.loader.dex.InMemoryDexLoadHook
+                    .retryLicensed();
         } catch (Throwable error) {
             ModuleLogger.log("activation: runtime retry " + error);
         }
@@ -189,8 +198,12 @@ public final class Activation {
     }
 
     public static String machineCode() {
+        return machineCode(wxid());
+    }
+
+    /** 用指定账号算机器码；授权守卫已经有账号，走这里可以避免重复反射。 */
+    public static String machineCode(String account) {
         try {
-            String account = wxid();
             if (account == null || account.isEmpty()) {
                 return null;
             }
@@ -205,12 +218,20 @@ public final class Activation {
 
     /** 校验授权码，返回 LEVEL_NONE / LEVEL_BASE / LEVEL_EXT（全部在 native）。 */
     public static int verifyCode(String code) {
+        return verifyCode(code, wxid());
+    }
+
+    /**
+     * 用指定账号复核授权码。
+     *
+     * 启动守卫手里已经有解析好的账号，走这个入口可以避免再次反射壳接口。
+     */
+    public static int verifyCode(String code, String account) {
         try {
             if (code == null || code.trim().isEmpty()) {
                 return LEVEL_NONE;
             }
-            String account = wxid();
-            // 公开码不依赖 wxid；机器码在 native 里用空 wxid 会自然校验失败。
+            // 卡密与机器码、wxid 绑定；账号为空时 mid 对不上，验签必然失败。
             return Secret.activationLevel(code.trim(), bindingFingerprint(), bindingDevice(),
                     Secret.of(SecretConstants.MODULE_CERT_SHA256),
                     account == null ? "" : account,

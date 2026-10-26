@@ -46,19 +46,31 @@ public final class CardActivation {
                     if (code == null || code.isEmpty()) {
                         return;
                     }
-                    boolean ok = Activation.verifyCode(code) > Activation.LEVEL_NONE;
+                    int granted = Activation.verifyCode(code);
+                    boolean ok = granted > Activation.LEVEL_NONE;
                     ModuleLogger.log("card activation: " + (ok ? "success" : "failed")
+                            + " level=" + granted
                             + " len=" + code.length()
                             + " wxid=" + Activation.wxid());
                     android.content.Context context = textView.getContext();
                     if (ok) {
-                        toast(context, "高级功能已激活，即将重启微信");
+                        // 卡片只认卡密：payload 的 features 位决定普通还是高级。
+                        // 按真实级别写库，别把基础码写成高级。
+                        boolean extended = granted >= Activation.LEVEL_EXT;
+                        toast(context, extended
+                                ? "高级功能已激活，即将重启微信"
+                                : "基础功能已激活，即将重启微信");
                         try {
-                            // 高级激活：写项目授权级别，功能表随之下发 sf/mf/af。
+                            int wanted = extended
+                                    ? github.shadowbaby.wechatxposed.hook.support.pack
+                                            .FeaturePackUnlock.LEVEL_PRO
+                                    : github.shadowbaby.wechatxposed.hook.support.pack
+                                            .FeaturePackUnlock.LEVEL_BASE;
+                            // 只升不降：已付费用户误输低级卡不该丢掉扩展。
+                            int target = Math.max(Activation.level(), wanted);
                             github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
-                                    .grant(Activation.dataDir(),
-                                            github.shadowbaby.wechatxposed.hook.support.pack
-                                                    .FeaturePackUnlock.LEVEL_PRO, code);
+                                    .grant(Activation.dataDir(), target,
+                                            extended ? code : null);
                         } catch (Throwable error) {
                             ModuleLogger.log(error);
                         }

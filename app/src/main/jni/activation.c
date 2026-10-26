@@ -1,8 +1,9 @@
 /*
- * 授权判定：机器码、公开码、短授权令牌。
+ * 授权判定：机器码绑定的 Ed25519 短令牌。
  *
- * 短令牌 24B：payload(8B) + HMAC-SHA256(截断 16B)，
- * Base64URL 后 32 字符；密钥由 native 主密钥派生。
+ * 令牌 72B：payload(8B) + Ed25519 签名(64B)，hex 后 144 字符；
+ * 签名覆盖 "WXH1|<机器码>|<wxid>|" + payload。
+ * 普通授权不走这里，由免责声明页面写入。
  */
 #include <jni.h>
 #include <stdint.h>
@@ -25,7 +26,6 @@ static const uint8_t ED25519_PUBLIC_KEY[ED25519_PUBLIC_KEY_BYTES] = {
         0xb1, 0xb3, 0xd5, 0x04, 0x0a, 0x06, 0x12, 0xa2,
 };
 
-#define ACT_PUBLIC_VALUE_INDEX 6
 #define ACT_PAYLOAD_BYTES 8
 
 static const uint8_t ACT_TABLE_KEY[16] = {
@@ -200,26 +200,14 @@ static jint activation_level(JNIEnv *env, jclass type, jstring code,
         return 0;
     }
     size_t length = (size_t) (*env)->GetStringUTFLength(env, code);
-    char public_code[64];
-    act_table_decode(&PACK_DB_TABLE[ACT_PUBLIC_VALUE_INDEX],
-                     public_code, sizeof(public_code));
-    if (strlen(public_code) > 0
-        && strlen(public_code) == length
-        && memcmp(public_code, text, length) == 0) {
-        (*env)->ReleaseStringUTFChars(env, code, text);
-        memset(public_code, 0, sizeof(public_code));
-        return 1;
-    }
-    /* 公开码不依赖 wxid；机器码路径必须有 wxid。 */
+    /* 只认机器码绑定的授权令牌：普通授权走免责声明，扩展走卡密，没有公开码通道。 */
     if (wxid == NULL) {
         (*env)->ReleaseStringUTFChars(env, code, text);
-        memset(public_code, 0, sizeof(public_code));
         return 0;
     }
     jstring expected = machine_code(env, fingerprint, device, certificate, wxid);
     if (expected == NULL) {
         (*env)->ReleaseStringUTFChars(env, code, text);
-        memset(public_code, 0, sizeof(public_code));
         return 0;
     }
     const char *mid = (*env)->GetStringUTFChars(env, expected, NULL);
@@ -238,7 +226,6 @@ static jint activation_level(JNIEnv *env, jclass type, jstring code,
     }
     (*env)->DeleteLocalRef(env, expected);
     (*env)->ReleaseStringUTFChars(env, code, text);
-    memset(public_code, 0, sizeof(public_code));
     return level;
 }
 

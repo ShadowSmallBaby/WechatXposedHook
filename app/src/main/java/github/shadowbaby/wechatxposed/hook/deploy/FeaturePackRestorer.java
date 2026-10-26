@@ -47,6 +47,9 @@ public abstract class FeaturePackRestorer {
 
     private static boolean checked;
 
+    /** 上次跑的时候是否恢复了扩展包。账号晚到时先按未授权跑，之后要能补回来。 */
+    private static boolean extensionsReady;
+
     public static synchronized void ensureOnce(File filesDir) {
         ensureOnce(filesDir, true);
     }
@@ -56,10 +59,13 @@ public abstract class FeaturePackRestorer {
      *                        否则壳扫描目录会加载 sf/mf/af。
      */
     public static synchronized void ensureOnce(File filesDir, boolean allowExtensions) {
-        if (checked) {
+        // 授权级别在启动早期可能还读不出来，先按未授权跑过一次之后，
+        // 级别涨上来必须允许补恢复扩展包；否则壳扫目录时看不到 sf/mf/af。
+        if (checked && (extensionsReady || !allowExtensions)) {
             return;
         }
         checked = true;
+        extensionsReady = allowExtensions;
         if (PACKS.length == 0) {
             ModuleLogger.log("feature packs: native plan unavailable");
             return;

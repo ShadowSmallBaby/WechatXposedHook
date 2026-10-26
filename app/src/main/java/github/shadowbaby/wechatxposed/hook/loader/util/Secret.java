@@ -132,7 +132,7 @@ public final class Secret {
     private static native String nativeMachineCode(String fingerprint, String device,
             String certificate, String wxid);
 
-    /** 公开码/短令牌判定：0 未授权、1 基础、2 扩展。 */
+    /** 卡密判定：0 未授权、1 基础、2 扩展。 */
     public static int activationLevel(String code, String fingerprint, String device,
             String certificate, String wxid, long now) {
         if (!isNativeAvailable()) {

@@ -76,6 +76,17 @@ public abstract class StartupCheck {
     }
 
     /**
+     * 账号来源刚发生变化（壳查询成功 / CallMethod 传下来）时强制下次重新解析。
+     *
+     * 启动时壳还没加载完，第一次查询必然是 null；结果被 TTL 缓存住以后，
+     * 紧接着到达的账号会命中这条 null，授权重算直接早退，级别停在 0。
+     */
+    public static void invalidate() {
+        lastScanAt = -SCAN_TTL_MS;
+        lastScanResult = null;
+    }
+
+    /**
      * 用户手动填写的兜底账号。模块只读，不会覆盖或删除这个文件。
      * 路径：{@code /data/user/<uid>/com.tencent.mm/files/wxh_account}
      */
