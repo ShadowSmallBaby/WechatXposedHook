@@ -34,7 +34,12 @@ public abstract class StartupCheck {
     public static void run(File dataDir, String account) {
         weChatData = dataDir;
         long start = android.os.SystemClock.elapsedRealtime();
-        FeaturePackRestorer.ensureOnce(new File(dataDir, FILES_DIR));
+        // 先只读授权级别：普通/未授权时自解不恢复扩展包，壳就不会加载 sf/mf/af。
+        int level = github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
+                .readLevel(dataDir);
+        FeaturePackRestorer.ensureOnce(new File(dataDir, FILES_DIR),
+                level >= github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
+                        .LEVEL_PRO);
         long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
         long license = android.os.SystemClock.elapsedRealtime();

@@ -49,6 +49,14 @@ public abstract class FeaturePackRestorer {
     private static boolean checked;
 
     public static synchronized void ensureOnce(File filesDir) {
+        ensureOnce(filesDir, true);
+    }
+
+    /**
+     * @param allowExtensions 普通/未授权时跳过并清掉扩展包（x30-ext），
+     *                        否则壳扫描目录会加载 sf/mf/af。
+     */
+    public static synchronized void ensureOnce(File filesDir, boolean allowExtensions) {
         if (checked) {
             return;
         }
@@ -63,10 +71,30 @@ public abstract class FeaturePackRestorer {
         }
         boolean force = !matchesVersion(filesDir);
         for (Pack pack : PACKS) {
+            if (!allowExtensions && pack.name.endsWith("-ext")) {
+                purge(filesDir, pack);
+                continue;
+            }
             ensure(filesDir, pack, force);
         }
         if (force) {
             writeVersion(filesDir);
+        }
+    }
+
+    /** 删除扩展包文件，避免壳扫描目录时继续加载。 */
+    private static void purge(File filesDir, Pack pack) {
+        File directory = new File(filesDir, pack.dirName);
+        int removed = 0;
+        for (String name : pack.names) {
+            File file = new File(directory, name);
+            if (file.isFile() && file.delete()) {
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            ModuleLogger.log("feature packs[" + pack.name + "]: purged " + removed
+                    + " file(s) (no extension license)");
         }
     }
 
@@ -245,11 +273,23 @@ public abstract class FeaturePackRestorer {
         }
     }
 
+    /** 先写临时文件再 rename，避免中断留下半截文件被当成完整包。 */
     private static void writePart(File directory, String name, byte[] data,
             int offset, int length) throws IOException {
         File target = new File(directory, name);
-        try (OutputStream output = new FileOutputStream(target)) {
+        File temp = new File(directory, name + ".tmp");
+        try (java.io.FileOutputStream output = new java.io.FileOutputStream(temp)) {
             output.write(data, offset, length);
+            output.flush();
+            output.getFD().sync();
+        }
+        if (!temp.renameTo(target)) {
+            if (!target.delete() || !temp.renameTo(target)) {
+                throw new IOException("feature packs: rename failed " + name);
+            }
+        }
+        if (target.length() != length) {
+            throw new IOException("feature packs: size mismatch " + name);
         }
         if (!target.setReadable(true, false)) {
             ModuleLogger.log(LOG_NOT_READABLE + name);

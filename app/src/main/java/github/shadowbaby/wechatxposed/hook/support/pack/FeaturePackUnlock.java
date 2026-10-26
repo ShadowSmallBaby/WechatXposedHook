@@ -91,6 +91,41 @@ public final class FeaturePackUnlock {
      * 数据库里没有项目字段（全新库或原版库）时按原版免费版初始化：
      * 四个基础功能 + 协议待确认。返回当前级别，调用方据此决定装不装授权绕过。
      */
+    /**
+     * 只读授权级别，不写库；供自解决定是否恢复扩展包。
+     * 数据库还没建立或字段缺失时按未授权处理。
+     */
+    public static synchronized int readLevel(File dataDir) {
+        try {
+            if (DB_NAME.isEmpty() || DB_KEY.isEmpty()
+                    || AES_MODE.isEmpty() || AES_KEY.isEmpty()) {
+                return LEVEL_NONE;
+            }
+            String account = StartupCheck.readLoginAccount(dataDir);
+            if (account == null || account.isEmpty()) {
+                return LEVEL_NONE;
+            }
+            File file = new File(dataDir, DB_DIR + DB_NAME);
+            if (!file.isFile()) {
+                return LEVEL_NONE;
+            }
+            SQLiteDatabase database = SQLiteDatabase.openDatabase(file.getPath(), null,
+                    SQLiteDatabase.OPEN_READONLY);
+            try {
+                String stored = readTag(database, account, LEVEL_TAG);
+                if (stored == null) {
+                    return LEVEL_NONE;
+                }
+                int level = parseInt(stored, LEVEL_NONE);
+                return level < LEVEL_NONE || level > LEVEL_PRO ? LEVEL_NONE : level;
+            } finally {
+                database.close();
+            }
+        } catch (Throwable error) {
+            return LEVEL_NONE;
+        }
+    }
+
     public static synchronized int syncLevel(File dataDir, boolean trusted) {
         return guard(dataDir, -1, trusted);
     }
