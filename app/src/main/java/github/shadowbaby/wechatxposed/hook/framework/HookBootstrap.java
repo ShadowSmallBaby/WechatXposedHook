@@ -99,6 +99,7 @@ public final class HookBootstrap {
         AppBrandCacheRepair.install();
         if (isAppBrandProcess(processName)) {
             Activation.install(new File(dataDir));
+            Activation.setHostLoader(classLoader);
             if (!Activation.isBaseAllowed()) {
                 return;
             }
@@ -127,6 +128,7 @@ public final class HookBootstrap {
             }
             FeatureDexInjector.setFilesDir(new File(data, "files"));
             Activation.install(data);
+            Activation.setHostLoader(classLoader);
             ModuleLogger.log("module " + BuildConfig.VERSION_NAME
                     + " (" + BuildConfig.VERSION_CODE + ")");
             DisclaimerSkin.install(framework, classLoader);
@@ -156,24 +158,25 @@ public final class HookBootstrap {
             boolean runtimeOk = RuntimeGuard.verify();
             boolean trusted = certOk && runtimeOk;
             // 授权守卫：读取/初始化项目授权级别，并把数据库功能表对齐到该级别。
-            int level = FeaturePackUnlock.syncLevel(data, trusted);
-            if (level < FeaturePackUnlock.LEVEL_BASE) {
-                // 账号还没解析出来时 syncLevel 会直接早退，但只读查询能读到库里
-                // 已有的账号行。漏了这步，授权 hook 会按未授权装死，
-                // 壳随后把 themes/base/donation/vidurlparser 全部关掉。
-                level = Math.max(level, FeaturePackUnlock.readLevel(data));
-            }
+            // syncLevel 是严格判定：账号还没解析出来时直接返回 0，也不会写库。
+            int stored = FeaturePackUnlock.syncLevel(data, trusted);
+            // 只读查询的兜底值只用于展示和包恢复，绝不能拿来放行授权：
+            // 账号未知时它返回普通授权，壳会跳过免责声明，最后因为功能表为空
+            // 给出一个点得进去但没有内容的「更多」页。
+            int level = Math.max(stored, FeaturePackUnlock.readLevel(data));
             // 普通授权也要装授权守卫：不装的话壳按未授权处理，
             // 运行中会把 themes/base/donation/vidurlparser 逐个 closed。
             // VIP/专业 与 sf/mf/af 扩展另由 msg 150 的标签查询和功能表分级控制。
-            boolean licensed = level >= FeaturePackUnlock.LEVEL_BASE;
-            boolean extensions = trusted && level >= FeaturePackUnlock.LEVEL_PRO;
+            // licensed 只能用严格判定的 stored：用兜底值等于替用户签了协议。
+            boolean licensed = stored >= FeaturePackUnlock.LEVEL_BASE;
+            boolean extensions = trusted && stored >= FeaturePackUnlock.LEVEL_PRO;
             if (BuildConfig.VERBOSE_LOG) {
                 // 壳的更新/公告域名解析失败时只能看到一行日志，先抓调用栈定位。
                 ShellHostProbe.install(framework);
             }
             ModuleLogger.log("activation: shell=on level=" + level
-                    + " licensed=" + licensed);
+                    + " licensed=" + licensed
+                    + (stored < level ? " (account pending)" : ""));
             installZygote(framework, ModuleApk.modulePath(), licensed);
             ModuleLogger.log("integrity: cert=" + certOk
                     + " runtime=" + runtimeOk + " ext=" + extensions);
@@ -184,29 +187,49 @@ public final class HookBootstrap {
             PackGuard.install(framework);
             NoticeSuppressor.install(framework);
             installHostVersionSpoof(framework, classLoader, dataDir, true);
-            // MMKV 在启动早期可能还没初始化；延迟再探一次，文件层读不到时补上账号。
-            // 探测会反射/读若干文件，放到子线程，别压主线程。
-            try {
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
-                        () -> new Thread(HookBootstrap::probeAccount, "wxh-probe").start(),
-                        5000);
-            } catch (Throwable error) {
-                ModuleLogger.log(error);
-            }
+            // 微信存储和壳的账号接口都要等宿主初始化完才可用：先探一次，
+            // 拿不到就按 3 秒间隔补探。探测会反射/读文件，放子线程别压主线程。
+            scheduleProbe(5000L);
         }
     }
 
-    /** 壳加载完成后补问一次账号：成功就落盘并触发授权重算。 */
+    /** 补探轮数上限：账号到手后就不再排；一直拿不到也别无限跑线程。 */
+    private static final java.util.concurrent.atomic.AtomicInteger PROBE_ROUNDS =
+            new java.util.concurrent.atomic.AtomicInteger();
+
+    private static final int PROBE_MAX_ROUNDS = 6;
+
+    private static final long PROBE_INTERVAL_MS = 3000L;
+
+    private static void scheduleProbe(long delayMs) {
+        if (PROBE_ROUNDS.incrementAndGet() > PROBE_MAX_ROUNDS) {
+            return;
+        }
+        try {
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                    () -> new Thread(HookBootstrap::probeAccount, "wxh-probe").start(),
+                    delayMs);
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
+        }
+    }
+
+    /** 宿主初始化完成后补问账号：成功就落盘并触发授权重算。 */
     private static void probeAccount() {
         try {
-            String account = Activation.probeShell();
+            String account = Activation.probeWeChat();
+            if (account == null) {
+                account = Activation.probeShell();
+            }
             if (account != null) {
                 Activation.setRuntimeWxid(account);
                 return;
             }
+            // 微信存储可能还没恢复完，隔几秒再补；账号到位后这里自然不再排队。
+            scheduleProbe(PROBE_INTERVAL_MS);
             if (Activation.wxid() == null) {
                 File dataDir = Activation.dataDir();
-                if (dataDir != null) {
+                if (dataDir != null && PROBE_ROUNDS.get() >= PROBE_MAX_ROUNDS) {
                     ModuleLogger.log("login diag: " + StartupCheck.diagnose(dataDir));
                 }
             }

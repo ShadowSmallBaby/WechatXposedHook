@@ -387,12 +387,22 @@ public final class DisclaimerSkin implements HookCallback {
         if (dataDir == null) {
             return;
         }
-        github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
-                .grant(dataDir,
-                        github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
-                                .LEVEL_BASE);
-        ModuleLogger.log("disclaimer: base granted");
+        int granted =
+                github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
+                        .grant(dataDir,
+                                github.shadowbaby.wechatxposed.hook.support.pack
+                                        .FeaturePackUnlock.LEVEL_BASE);
         Context context = source.getContext();
+        if (granted < github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
+                .LEVEL_BASE) {
+            // 账号还没解析出来时 guard 会早退，这里不能报成功：
+            // 否则用户签完协议重启，功能表仍是空的。
+            ModuleLogger.log("disclaimer: base grant deferred, account not ready");
+            Toast.makeText(context, "账号还没准备好，请稍后再点一次",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        ModuleLogger.log("disclaimer: base granted");
         Toast.makeText(context, "基础功能已激活，即将重启微信",
                 Toast.LENGTH_SHORT).show();
         android.app.Activity activity = Contexts.activityOf(context);

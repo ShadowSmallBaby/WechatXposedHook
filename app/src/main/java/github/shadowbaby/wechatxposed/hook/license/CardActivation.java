@@ -57,23 +57,31 @@ public final class CardActivation {
                         // 卡片只认卡密：payload 的 features 位决定普通还是高级。
                         // 按真实级别写库，别把基础码写成高级。
                         boolean extended = granted >= Activation.LEVEL_EXT;
-                        toast(context, extended
-                                ? "高级功能已激活，即将重启微信"
-                                : "基础功能已激活，即将重启微信");
+                        int wanted = extended
+                                ? github.shadowbaby.wechatxposed.hook.support.pack
+                                        .FeaturePackUnlock.LEVEL_PRO
+                                : github.shadowbaby.wechatxposed.hook.support.pack
+                                        .FeaturePackUnlock.LEVEL_BASE;
+                        int stored = Activation.LEVEL_NONE;
                         try {
-                            int wanted = extended
-                                    ? github.shadowbaby.wechatxposed.hook.support.pack
-                                            .FeaturePackUnlock.LEVEL_PRO
-                                    : github.shadowbaby.wechatxposed.hook.support.pack
-                                            .FeaturePackUnlock.LEVEL_BASE;
                             // 只升不降：已付费用户误输低级卡不该丢掉扩展。
                             int target = Math.max(Activation.level(), wanted);
-                            github.shadowbaby.wechatxposed.hook.support.pack.FeaturePackUnlock
-                                    .grant(Activation.dataDir(), target,
+                            stored = github.shadowbaby.wechatxposed.hook.support.pack
+                                    .FeaturePackUnlock.grant(Activation.dataDir(), target,
                                             extended ? code : null);
                         } catch (Throwable error) {
                             ModuleLogger.log(error);
                         }
+                        if (stored < wanted) {
+                            // 账号还没解析出来时 guard 早退，库里什么都没写。
+                            // 这时候提示成功会让用户重启后看到空菜单。
+                            ModuleLogger.log("card activation: grant deferred, account not ready");
+                            toast(context, "账号还没准备好，请重启微信后再试");
+                            return;
+                        }
+                        toast(context, extended
+                                ? "高级功能已激活，即将重启微信"
+                                : "基础功能已激活，即将重启微信");
                         android.app.Activity activity = Contexts.activityOf(context);
                         if (activity != null) {
                             new android.os.Handler(android.os.Looper.getMainLooper())

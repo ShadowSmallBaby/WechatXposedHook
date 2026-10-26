@@ -11,10 +11,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 账号优先向壳要：先调壳自己的账号查询，再退回壳 CallMethod 传下来的值。
+ * 账号解析按可靠性排序：微信自己的存储 → 壳接口 → 运行时回调 → 落盘缓存。
  *
- * 手动文件只是兜底：模块只读不写，内容由用户自己填写。
- * 不扫描微信的 XML prefs，也不读 MMKV 库文件。
+ * 微信存储与壳接口的就绪时间接近，但前者不经过壳的 core dex，壳换版本时
+ * 账号解析不会连带失效。落盘缓存由 {@link Activation} 在账号到手后写入，
+ * 是下一次启动最早可用的来源。
  */
 public abstract class StartupCheck {
 
@@ -62,7 +63,10 @@ public abstract class StartupCheck {
         if (now - lastScanAt < SCAN_TTL_MS) {
             return lastScanResult;
         }
-        String account = Activation.probeShell();
+        String account = Activation.probeWeChat();
+        if (account == null) {
+            account = Activation.probeShell();
+        }
         if (account == null) {
             account = Activation.runtimeWxid();
         }
@@ -87,7 +91,10 @@ public abstract class StartupCheck {
     }
 
     /**
-     * 用户手动填写的兜底账号。模块只读，不会覆盖或删除这个文件。
+     * 账号落盘缓存：{@code files/wxh_account}。
+     *
+     * 由 {@link Activation} 在任一来源解析到账号后写入，下次启动最先读它；
+     * 用户也可以手动填这个文件，内容一致时模块不会去动它。
      * 路径：{@code /data/user/<uid>/com.tencent.mm/files/wxh_account}
      */
     private static String readManualAccount(File dataDir) {

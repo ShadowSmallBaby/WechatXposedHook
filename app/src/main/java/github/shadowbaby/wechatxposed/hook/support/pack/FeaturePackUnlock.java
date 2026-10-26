@@ -117,8 +117,18 @@ public final class FeaturePackUnlock {
     /**
      * 只读授权级别，不写库；供自解决定是否恢复扩展包。
      * 数据库还没建立或字段缺失时按未授权处理。
+     * 账号未知时按普通授权兜底，只适合展示与包恢复。
      */
     public static synchronized int readLevel(File dataDir) {
+        return readLevel(dataDir, true);
+    }
+
+    /**
+     * @param fallbackBase 账号未知时是否按普通授权兜底。
+     *                     授权判定必须传 false：兜底值会让未解析出账号的进程
+     *                     被当成已授权，壳跳过免责声明，授权绕过也照装。
+     */
+    public static synchronized int readLevel(File dataDir, boolean fallbackBase) {
         try {
             if (DB_NAME.isEmpty() || DB_KEY.isEmpty()
                     || AES_MODE.isEmpty() || AES_KEY.isEmpty()) {
@@ -130,11 +140,11 @@ public final class FeaturePackUnlock {
             }
             String account = StartupCheck.readLoginAccount(dataDir);
             if (account == null || account.isEmpty()) {
-                // 启动早期壳还没加载完，账号必然解析不出来。这时按普通授权处理：
-                // 普通授权只是点一下协议，代价最低；判成 0 会让壳把扩展包清掉、
-                // 授权绕过也不装，运行中直接把功能全部关掉。
-                // 账号到达后 setRuntimeWxid 会重算，高级授权再补恢复扩展包。
-                return LEVEL_BASE;
+                // 启动早期壳还没加载完，账号必然解析不出来。展示路径按普通授权
+                // 兜底（普通授权只是点一下协议，代价最低）；授权判定路径必须返回 0，
+                // 否则等于替用户签了协议、还把授权绕过装给未授权进程。
+                // 账号到达后 setRuntimeWxid 会重算，并把账号落盘供下次启动使用。
+                return fallbackBase ? LEVEL_BASE : LEVEL_NONE;
             }
             SQLiteDatabase database = SQLiteDatabase.openDatabase(file.getPath(), null,
                     SQLiteDatabase.OPEN_READONLY);
@@ -162,13 +172,18 @@ public final class FeaturePackUnlock {
         return currentLevel;
     }
 
-    /** 用户同意协议（普通授权）时写入级别；卡密授权带卡密写高级。 */
-    public static synchronized void grant(File dataDir, int level) {
-        guard(dataDir, level, true, null);
+    /**
+     * 用户同意协议（普通授权）时写入级别；卡密授权带卡密写高级。
+     *
+     * @return 实际落库的级别。账号还没解析出来时返回 0 且不写库，
+     *         调用方必须据此判断是否真的激活成功，不能只看输入是否合法。
+     */
+    public static synchronized int grant(File dataDir, int level) {
+        return guard(dataDir, level, true, null);
     }
 
-    public static synchronized void grant(File dataDir, int level, String card) {
-        guard(dataDir, level, true, card);
+    public static synchronized int grant(File dataDir, int level, String card) {
+        return guard(dataDir, level, true, card);
     }
 
     private static int guard(File dataDir, int target, boolean trusted) {

@@ -7,6 +7,9 @@ import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 离线授权：免责声明页写普通授权，机器码绑定的卡密写 sf/mf/af。
@@ -66,6 +69,42 @@ public final class Activation {
         }
     }
 
+    /** 微信（宿主）的 ClassLoader，用来直接问微信要账号。 */
+    private static volatile ClassLoader hostLoader;
+
+    public static void setHostLoader(ClassLoader loader) {
+        if (loader == null) {
+            return;
+        }
+        hostLoader = loader;
+        // 进程刚绑定时微信的存储类还没初始化，延后几秒再主动调用，
+        // 否则可能把它的静态块跑挂，连带影响微信自己。
+        WeChatAccount.armAfter(3000L);
+    }
+
+    /**
+     * 先问微信自己的存储，拿不到再交给壳。
+     *
+     * 两条路就绪时间接近，但这条不经过壳的 core dex：壳换版本或改加密方式时，
+     * 账号解析不会连带失效，也不用每次启动都等壳初始化完。
+     */
+    public static String probeWeChat() {
+        String value = WeChatAccount.read(dataDir, hostLoader);
+        if (value == null) {
+            return null;
+        }
+        if (!value.equals(probedWxid)) {
+            probedWxid = value;
+            // 之前缓存的可能是启动早期的 null，必须让它重新解析。
+            StartupCheck.invalidate();
+            // 账号一确定就落盘：切换账号后的下一次启动直接命中，
+            // 不必再等 prefs 或反射就绪。
+            cacheAccount(value);
+            ModuleLogger.log("activation: account from wechat api");
+        }
+        return value;
+    }
+
     /**
      * 壳的 c.ˊﹶ.ˉˎ.יⁱ() 会依次尝试反射微信的账号 API，不依赖 prefs/MMKV。
      * 这里直接复用壳的实现，作为最稳的账号来源。
@@ -82,6 +121,7 @@ public final class Activation {
                 probedWxid = text;
                 // 之前缓存的多半是启动早期的 null，必须让它重新解析。
                 StartupCheck.invalidate();
+                cacheAccount(text);
                 ModuleLogger.log("activation: account from shell api");
                 return text;
             }
@@ -117,6 +157,8 @@ public final class Activation {
         StartupCheck.invalidate();
         ModuleLogger.log("activation: runtime account=" + Wxid.mask(account));
         try {
+            // 先落盘：下次启动壳接口还没就绪时也能直接读到账号。
+            cacheAccount(account);
             if (dataDir != null) {
                 StartupCheck.run(dataDir, account);
             }
@@ -135,12 +177,70 @@ public final class Activation {
         level = -1;
     }
 
+    /** 本进程最近一次落盘的内容，避免每次探测都读一遍文件。 */
+    private static volatile String lastCached;
+
+    /**
+     * 把当前登录账号落到 {@code files/wxh_account}，下次启动直接读。
+     *
+     * 账号来源（prefs / MMKV / 微信存储 / 壳）都要等宿主初始化，启动早期
+     * 拿不到。这个窗口里授权只能按兜底值走，壳就会跳过免责声明却因为
+     * 功能表为空给出空菜单。落盘后下一次启动账号立刻可读，判定和加载都
+     * 落在正确时机。切换账号时新账号会覆盖旧内容，所以每次来源命中都调。
+     */
+    private static void cacheAccount(String account) {
+        File directory = dataDir;
+        if (directory == null || account.equals(lastCached)) {
+            return;
+        }
+        try {
+            File file = new File(directory, "files/" + ACCOUNT_CACHE);
+            byte[] bytes = account.getBytes(StandardCharsets.UTF_8);
+            if (sameContent(file, bytes)) {
+                lastCached = account;
+                return;
+            }
+            File parent = file.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+                return;
+            }
+            try (FileOutputStream output = new FileOutputStream(file, false)) {
+                output.write(bytes);
+            }
+            lastCached = account;
+            ModuleLogger.log("activation: account cached");
+        } catch (Throwable error) {
+            // 落盘失败只影响下次启动的解析速度，不影响当前进程。
+            ModuleLogger.log("activation: account cache " + error);
+        }
+    }
+
+    private static boolean sameContent(File file, byte[] bytes) {
+        if (!file.isFile() || file.length() != bytes.length) {
+            return false;
+        }
+        try (FileInputStream input = new FileInputStream(file)) {
+            byte[] buffer = new byte[bytes.length];
+            if (input.read(buffer) != bytes.length) {
+                return false;
+            }
+            return java.util.Arrays.equals(buffer, bytes);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     /** 宿主数据目录，供授权守卫同步功能包数据库。 */
     public static File dataDir() {
         return dataDir;
     }
 
-    /** 授权级别统一来自数据库（WXH_LEVEL）；本进程未同步时只读查询兜底。 */
+    /**
+     * 授权级别统一来自数据库（WXH_LEVEL）；本进程未同步时只读查询兜底。
+     *
+     * 账号还没解析出来时按 0 处理，不能用 readLevel 的普通授权兜底：
+     * 兜底值会让壳跳过免责声明，同时把授权绕过装给未授权进程。
+     */
     public static synchronized int level() {
         int current = FeaturePackUnlock.currentLevel();
         if (current > FeaturePackUnlock.LEVEL_NONE) {
@@ -151,7 +251,7 @@ public final class Activation {
             return cached;
         }
         int result = dataDir == null
-                ? LEVEL_NONE : FeaturePackUnlock.readLevel(dataDir);
+                ? LEVEL_NONE : FeaturePackUnlock.readLevel(dataDir, false);
         level = result;
         return result;
     }
