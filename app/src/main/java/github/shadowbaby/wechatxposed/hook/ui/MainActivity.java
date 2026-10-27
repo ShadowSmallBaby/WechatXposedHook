@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toolbar;
+import github.shadowbaby.wechatxposed.hook.BuildConfig;
 import github.shadowbaby.wechatxposed.hook.R;
 import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
@@ -29,6 +30,13 @@ public class MainActivity extends Activity {
     /** 桌面图标别名，必须和 AndroidManifest 里的 activity-alias 完全一致。 */
     private static final String ICON_ALIAS =
             "github.shadowbaby.wechatxposed.hook.ui.MainActivityAlias";
+
+    /**
+     * 包名取编译期常量，不能用 getPackageName()：
+     * X30Compat 会把模块包名伪装成壳包名 cn.android.x，运行期读到的值不可靠，
+     * 用它构造 ComponentName 会被系统当成未知组件直接抛 IllegalArgumentException。
+     */
+    private static final String MODULE_PACKAGE = BuildConfig.APPLICATION_ID;
 
     private static final String WECHAT = Secret.of(SecretConstants.WECHAT_PACKAGE);
 
@@ -99,7 +107,7 @@ public class MainActivity extends Activity {
         if (item.getItemId() == R.id.action_icon) {
             boolean enabled = iconAliasEnabled();
             getPackageManager().setComponentEnabledSetting(
-                    new ComponentName(this, ICON_ALIAS),
+                    new ComponentName(MODULE_PACKAGE, ICON_ALIAS),
                     enabled ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED
                             : PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     PackageManager.DONT_KILL_APP);
@@ -110,7 +118,7 @@ public class MainActivity extends Activity {
 
     private boolean iconAliasEnabled() {
         return getPackageManager().getComponentEnabledSetting(
-                new ComponentName(this, ICON_ALIAS))
+                new ComponentName(MODULE_PACKAGE, ICON_ALIAS))
                 == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
     }
 

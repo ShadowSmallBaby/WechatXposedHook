@@ -41,10 +41,13 @@ public final class PackageVersionSpoof {
         if (installed) {
             return;
         }
+        // 先占位，异常重试时不再重复挂已经成功的重载；类缺失则放回去允许重试。
+        installed = true;
         try {
             Class<?> manager = framework.findClassIfExists(
                     "android.app.ApplicationPackageManager", null);
             if (manager == null) {
+                installed = false;
                 return;
             }
             frameworkRef = framework;
@@ -62,7 +65,6 @@ public final class PackageVersionSpoof {
                 framework.hookMethod(method, callback);
                 count++;
             }
-            installed = true;
             ModuleLogger.log("package version spoof: " + count + " method(s)");
         } catch (Throwable error) {
             ModuleLogger.log(error);

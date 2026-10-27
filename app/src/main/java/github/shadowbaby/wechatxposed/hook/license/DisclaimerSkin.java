@@ -83,10 +83,14 @@ public final class DisclaimerSkin implements HookCallback {
         if (installed) {
             return;
         }
+        // 先占位，异常重试时不再重复挂 show/dismiss；Dialog 缺失则放回去允许重试。
+        installed = true;
         try {
+            frameworkRef = framework;
             // show() 声明在 Dialog 上，AlertDialog 只继承不重写。
             Class<?> dialog = framework.findClassIfExists("android.app.Dialog", null);
             if (dialog == null) {
+                installed = false;
                 ModuleLogger.log("disclaimer: Dialog missing");
                 return;
             }
@@ -103,8 +107,6 @@ public final class DisclaimerSkin implements HookCallback {
             // 点「接受声明」那片区域时壳会走 mo876 -> C0150.m860 打开更多页，
             // 协议没签成之前把这一跳拦掉。core dex 加载较晚，这里先记下 framework，
             // 等弹窗真的出现（此时 core 已就绪）再挂。
-            frameworkRef = framework;
-            installed = true;
             ModuleLogger.log("disclaimer: hooked");
         } catch (Throwable error) {
             ModuleLogger.log(error);

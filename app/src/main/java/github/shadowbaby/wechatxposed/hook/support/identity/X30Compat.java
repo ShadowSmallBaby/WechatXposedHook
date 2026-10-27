@@ -59,6 +59,10 @@ public final class X30Compat implements IXposedHookZygoteInit {
     private static final ThreadLocal<Boolean> RAW_LOOKUP =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
 
+    /** initZygote 每个 zygote 进程只安装一次，避免 13 组系统 API 被重复包装。 */
+    private static final java.util.concurrent.atomic.AtomicBoolean INITIALIZED =
+            new java.util.concurrent.atomic.AtomicBoolean();
+
     @Override
     public void initZygote(StartupParam startupParam) {
         try {
@@ -69,6 +73,11 @@ public final class X30Compat implements IXposedHookZygoteInit {
                 // 否则 PackageInfo.packageName 被改成 cn.android.x，系统安装
                 // androidx.startup.InitializationProvider 时会 NameNotFound 崩溃。
                 XposedBridge.log("WeXposedHook-> x30 compat skip: module process");
+                return;
+            }
+            if (!INITIALIZED.compareAndSet(false, true)) {
+                // 热重载/双开/重复初始化时不要再次包装系统 API。
+                XposedBridge.log("WeXposedHook-> x30 compat already initialized");
                 return;
             }
             moduleApkPath = startupParam == null ? null : startupParam.modulePath;
@@ -94,16 +103,30 @@ public final class X30Compat implements IXposedHookZygoteInit {
 
     private static volatile String processNameCache;
 
+    /**
+     * zygote/usap 预加载阶段的名字会被 fork 后的进程继承。
+     * 一旦缓存了它们，isModuleProcessRuntime() 在真实进程里永远为 false，
+     * 包名伪装就会波及模块自己的进程（MainActivity 里的 ComponentName 会变成
+     * cn.android.x/...，系统直接抛 Unknown component）。
+     */
+    private static boolean isPlaceholderProcessName(String name) {
+        return name == null || name.isEmpty()
+                || "zygote".equals(name) || "zygote64".equals(name)
+                || "usap64".equals(name)
+                // 框架预初始化阶段会给 "<pre-initialized>" 之类的占位值
+                || name.startsWith("<");
+    }
+
     private static String currentProcessName() {
         String cached = processNameCache;
-        if (cached != null) {
+        if (!isPlaceholderProcessName(cached)) {
             return cached;
         }
         // API 28 起是公开接口，不再反射 ActivityThread。
         if (android.os.Build.VERSION.SDK_INT >= 28) {
             try {
                 String name = android.app.Application.getProcessName();
-                if (name != null && !name.isEmpty() && !"usap64".equals(name)) {
+                if (!isPlaceholderProcessName(name)) {
                     processNameCache = name;
                     return name;
                 }
@@ -121,7 +144,8 @@ public final class X30Compat implements IXposedHookZygoteInit {
                     end++;
                 }
                 String name = new String(data, 0, end, StandardCharsets.UTF_8);
-                if (!name.isEmpty() && !"usap64".equals(name)) {
+                // fork 后 cmdline 一定是真实进程名，这里才值得写缓存。
+                if (!isPlaceholderProcessName(name)) {
                     processNameCache = name;
                 }
                 return name;

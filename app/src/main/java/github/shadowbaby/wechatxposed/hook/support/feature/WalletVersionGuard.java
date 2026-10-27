@@ -5,6 +5,8 @@ import github.shadowbaby.wechatxposed.hook.framework.HookFramework;
 import github.shadowbaby.wechatxposed.hook.framework.HookParam;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.support.feature.version.VersionWindow;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 钱包/转账页面的版本恢复。
@@ -29,11 +31,19 @@ public final class WalletVersionGuard {
     private WalletVersionGuard() {
     }
 
-    public static void install(HookFramework framework, ClassLoader classLoader) {
+    /** 同一进程/ClassLoader 内每个类只挂一次；类晚加载时允许下一轮重试。 */
+    private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
+
+    public static synchronized void install(HookFramework framework, ClassLoader classLoader) {
         for (String name : WALLET_CLASSES) {
+            String key = name + "@" + System.identityHashCode(classLoader);
+            if (!DONE.add(key)) {
+                continue;
+            }
             try {
                 Class<?> target = framework.findClassIfExists(name, classLoader);
                 if (target == null) {
+                    DONE.remove(key);
                     ModuleLogger.debug("wallet version: missing " + name);
                     continue;
                 }
@@ -53,6 +63,7 @@ public final class WalletVersionGuard {
                         });
                 ModuleLogger.debug("wallet version: hooked " + name);
             } catch (Throwable error) {
+                DONE.remove(key);
                 ModuleLogger.debug("wallet version: failed " + name);
             }
         }

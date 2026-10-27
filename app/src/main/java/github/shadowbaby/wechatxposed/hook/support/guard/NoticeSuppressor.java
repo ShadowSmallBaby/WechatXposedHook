@@ -29,16 +29,18 @@ public final class NoticeSuppressor {
         if (installed) {
             return;
         }
+        // 先占位，异常重试时不再重复挂 setText；TextView 缺失则放回去允许重试。
+        installed = true;
         try {
             Class<?> textView = framework.findClassIfExists("android.widget.TextView", null);
             if (textView == null) {
+                installed = false;
                 return;
             }
             Callback callback = new Callback();
             framework.hookMethod(textView, "setText", new Class<?>[]{CharSequence.class}, callback);
             framework.hookMethod(textView, "setText",
                     new Class<?>[]{CharSequence.class, TextView.BufferType.class}, callback);
-            installed = true;
             ModuleLogger.debug("notice suppressor installed");
         } catch (Throwable error) {
             framework.log(error);

@@ -32,13 +32,15 @@ public final class PackGuard {
         if (installed) {
             return;
         }
+        // 先占位，异常重试时不再重复挂 File.delete；File 缺失则放回去允许重试。
+        installed = true;
         try {
             Class<?> fileClass = framework.findClassIfExists("java.io.File", null);
             if (fileClass == null) {
+                installed = false;
                 return;
             }
             framework.hookMethod(fileClass, "delete", new Class<?>[]{}, new Callback());
-            installed = true;
             ModuleLogger.debug("pack guard installed: File.delete");
         } catch (Throwable error) {
             framework.log(error);

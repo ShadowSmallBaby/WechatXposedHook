@@ -39,15 +39,17 @@ public final class DonationFeatureUnlock implements HookCallback {
         if (installed || classLoader == null) {
             return;
         }
+        // 先占位，异常重试时不再重复挂 requires；目标类缺失则放回去允许重试。
+        installed = true;
         try {
             Class<?> target = framework.findClassIfExists(REQUIRES_CLASS, classLoader);
             if (target == null) {
+                installed = false;
                 return;
             }
             framework.hookMethod(target, REQUIRES_METHOD,
                     new Class<?>[]{String.class, Object[].class},
                     new DonationFeatureUnlock());
-            installed = true;
             ModuleLogger.log("donation requires hooked: " + REQUIRES_CLASS + "." + REQUIRES_METHOD);
         } catch (Throwable error) {
             framework.log(error);

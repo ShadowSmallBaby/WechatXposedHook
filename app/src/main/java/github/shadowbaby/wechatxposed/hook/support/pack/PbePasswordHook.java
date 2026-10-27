@@ -24,14 +24,16 @@ public final class PbePasswordHook implements HookCallback {
         if (installed) {
             return;
         }
+        // 先占位，异常重试时不再重复挂构造器；PBEKeySpec 缺失则放回去允许重试。
+        installed = true;
         try {
             Class<?> spec = framework.findClassIfExists(
                     "javax.crypto.spec.PBEKeySpec", null);
             if (spec == null) {
+                installed = false;
                 return;
             }
             framework.hookConstructors(spec, new PbePasswordHook());
-            installed = true;
             ModuleLogger.debug("pbe password hook installed");
         } catch (Throwable error) {
             framework.log(error);

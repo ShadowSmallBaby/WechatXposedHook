@@ -490,14 +490,25 @@ public final class X3GuardBypass implements HookCallback {
                 return;
             }
             for (Method method : task.getDeclaredMethods()) {
-                if (BASE_UPDATE_DONE.equals(method.getName())
+                String name = method.getName();
+                if (BASE_UPDATE_DONE.equals(name)
                         && method.getParameterCount() == 1) {
+                    String key = BASE_UPDATE_TASK + "#" + name
+                            + "@" + System.identityHashCode(classLoader);
+                    if (!DONE.add(key)) {
+                        continue;
+                    }
                     framework.hookMethod(method, new NoOp("base update done"));
                     ModuleLogger.debug("base update callback hooked");
-                } else if (BASE_UPDATE_WORK.equals(method.getName())
+                } else if (BASE_UPDATE_WORK.equals(name)
                         && method.getParameterCount() == 1) {
                     // 更新服务端已下线：请求必然解析失败，结果回调又已经置空，
                     // 这里直接不联网，省掉两条 Unable to resolve host。
+                    String key = BASE_UPDATE_TASK + "#" + name
+                            + "@" + System.identityHashCode(classLoader);
+                    if (!DONE.add(key)) {
+                        continue;
+                    }
                     framework.hookMethod(method, new NoOp("base update skipped"));
                     ModuleLogger.debug("base update request skipped");
                 }
