@@ -194,7 +194,7 @@ static jstring secret_native_restore_plan(
     for (size_t index = 0; index < 3 && index < RESTORE_META_COUNT; index++) {
         pack_table_decode(&RESTORE_META_TABLE[index], meta[index], sizeof(meta[index]));
     }
-    char buffer[4096];
+    char buffer[8192];
     size_t used = 0;
     int failed = 0;
     for (int section = 0; section < 2 && !failed; section++) {
@@ -224,7 +224,7 @@ static jstring secret_native_restore_plan(
         const PackTableEntry *table = section == 0 ? RESTORE_BASE_TABLE : RESTORE_EXT_TABLE;
         size_t count = section == 0 ? RESTORE_BASE_COUNT : RESTORE_EXT_COUNT;
         for (size_t index = 0; index < count && !failed; index++) {
-            char item[128];
+            char item[256];
             size_t length = pack_table_decode(&table[index], item, sizeof(item));
             if (used + length + 2 >= sizeof(buffer)) {
                 failed = 1;
@@ -246,7 +246,7 @@ static jstring secret_native_restore_plan(
             used += tag_length;
         }
         for (size_t index = 0; index < RESTORE_ALIAS_COUNT && !failed; index++) {
-            char item[128];
+            char item[256];
             size_t length = pack_table_decode(&RESTORE_ALIAS_TABLE[index],
                                               item, sizeof(item));
             if (used + length + 2 >= sizeof(buffer)) {

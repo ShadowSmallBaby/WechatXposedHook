@@ -11,10 +11,15 @@ Java 只保留 JNI 调用。
 
 from __future__ import annotations
 
+import hashlib
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "app" / "src" / "main" / "jni" / "pack_tables.inc"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from runtime_names import BRIDGE, CORE, UTILITY, runtime
 
 # salt -> 原版 PBE password（13 组）
 SALT_PASSWORDS = [
@@ -74,40 +79,116 @@ PACK_GUARD_VALUES = [
 # 运行时恢复清单：基础包 26、扩展包 3、扩展包别名 3。
 RESTORE_META = ["x30", "x7_3.0", "x30-ext"]
 
-RESTORE_BASE = [
-    ("14e777717682cce8a53cfcb34a22d65", 994250),
-    ("14e777717682cce8a53cfcb34a22d65_c", 599),
-    ("14e777717682cce8a53cfcb34a22d65_s", 256),
-    ("36a76b97b96b5d46742bb4bcd2ff24d", 597288),
-    ("36a76b97b96b5d46742bb4bcd2ff24d_c", 599),
-    ("36a76b97b96b5d46742bb4bcd2ff24d_s", 256),
-    ("44c29edb103a2872f519adc9afdaaa", 4568),
-    ("534a9729a0c461cbd7a4379978fb742", 1159),
-    ("5dbc98dcc983a7728bd82d1a47546e", 258922),
-    ("62a4e566b714ea1c4349923c9ea6c35", 48008),
-    ("69691c7bdcc3ce6d5d8a1361f22d4ac", 41464),
-    ("6d6586c9c5458ecfc98981b52ee662de", 43336),
-    ("739440c5d87b2b8095b99f9d2a1bbf9", 98264),
-    ("802766a4a4bd401c145a57463274d4dd", 200554),
-    ("802766a4a4bd401c145a57463274d4dd_c", 599),
-    ("802766a4a4bd401c145a57463274d4dd_s", 256),
-    ("a89eaf67dc796cb3af54d94fac0198b", 121962),
-    ("a89eaf67dc796cb3af54d94fac0198b_c", 599),
-    ("a89eaf67dc796cb3af54d94fac0198b_s", 256),
-    ("d61f837cad1d412f80b84d143e1257", 370042),
-    ("d61f837cad1d412f80b84d143e1257_c", 599),
-    ("d61f837cad1d412f80b84d143e1257_s", 256),
-    ("df4e6fd144fab2389ece8cb79eaa8f", 129498),
-    ("df4e6fd144fab2389ece8cb79eaa8f_c", 599),
-    ("df4e6fd144fab2389ece8cb79eaa8f_s", 256),
-    ("dc7be70f1898d3a58965a919740f97", 533080),
+# 能算的名字走 runtime_names，厂商固定 ID 走 BRIDGE / UTILITY，避免手抄漂移。
+BASE = runtime("base")
+THEMES = runtime("themes")
+DONATION = runtime("donation")
+VIDURLPARSER = runtime("vidurlparser")
+SF, MF, AF = runtime("sf"), runtime("mf"), runtime("af")
+
+# (xmetadata 源, 运行时名, 侧车角色)。清单顺序就是恢复顺序。
+BASE_SOURCES = [
+    ("r/fp/base", BASE, "base"),
+    ("r/L", BRIDGE, "L"),
+    ("pr/P", UTILITY["pr/P"], None),
+    ("D", UTILITY["D"], None),
+    ("S", UTILITY["S"], None),
+    ("H_p", UTILITY["H_p"], None),
+    ("M", UTILITY["M"], None),
+    ("pr/P_8049", UTILITY["pr/P_8049"], None),
+    ("Xmd", UTILITY["Xmd"], None),
+    ("r/fp/themes", THEMES, "themes"),
+    ("r/fp/donation", DONATION, "donation"),
+    ("3.0/r/C", CORE, "C"),
+    ("r/fp/vidurlparser", VIDURLPARSER, "vidurlparser"),
+    ("LD64", UTILITY["LD64"], None),
 ]
 
-RESTORE_EXT = [
-    ("aa894d53fa41c9b675eec6f80331085", 91594),
-    ("665c7b62836222d48164bc1c5f93fb2", 148186),
-    ("3e9bf1b973f6b1617f4f6df9a88f39d", 182538),
+EXT_SOURCES = [
+    ("r/fp/sf", SF, None),
+    ("r/fp/mf", MF, None),
+    ("r/fp/af", AF, None),
 ]
+
+SOURCE_ROOT = ROOT / "xmetadata" / "wx7"
+
+# 迁移前的长度；源目录换错时尽早报错，避免把错误清单烧进 .so。
+EXPECTED_SIZES = {
+    BASE: 994250,
+    BASE + "_c": 599,
+    BASE + "_s": 256,
+    BRIDGE: 597288,
+    BRIDGE + "_c": 599,
+    BRIDGE + "_s": 256,
+    UTILITY["pr/P"]: 4568,
+    UTILITY["D"]: 1159,
+    UTILITY["S"]: 258922,
+    UTILITY["H_p"]: 48008,
+    UTILITY["M"]: 41464,
+    UTILITY["pr/P_8049"]: 43336,
+    UTILITY["Xmd"]: 98264,
+    THEMES: 200554,
+    THEMES + "_c": 599,
+    THEMES + "_s": 256,
+    DONATION: 121962,
+    DONATION + "_c": 599,
+    DONATION + "_s": 256,
+    CORE: 370042,
+    CORE + "_c": 599,
+    CORE + "_s": 256,
+    VIDURLPARSER: 129498,
+    VIDURLPARSER + "_c": 599,
+    VIDURLPARSER + "_s": 256,
+    UTILITY["LD64"]: 533080,
+    SF: 91594,
+    MF: 148186,
+    AF: 182538,
+}
+
+
+def payload(relative: str) -> bytes:
+    """读取 32B SHA-256 + body 的源文件，返回校验过的 body。"""
+    path = SOURCE_ROOT / relative
+    data = path.read_bytes()
+    if len(data) < 32:
+        raise SystemExit(f"{path}: 源文件过短")
+    body = data[32:]
+    if hashlib.sha256(body).digest() != data[:32]:
+        raise SystemExit(f"{path}: 前 32 字节不是 body 的 SHA-256")
+    return body
+
+
+def sidecar(role: str, suffix: str) -> bytes:
+    path = SOURCE_ROOT / "cfg" / (role + suffix)
+    data = path.read_bytes()
+    expected = 599 if suffix == ".c" else 256
+    if len(data) != expected:
+        raise SystemExit(f"{path}: 应为 {expected} 字节，实际 {len(data)}")
+    return data
+
+
+def restore_entries(sources) -> list[tuple[str, int, str]]:
+    entries: list[tuple[str, int, str]] = []
+
+    def add(name: str, data: bytes) -> None:
+        expected = EXPECTED_SIZES.get(name)
+        if expected is not None and len(data) != expected:
+            raise SystemExit(
+                f"{name}: 源长度 {len(data)} != 迁移前清单 {expected}；"
+                "确认 xmetadata 是否已更新，更新后同步 EXPECTED_SIZES"
+            )
+        entries.append((name, len(data), hashlib.sha256(data).hexdigest()))
+
+    for relative, name, role in sources:
+        add(name, payload(relative))
+        if role is not None:
+            add(name + "_c", sidecar(role, ".c"))
+            add(name + "_s", sidecar(role, ".s"))
+    return entries
+
+
+RESTORE_BASE = restore_entries(BASE_SOURCES)
+RESTORE_EXT = restore_entries(EXT_SOURCES)
 
 RESTORE_ALIASES = [
     ("aa894d53fa41c9b675eec6f80331085", "60d31eb37595dd44584be5ef363283e3"),
@@ -171,11 +252,11 @@ def main() -> int:
     restore_base_lines = [
         line for index, value in enumerate(RESTORE_BASE)
         for line in c_array("RESTORE_BASE_%d" % index,
-                            obfuscate("%s|%d" % value))]
+                            obfuscate("%s|%d|%s" % value))]
     restore_ext_lines = [
         line for index, value in enumerate(RESTORE_EXT)
         for line in c_array("RESTORE_EXT_%d" % index,
-                            obfuscate("%s|%d" % value))]
+                            obfuscate("%s|%d|%s" % value))]
     restore_alias_lines = [
         line for index, value in enumerate(RESTORE_ALIASES)
         for line in c_array("RESTORE_ALIAS_%d" % index,

@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -246,22 +247,89 @@ public abstract class FeaturePackRestorer {
             File file = new File(directory, pack.names[index]);
             if (!file.isFile() || file.length() != pack.sizes[index]) {
                 missing.add(pack.names[index]);
+                continue;
+            }
+            if (verifyContent(pack.names[index])
+                    && !hashMatches(file, pack.hashes[index])) {
+                ModuleLogger.log("feature packs: hash mismatch " + pack.names[index]);
+                missing.add(pack.names[index]);
             }
         }
         return missing;
+    }
+
+    /**
+     * 暂时只对 _s 签名侧车做内容哈希：每个只有 256 字节，启动开销可忽略。
+     * body/_c 先维持长度校验，观察稳定后再扩大；清单里仍保留全部哈希。
+     */
+    private static boolean verifyContent(String name) {
+        return name.endsWith("_s");
+    }
+
+    /**
+     * 空哈希表示旧版清单，只校验长度；新版清单必须逐字节对 SHA-256，
+     * 避免「大小相同但内容被替换」的包被壳当成完整包加载。
+     */
+    private static boolean hashMatches(File file, String expected) {
+        if (!isSha256(expected)) {
+            return true;
+        }
+        try (InputStream input = new FileInputStream(file)) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int read;
+            while ((read = input.read(buffer)) > 0) {
+                digest.update(buffer, 0, read);
+            }
+            return expected.equalsIgnoreCase(hex(digest.digest()));
+        } catch (Throwable error) {
+            return false;
+        }
+    }
+
+    private static boolean isSha256(String value) {
+        if (value == null || value.length() != 64) {
+            return false;
+        }
+        for (int index = 0; index < 64; index++) {
+            char ch = value.charAt(index);
+            boolean hex = (ch >= '0' && ch <= '9')
+                    || (ch >= 'a' && ch <= 'f')
+                    || (ch >= 'A' && ch <= 'F');
+            if (!hex) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String hex(byte[] data) {
+        char[] digits = "0123456789abcdef".toCharArray();
+        char[] out = new char[data.length * 2];
+        for (int index = 0; index < data.length; index++) {
+            int value = data[index] & 0xFF;
+            out[index * 2] = digits[value >>> 4];
+            out[index * 2 + 1] = digits[value & 0x0F];
+        }
+        return new String(out);
     }
 
     private static int restore(File directory, Pack pack, List<String> missing)
             throws IOException {
         int restored = 0;
         for (String name : missing) {
-            if (restoreMerged(directory, pack.dirName, name)) {
+            if (restoreMerged(directory, pack, name)) {
                 restored++;
                 continue;
             }
             File target = new File(directory, name);
             if (ModuleApk.copyAsset(name, target)
                     || ModuleApk.copyAsset(pack.dirName + "/" + name, target)) {
+                if (!verify(target, pack, name)) {
+                    target.delete();
+                    ModuleLogger.log("feature packs: hash mismatch after restore " + name);
+                    continue;
+                }
                 if (!target.setReadable(true, false)) {
                     ModuleLogger.log(LOG_NOT_READABLE + name);
                 }
@@ -273,15 +341,25 @@ public abstract class FeaturePackRestorer {
         return restored;
     }
 
+    private static boolean verify(File file, Pack pack, String name) {
+        int index = pack.indexOf(name);
+        if (index < 0) {
+            return false;
+        }
+        return file.isFile()
+                && file.length() == pack.sizes[index]
+                && (!verifyContent(name) || hashMatches(file, pack.hashes[index]));
+    }
+
     /** 平铺资产里的 WXH1 容器：body + _c + _s 合一，运行时拆开写盘。 */
-    private static boolean restoreMerged(File directory, String dirName, String name) {
+    private static boolean restoreMerged(File directory, Pack pack, String name) {
         String base = name;
         if (name.endsWith("_c") || name.endsWith("_s")) {
             base = name.substring(0, name.length() - 2);
         }
         byte[] data = ModuleApk.readAsset(base);
         if (data == null) {
-            data = ModuleApk.readAsset(dirName + "/" + base);
+            data = ModuleApk.readAsset(pack.dirName + "/" + base);
         }
         if (data == null || data.length < 16
                 || data[0] != 'W' || data[1] != 'X'
@@ -297,14 +375,16 @@ public abstract class FeaturePackRestorer {
         }
         try {
             int offset = 16;
-            writePart(directory, base, data, offset, bodySize);
+            writePart(directory, base, data, offset, bodySize, pack.hashOf(base));
             offset += bodySize;
             if (sidecarSize > 0) {
-                writePart(directory, base + "_c", data, offset, sidecarSize);
+                String sidecar = base + "_c";
+                writePart(directory, sidecar, data, offset, sidecarSize, pack.hashOf(sidecar));
                 offset += sidecarSize;
             }
             if (signatureSize > 0) {
-                writePart(directory, base + "_s", data, offset, signatureSize);
+                String signature = base + "_s";
+                writePart(directory, signature, data, offset, signatureSize, pack.hashOf(signature));
             }
             return true;
         } catch (IOException error) {
@@ -315,7 +395,7 @@ public abstract class FeaturePackRestorer {
 
     /** 先写临时文件再 rename，避免中断留下半截文件被当成完整包。 */
     private static void writePart(File directory, String name, byte[] data,
-            int offset, int length) throws IOException {
+            int offset, int length, String expectedHash) throws IOException {
         File target = new File(directory, name);
         File temp = new File(directory, name + ".tmp");
         try (java.io.FileOutputStream output = new java.io.FileOutputStream(temp)) {
@@ -330,6 +410,9 @@ public abstract class FeaturePackRestorer {
         }
         if (target.length() != length) {
             throw new IOException("feature packs: size mismatch " + name);
+        }
+        if (verifyContent(name) && !hashMatches(target, expectedHash)) {
+            throw new IOException("feature packs: hash mismatch " + name);
         }
         if (!target.setReadable(true, false)) {
             ModuleLogger.log(LOG_NOT_READABLE + name);
@@ -353,18 +436,28 @@ public abstract class FeaturePackRestorer {
             if (parts.length < 4 || "alias".equals(parts[0])) {
                 continue;
             }
-            int count = (parts.length - 2) / 2;
+            int tail = parts.length - 2;
+            // 新清单每项是 name|size|sha256；旧清单只有 name|size。
+            boolean withHash = tail % 3 == 0 && parts.length > 4 && isSha256(parts[4]);
+            int stride = withHash ? 3 : 2;
+            if (tail <= 0 || tail % stride != 0) {
+                continue;
+            }
+            int count = tail / stride;
             String[] names = new String[count];
             long[] sizes = new long[count];
+            String[] hashes = new String[count];
             try {
                 for (int index = 0; index < count; index++) {
-                    names[index] = parts[2 + index * 2];
-                    sizes[index] = Long.parseLong(parts[3 + index * 2]);
+                    int offset = 2 + index * stride;
+                    names[index] = parts[offset];
+                    sizes[index] = Long.parseLong(parts[offset + 1]);
+                    hashes[index] = withHash ? parts[offset + 2] : "";
                 }
             } catch (NumberFormatException error) {
                 continue;
             }
-            packs.add(new Pack(parts[0], parts[1], names, sizes));
+            packs.add(new Pack(parts[0], parts[1], names, sizes, hashes));
         }
         return packs.toArray(new Pack[0]);
     }
@@ -389,7 +482,21 @@ public abstract class FeaturePackRestorer {
         return new String[0][];
     }
 
-    private record Pack(String name, String dirName, String[] names, long[] sizes) {
+    private record Pack(String name, String dirName, String[] names, long[] sizes,
+            String[] hashes) {
 
+        int indexOf(String target) {
+            for (int index = 0; index < names.length; index++) {
+                if (names[index].equals(target)) {
+                    return index;
+                }
+            }
+            return -1;
+        }
+
+        String hashOf(String target) {
+            int index = indexOf(target);
+            return index < 0 ? "" : hashes[index];
+        }
     }
 }
