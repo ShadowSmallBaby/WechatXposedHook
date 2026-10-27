@@ -2,15 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- LibXposed 服务声明 minSdk 26,与本模块一致;这里只是显式覆盖,避免合并告警。 -->
-    <uses-sdk tools:overrideLibrary="io.github.libxposed.service,io.github.libxposed.service.interfaces" />
+    <!--
+      LibXposed 服务声明 minSdk 26,与本模块一致;这里只是显式覆盖,避免合并告警。
 
-    <application>
-        <!-- 让 LibXposed 框架能绑定本应用的服务(激活与远程偏好)。 -->
-        <provider
-            android:name="io.github.libxposed.service.XposedProvider"
-            android:authorities="${applicationId}.XposedService"
-            android:exported="true" />
-    </application>
+      XposedProvider 不在这里手写:io.github.libxposed:service 的 AAR 自带
+      <provider authority="${applicationId}.XposedService">,Gradle 合并时会自动带进来。
+      手写一份等于重复声明,而且 authority 要和库保持一致,容易漂。
+    -->
+    <uses-sdk tools:overrideLibrary="io.github.libxposed.service,io.github.libxposed.service.interfaces" />
 
 </manifest>

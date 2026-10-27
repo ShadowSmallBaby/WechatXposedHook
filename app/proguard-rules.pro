@@ -10,6 +10,8 @@
 ## 壳的运行时按类名/方法名做 native 查表，一旦被 R8 重命名会直接 SIGSEGV。
 -keep class x.** { *; }
 -keep class com.android.xf.** { *; }
+## XposedProvider 由系统按 manifest 里的类名实例化，重命名或裁掉会让模块进程启动即崩。
+-keep class io.github.libxposed.service.** { *; }
 ## JNI 用 RegisterNatives 按类名注册，类被重命名会让常量解密全部返回空。
 -keep class github.shadowbaby.wechatxposed.hook.loader.util.Secret { *; }
 -keep class github.shadowbaby.wechatxposed.hook.license.LicenseCrypto { *; }
