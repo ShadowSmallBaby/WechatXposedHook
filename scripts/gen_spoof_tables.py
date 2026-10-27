@@ -23,7 +23,9 @@ TABLES = {
     ],
     "EXT_UNAVAILABLE": ["mf_unlocked", "af_unlocked", "sf_unlocked"],
     # 登录链路：低版本会被服务端直接拒绝登录。
-    "LOGIN": ["manualauth", "autoauth", "h5auth", "disasterauth"],
+    # 只伪装手动登录：autoauth 是子串匹配，会连带命中钱包流程里的 secautoauth，
+    # 把请求版本抬到 8.0.79 后头体不一致，服务端直接判网络繁忙。
+    "LOGIN": ["manualauth"],
     "WALLET_CLASS": [
         "wallet", "mmpay", "tenpay", "remit", "kinda",
         "redpacket", "hongbao", "lucky", "plugin.pay", "plugin.hb",

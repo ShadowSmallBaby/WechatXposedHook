@@ -39,17 +39,23 @@ public final class MiniProgramVersionSpoof {
         try {
             Class<?> target = framework.findClassIfExists(LAUNCH_SCENE_CLASS, classLoader);
             if (target == null) {
+                ModuleLogger.log("mini program: launch class missing " + LAUNCH_SCENE_CLASS);
                 return;
             }
+            int constructors = 0;
             for (Constructor<?> constructor : target.getDeclaredConstructors()) {
                 framework.hookMethod(constructor, new HookCallback() {
                     @Override
                     public void before(HookParam param) {
-                        VersionWindow.open(framework, classLoader,
-                                LAUNCH_WINDOW_MS, "launch");
+                        if (!VersionWindow.open(framework, classLoader,
+                                LAUNCH_WINDOW_MS, "launch")) {
+                            ModuleLogger.log("mini program: launch window not ready");
+                        }
                     }
                 });
+                constructors++;
             }
+            int callbacks = 0;
             for (Method method : target.getDeclaredMethods()) {
                 if (LAUNCH_SCENE_CALLBACK.equals(method.getName())
                         && method.getParameterCount() == 5) {
@@ -59,8 +65,11 @@ public final class MiniProgramVersionSpoof {
                             VersionWindow.shorten(LAUNCH_GRACE_MS);
                         }
                     });
+                    callbacks++;
                 }
             }
+            ModuleLogger.log("mini program: launch hooked " + constructors
+                    + " constructor(s), " + callbacks + " callback(s)");
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }

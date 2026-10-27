@@ -7,6 +7,8 @@ import github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 import github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import java.lang.reflect.Method;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 网络层版本伪装（最小作用域）。
@@ -14,9 +16,10 @@ import java.lang.reflect.Method;
  * - 启动期只伪装 getonlineinfo，命中后 2 秒关闭；
  * - 通话期只伪装 voipilink 链路；
  * - 小程序只伪装 launchwxaapp；
- * - 登录 CGI（manualauth / autoauth / h5auth / disasterauth）单独伪装：
- *   这些请求是标准协议，BaseRequest.clientVersion 明文可写，
+ * - 登录 CGI 只伪装手动登录（manualauth）：
  *   不伪装会弹「当前客户端版本过低」。
+ *   autoauth 是子串匹配，会连带命中钱包流程里的 secautoauth，
+ *   那类请求必须保持真实，否则头体不一致会判网络繁忙。
  * - 钱包/转账/红包整体保持真实。
  *
  * URI 白名单与目标版本都在 native（spoof_tables.inc），Java 只负责时机。
@@ -25,8 +28,6 @@ public final class NetworkVersionSpoof {
 
     private static final String BASE_REQUEST_FILLER =
             Secret.of(SecretConstants.BASE_REQUEST_FILLER_CLASS);
-    /** 8.0.79 起 BASE_REQUEST_FILLER 的混淆名变成 l1。 */
-    private static final String BASE_REQUEST_FILLER_79 = "com.tencent.mm.modelbase.l1";
     private static final String BASE_REQUEST_FILL =
             Secret.of(SecretConstants.BASE_REQUEST_FILL_METHOD);
     private static final String BASE_REQUEST_SET_VERSION =
@@ -37,10 +38,13 @@ public final class NetworkVersionSpoof {
     private static volatile long startupUntil;
     private static volatile boolean callActive;
 
+    /** 同一进程/ClassLoader 内每个方法只挂一次；类晚加载时允许下一轮重试。 */
+    private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
+
     private NetworkVersionSpoof() {
     }
 
-    public static void install(HookFramework framework, ClassLoader classLoader) {
+    public static synchronized void install(HookFramework framework, ClassLoader classLoader) {
         startupUntil = System.currentTimeMillis() + STARTUP_WINDOW_MS;
         hookBaseRequest(framework, classLoader);
         hookCallUi(framework, classLoader,
@@ -51,29 +55,33 @@ public final class NetworkVersionSpoof {
 
     private static void hookBaseRequest(HookFramework framework,
             ClassLoader classLoader) {
-        for (String name : new String[]{BASE_REQUEST_FILLER, BASE_REQUEST_FILLER_79}) {
-            try {
-                Class<?> target = framework.findClassIfExists(name, classLoader);
-                if (target == null) {
-                    ModuleLogger.log("network version: base filler missing " + name);
+        try {
+            Class<?> target = framework.findClassIfExists(BASE_REQUEST_FILLER, classLoader);
+            if (target == null) {
+                ModuleLogger.log("network version: base filler missing");
+                return;
+            }
+            for (Method method : target.getDeclaredMethods()) {
+                if (!BASE_REQUEST_FILL.equals(method.getName())
+                        || method.getParameterCount() != 2) {
                     continue;
                 }
-                for (Method method : target.getDeclaredMethods()) {
-                    if (!BASE_REQUEST_FILL.equals(method.getName())
-                            || method.getParameterCount() != 2) {
-                        continue;
-                    }
-                    framework.hookMethod(method, new HookCallback() {
-                        @Override
-                        public void after(HookParam param) {
-                            spoofRequest(framework, classLoader, param);
-                        }
-                    });
-                    ModuleLogger.debug("network version: base request hooked " + name);
+                String key = "base-request:" + target.getName() + "#"
+                        + method.toGenericString()
+                        + "@" + System.identityHashCode(classLoader);
+                if (!DONE.add(key)) {
+                    continue;
                 }
-            } catch (Throwable error) {
-                ModuleLogger.log(error);
+                framework.hookMethod(method, new HookCallback() {
+                    @Override
+                    public void after(HookParam param) {
+                        spoofRequest(framework, classLoader, param);
+                    }
+                });
+                ModuleLogger.debug("network version: base request hooked");
             }
+        } catch (Throwable error) {
+            ModuleLogger.log(error);
         }
     }
 
@@ -82,6 +90,11 @@ public final class NetworkVersionSpoof {
         try {
             Class<?> target = framework.findClassIfExists(className, classLoader);
             if (target == null) {
+                return;
+            }
+            String key = "call-ui:" + className + "@"
+                    + System.identityHashCode(classLoader);
+            if (!DONE.add(key)) {
                 return;
             }
             framework.hookMethod(target, "onCreate",
@@ -160,6 +173,9 @@ public final class NetworkVersionSpoof {
         try {
             framework.callMethod(request, BASE_REQUEST_SET_VERSION,
                     VersionWindow.spoofed());
+            if (miniProgram) {
+                ModuleLogger.log("network version: mini program " + uri);
+            }
             if (Secret.hintMatch(Secret.HINT_CALL_SHUTDOWN, uri)) {
                 callActive = false;
                 ModuleLogger.log("call context: off (shutdown)");
@@ -170,10 +186,11 @@ public final class NetworkVersionSpoof {
     }
 
     /**
-     * 登录链路伪装。
+     * 手动登录伪装。
      *
      * 直接读请求对象里的真实版本再改成目标版本，不依赖 VersionWindow：
-     * 自动登录（secautoauth）早于 Application 就绪，ensure 必然失败。
+     * 登录可能早于 Application 就绪，ensure 不一定成功。
+     * 只处理 manualauth；autoauth 族（含 secautoauth）保持真实。
      */
     private static void spoofLogin(HookFramework framework, ClassLoader classLoader,
             Object request, String uri) {
