@@ -35,6 +35,13 @@ public final class HookBootstrap {
 
     private static volatile boolean zygoteHooked;
 
+    /**
+     * 同一 PID 只跑一次完整初始化。zygote/usap 预加载进程 fork 后静态字段会被
+     * 继承，用进程名或布尔值都可能误判；PID 在 fork 后一定变化，才能既去重
+     * 又让真实微信进程重新初始化。
+     */
+    private static int readyPid = -1;
+
     private HookBootstrap() {
     }
 
@@ -96,7 +103,15 @@ public final class HookBootstrap {
         if (!WECHAT_PACKAGE.equals(packageName)) {
             return;
         }
-        AppBrandCacheRepair.install();
+        synchronized (HookBootstrap.class) {
+            int pid = android.os.Process.myPid();
+            if (pid == readyPid) {
+                ModuleLogger.debug("bootstrap: already initialized in pid " + pid);
+                return;
+            }
+            readyPid = pid;
+        }
+        AppBrandCacheRepair.install(framework, classLoader);
         if (isAppBrandProcess(processName)) {
             Activation.install(new File(dataDir));
             Activation.setHostLoader(classLoader);
