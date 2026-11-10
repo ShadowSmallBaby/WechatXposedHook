@@ -4,22 +4,26 @@
 
 | 组件 | 作用 |
 |---|---|
-| WeXposedHook（WXH） | 主模块，让「微X模块 2.44」与「X 3.0」的功能在启动后直接可用 |
+| WeXposedHook（WXH） | 主模块，让微X模块与 X 的功能在启动后直接可用 |
 | WeXposedTool（WXT） | 版本伪装工具，对微信的登录、小程序、通话与平板做低版本伪装 |
 
 两个组件互不影响，可以同时安装，也可以只用其中一个。
 
-## 一、WeXposedHook
+## 一、WeXposedHook（WXH）
 
 ### 特性
 
 - 启动时接管微X的授权校验，功能菜单直接可用
 - 内置功能包：检测到功能文件缺失时自动补齐
 - 自动写入授权数据库，换账号也能用
-- 屏蔽小程序与通话中的宿主版本检测，避免反复提示升级
+- 屏蔽小程序与通话中的宿主版本检测，避免反复提示升级（1.3.9 起由 WXT 搭配负责）
 - 同时支持经典 Xposed 与现代 LibXposed 两种入口
-- 同时支持微X模块 2.44 与 X 3.0
+- 同时支持微X模块 2.44 与 X 3.0（1.3.9 起理论适配微X 2.26–2.44）
 - 一个 APK 同时包含 `arm64-v8a` 与 `armeabi-v7a`，64 位 / 32 位微信都能用
+- 在线适配（1.3.9+，理论支持停更前的所有微信版本）
+
+1.3.9 是 WXH 1.x 的终版，已移除内置版本伪装代码，版本伪装相关功能统一由
+WeXposedTool（WXT）负责。
 
 ### 版本选择指南
 
@@ -47,10 +51,10 @@
 例如：
 
 ```
-WeXposedHook-modern-wx2.44-v1.1.apk
-WeXposedHook-legacy-wx2.44-v1.1.apk
-WeXposedHook-modern-wx3.0-v1.1.apk
-WeXposedHook-legacy-wx3.0-v1.1.apk
+WeXposedHook-modern-wx6-v1.3.9.apk
+WeXposedHook-legacy-wx6-v1.3.9.apk
+WeXposedHook-modern-wx7-v1.3.9.apk
+WeXposedHook-legacy-wx7-v1.3.9.apk
 ```
 
 #### 环境要求
@@ -58,8 +62,8 @@ WeXposedHook-legacy-wx3.0-v1.1.apk
 | 项目 | 要求 |
 |---|---|
 | Android | 8.0 及以上 |
-| 微信 | 8.0.49 |
-| 微X模块 | 2.44 或 X 3.0 |
+| 微信 | 停更前的所有版本（截至 8.0.49），非 8.0.49 需要在线适配 |
+| 微X模块 | 2.26–2.44 或 X 3.0 |
 
 ### 使用指南
 
@@ -69,43 +73,15 @@ WeXposedHook-legacy-wx3.0-v1.1.apk
 4. 强制停止微信后重新打开（必要时重启手机）。
 5. 首次启动会自动补齐功能包并写入授权数据；若功能菜单仍为空，再重启一次微信。
 
-### 手动修改版本伪装
+### 在线适配（非 8.0.49）
 
-模块首次启动时会在微信数据目录生成版本伪装文件，默认值为 `8.0.79`：
+1. 安装并启用 WXH 1.3.9 与对应的微X / X 模块。
+2. 正常打开微信，进入模块菜单，等待在线适配完成。
+3. 适配完成后重启微信。
 
-| 微X版本 | 文件路径 |
-|---|---|
-| 微X模块 2.44 | `/data/data/com.tencent.mm/files/WechatXposed/wxh_client_version` |
-| X 3.0 | `/data/data/com.tencent.mm/files/X/wxh_client_version` |
+8.0.49 已内置，不需要等待适配。
 
-文件内容是一行版本号，例如：
-
-```text
-8.0.79
-```
-
-需要手动调整时：
-
-1. 先启动一次微信，让模块生成该文件。
-2. 使用 root 文件管理器或 adb 修改文件内容；建议保持与微信 `files` 目录相同的属主，权限为 `644`。
-3. 强制停止微信，再重新打开。
-
-adb 示例（微X 2.44）：
-
-```bash
-adb shell su -c 'echo 8.0.79 > /data/data/com.tencent.mm/files/WechatXposed/wxh_client_version'
-adb shell su -c 'chmod 644 /data/data/com.tencent.mm/files/WechatXposed/wxh_client_version'
-```
-
-X 3.0 把路径换成 `files/X/wxh_client_version` 即可。
-
-注意：
-
-- 建议只写 `8.0.x` 形式的版本号，不要加入其它说明文字。
-- 删除该文件后，下次启动会自动恢复默认值 `8.0.79`。
-- 修改后必须强停微信；仅返回桌面或切换账号不一定重新读取。
-
-## 二、WeXposedTool
+## 二、WeXposedTool（WXT）
 
 独立的 Xposed 模块，把微信伪装成较低版本，解锁受宿主版本限制的功能：
 
@@ -115,6 +91,7 @@ X 3.0 把路径换成 `files/X/wxh_client_version` 即可。
 - 解锁平板模式与平板登录
 
 它不依赖微X模块，单独安装并在 LSPosed / EdXposed 中启用即可，作用域同样勾选「微信」。
+WXH 1.3.9 起不再内置版本伪装，需要屏蔽宿主版本检测时请与 WXH 搭配使用。
 
 ### 规则文件与在线更新
 
@@ -129,7 +106,7 @@ X 3.0 把路径换成 `files/X/wxh_client_version` 即可。
 
 ### 说明
 
-- 模块不收集、不上传任何数据；主模块不发起网络请求，版本伪装工具仅在缺少对应版本规则时下载。
+- 模块不收集、不上传任何数据；仅在线适配或缺少对应版本规则时下载必要配置。
 - 主模块依赖微X模块本身，请先确保对应版本的微X已正确安装并启用。
 - 模块会修改微信进程内的运行逻辑，升级微信或微X后若出现异常，请先确认版本兼容性。
 
