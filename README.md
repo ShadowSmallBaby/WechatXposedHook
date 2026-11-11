@@ -90,14 +90,88 @@ WeXposedHook-legacy-wx7-v1.3.9.apk
 - 解锁鸿蒙通话
 - 解锁平板模式与平板登录
 
-它不依赖微X模块，单独安装并在 LSPosed / EdXposed 中启用即可，作用域同样勾选「微信」。
-WXH 1.3.9 起不再内置版本伪装，需要屏蔽宿主版本检测时请与 WXH 搭配使用。
+### 版本选择
 
-### 规则文件与在线更新
+发布包按框架能力拆成 3 个 APK（同包名、同签名，三选一覆盖安装）：
 
-版本伪装工具内置微信 8.0.49 的规则；其他版本在首次启动时自动获取。
+| 框架 | 文件名 |
+|---|---|
+| 新版 LSPosed（模块页面 API ≥ 102） | `WeXposedTool-v1.1-modern.apk` |
+| 仅支持 API 101 的 LibXposed 框架 | `WeXposedTool-v1.1-modern101.apk` |
+| 旧版 LSPosed / EdXposed / 经典 Xposed | `WeXposedTool-v1.1-legacy.apk` |
 
-## 三、通用说明
+切换变体请**覆盖安装，不要先卸载**，否则设置会被清空。
+
+### 使用指南
+
+1. 安装与本机框架匹配的 APK。
+2. 在 LSPosed / EdXposed 中启用模块，作用域勾选「微信」。
+3. 强制停止微信后重新打开。
+
+## 三、源码结构与构建
+
+### 工程结构
+
+```
+WeXposedHook/
+├── build.gradle                  # 根构建脚本
+├── settings.gradle               # 阿里云镜像 + google() + mavenCentral()
+├── gradle/wrapper/               # Gradle wrapper
+├── xmetadata/
+├── tool/                         # WeXposedTool（独立模块）
+├── shared/                       # app 与 tool 共用的 Hook 抽象
+└── app/
+    ├── build.gradle              # compileSdk 37、minSdk 26
+    ├── proguard-rules.pro        # R8 保留规则
+    └── src/
+        ├── main/
+        │   ├── AndroidManifest.xml
+        │   ├── java/io/github/shadowbaby/wechatxposed/hook/
+        │   │   ├── framework/    # Hook 框架抽象与启动引导
+        │   │   ├── loader/       # dex 加载拦截、组件识别、常量表
+        │   │   ├── deploy/       # 内置载荷、启动自检
+        │   │   ├── license/      # 授权库生成与写入
+        │   │   └── support/      # 目标 dex 的 hook 实现
+        │   ├── jniLibs/          # arm64-v8a / armeabi-v7a 的 libwexhook.so
+        │   └── res/              # mipmap/logo.png + values/
+        ├── wx244/                # 2.44 功能包（assets/wx6_2.44.zip）
+        ├── wx30/                 # 3.0 功能包（assets/x7_3.0.zip）
+        ├── legacy/               # 经典 Xposed 入口（XposedInit）
+        └── modern/               # LibXposed 入口（ModernEntry）
+```
+
+`wx244` 与 `wx30` 内置的 `8.0.49` 功能包, 可编译时替换, 或者直接覆盖运行时
+`legacy` 与 `modern` 共用 `main` 里的全部逻辑，只在入口处分别适配
+`de.robv.android.xposed` 与 `io.github.libxposed.api`。
+
+### 运行时流程
+
+1. 入口记录模块 APK 路径，挂住 `dalvik.system.InMemoryDexClassLoader` 的构造函数，
+   并补挂 `DexClassLoader` / `PathClassLoader` 的构造函数。
+2. 有 dex 加载时，`loader` 包探测组件入口与关键类：命中 X 3.0 的授权 / 更新 / 设置 /
+   组件入口则安装对应 hook；命中微X的组件入口（Base / Core / Themes / Donation）
+   则注入并移出待办列表。
+3. Core 组件里，`CallMethodBypassHook` 按消息号 130 / 132 / 150 处理校验结果与功能列表，
+   `VerifierMethodReplacement` 处理轮询校验、接口请求与更新提示。
+4. Base / Themes / Donation 只挂入口方法做握手，命中 `disable`、`updateLicense`、
+   `delayed_check` 等方法名时返回 `null`。
+5. 微信主进程启动时，`StartupCheck` 先按 APK 版本检查运行时目录
+   （`files/wx6_2.44` 或 `files/x7_3.0`）里 27 个功能包文件是否齐全，缺哪个就从
+   APK 内置载荷补写；`LicenseInstaller` 再按登录账号补一次授权库。
+6. 随后安装 `PackIntegrity`、`PackGuard`、`NoticeSuppressor`，
+   防止核心删除功能包或弹出更新提示。
+7. 小程序进程（`appbrand0` / `appbrand1`）只安装 `PackIntegrity`。
+
+### 构建
+
+需要 JDK 17 与 Android SDK 37
+
+```powershell
+JAVA_HOME=<JDK17> ./gradlew :app:assembleRelease   # 主模块，4 个 APK
+JAVA_HOME=<JDK17> ./gradlew :tool:assembleRelease  # 版本伪装工具，3 个 APK
+```
+
+## 四、通用说明
 
 ### 兼容性
 

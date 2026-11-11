@@ -1,0 +1,4 @@
+minApiVersion=${frameworkApi}
+targetApiVersion=${frameworkApi}
+autoHotReload=false
+exceptionMode=protective

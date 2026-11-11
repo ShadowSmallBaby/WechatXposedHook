@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WeXposedTool</string>
+    <string name="description">一个简单的微信工具集</string>
+
+    <string name="section_scope">版本伪装</string>
+    <string name="section_about">关于</string>
+
+    <string name="target_version">伪装版本</string>
+    <string name="version_custom">自定义</string>
+    <string name="version_custom_title">自定义版本</string>
+    <string name="version_custom_content">版本自定义</string>
+    <string name="version_name_invalid">请输入版本名</string>
+    <string name="version_code_invalid">请输入有效的微信 ClientVersion</string>
+    <string name="version_name_hint">版本名，如 8.0.81</string>
+    <string name="version_code_hint">ClientVersion，如 0x28005133</string>
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+
+    <string name="master_switch">启用版本伪装</string>
+    <string name="master_switch_summary">伪装功能的总开关</string>
+    <string name="login_spoof">登录伪装</string>
+    <string name="login_spoof_summary">解锁低版本登录</string>
+    <string name="call_spoof">通话伪装</string>
+    <string name="call_spoof_summary">解锁鸿蒙通话</string>
+    <string name="mini_program_spoof">小程序伪装</string>
+    <string name="mini_program_summary">模式：%s</string>
+    <string name="mini_program_off">关闭</string>
+    <string name="mini_program_lib">模式一 (LIB)</string>
+    <string name="mini_program_cgi">模式二 (CGI)</string>
+    <string name="mini_program_jsapi">模式三 (JSAPI)</string>
+    <string name="mini_program_lib_summary">伪装请求基础库版本</string>
+    <string name="mini_program_cgi_summary">伪装请求微信版本,必要时删小程序重试</string>
+    <string name="mini_program_jsapi_summary">伪装 JSAPI 接口微信版本</string>
+    <string name="mini_program_off_summary">关闭小程序专项伪装</string>
+    <string name="global_spoof">全局伪装</string>
+    <string name="global_spoof_summary">非极端情况下不建议启用</string>
+    <string name="tablet_mode">平板模式</string>
+    <string name="tablet_mode_summary">显示平板登录入口及冷启动保持</string>
+    <string name="show_launcher_icon">展示桌面图标</string>
+    <string name="show_launcher_icon_summary">隐藏后仍可从 LSPosed 的模块设置打开</string>
+    <string name="launcher_icon_failed">桌面图标切换失败</string>
+    <string name="hook_log">调试日志</string>
+    <string name="hook_log_summary">输出版本伪装命中日志</string>
+    <string name="status_active">模块已激活</string>
+    <string name="status_inactive">模块未激活：请在 LSPosed 中启用并勾选微信</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_source">开源地址</string>
+    <string name="about_source_summary">源代码</string>
+</resources>

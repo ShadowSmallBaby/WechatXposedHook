@@ -1,0 +1,171 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'io.github.shadowbaby.wechatxposed.tool'
+    compileSdk 37
+
+    defaultConfig {
+        applicationId 'io.github.shadowbaby.wechatxposed.tool'
+        minSdk 26
+        targetSdk 37
+        versionCode 6
+        versionName '1.1'
+        resourceConfigurations += ['zh-rCN']
+        buildConfigField 'String', 'SPOOF_HOOKS_ASSET', '"15fdaf36c280ecb8ea26cd1ceb9325c8"'
+        buildConfigField 'String', 'SPOOF_CERT_ASSET', '"534a9729a0c461cbd7a4379978fb742"'
+    }
+
+
+
+    flavorDimensions += 'framework'
+    productFlavors {
+        modern101 {
+            dimension 'framework'
+            buildConfigField 'int', 'FRAMEWORK_API', '101'
+        }
+        modern {
+            dimension 'framework'
+            buildConfigField 'int', 'FRAMEWORK_API', '102'
+        }
+
+        legacy {
+            dimension 'framework'
+            buildConfigField 'int', 'FRAMEWORK_API', '82'
+        }
+    }
+
+    buildTypes {
+        debug {
+
+            debuggable false
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'true'
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'false'
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+        compose true
+    }
+
+    sourceSets {
+
+        modern101 {
+            java.srcDirs += 'src/modern/java'
+            kotlin.srcDirs += 'src/modern/java'
+            resources.srcDirs += 'src/modern/resources'
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    packaging {
+        resources {
+            excludes += [
+                'META-INF/LICENSE',
+                'META-INF/LICENSE.txt',
+                'META-INF/NOTICE',
+                'META-INF/NOTICE.txt',
+                'META-INF/*.kotlin_module',
+                'DebugProbesKt.bin'
+            ]
+        }
+    }
+}
+
+@CacheableTask
+abstract class GenerateToolModuleProp extends DefaultTask {
+    @Input
+    abstract Property<Integer> getFrameworkApi()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    abstract RegularFileProperty getTemplateFile()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void generate() {
+        def prop = new File(outputDir.get().asFile, 'META-INF/xposed/module.prop')
+        prop.parentFile.mkdirs()
+        prop.setText(templateFile.get().asFile.getText('UTF-8')
+                .replace('${frameworkApi}', frameworkApi.get().toString()), 'UTF-8')
+    }
+}
+
+androidComponents {
+
+    onVariants(selector().all()) { variant ->
+        if (variant.flavorName in ['modern', 'modern101']) {
+            def api = variant.buildConfigFields.map { fields -> fields['FRAMEWORK_API'].value.toInteger() }
+            def generateModuleProp = tasks.register("generate${variant.name.capitalize()}ModuleProp", GenerateToolModuleProp) {
+                frameworkApi.set(api)
+                templateFile.set(layout.projectDirectory.file('src/modern/module.prop.template'))
+                outputDir.set(layout.buildDirectory.dir("generated/xposedMetadata/${variant.name}"))
+            }
+            variant.sources.resources.addGeneratedSourceDirectory(generateModuleProp, { task -> task.outputDir })
+        }
+        def appVersion = android.defaultConfig.versionName
+        variant.outputs.each { output ->
+            output.outputFileName.set("WeXposedTool-v${appVersion}-${variant.flavorName}.apk")
+        }
+    }
+}
+
+
+['Debug', 'Release'].each { buildType ->
+    tasks.register("assembleModernApis${buildType}") {
+        group = 'build'
+        description = "构建现代 API 101 和 102 的 ${buildType} APK"
+        dependsOn ":tool:assembleModern${buildType}", ":tool:assembleModern101${buildType}"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    implementation project(':shared')
+
+    legacyCompileOnly 'de.robv.android.xposed:api:82'
+
+    modern101CompileOnly 'io.github.libxposed:api:101.0.1'
+
+    modern101Implementation 'io.github.libxposed:service:101.0.0'
+    modernCompileOnly 'io.github.libxposed:api:102.0.0'
+    modernImplementation 'io.github.libxposed:service:102.0.0'
+
+    def composeBom = platform('androidx.compose:compose-bom:2026.09.00')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
+
+    implementation 'top.yukonga.miuix.kmp:miuix-ui-android:0.9.4'
+    implementation 'top.yukonga.miuix.kmp:miuix-preference-android:0.9.4'
+}
