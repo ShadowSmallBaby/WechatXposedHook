@@ -1,0 +1,26 @@
+{
+  "bindings": {
+    "clientVersionClass": "#version.global.clientVersion.class",
+    "baseRequestFiller": "#version.request.baseRequest.filler.class",
+    "baseRequestFill": "#version.request.baseRequest.fill.method",
+    "chatConfigHub": "#guard.chat.mvvm.config.class",
+    "chatConfigGet": "#guard.chat.mvvm.config.read.method"
+  },
+  "m": [
+    {
+      "mh": "#tablet.mode.ui.tabletEntry.owner,#tablet.mode.ui.tabletEntry.method",
+      "sig": "#tablet.mode.ui.tabletEntry.signature",
+      "s": true
+    },
+    {
+      "mh": "#tablet.mode.ui.phoneEntry.owner,#tablet.mode.ui.phoneEntry.method",
+      "sig": "#tablet.mode.ui.phoneEntry.signature",
+      "s": false
+    },
+    {
+      "mh": "#tablet.mode.ui.deviceGate.owner,#tablet.mode.ui.deviceGate.method",
+      "sig": "#tablet.mode.ui.deviceGate.signature",
+      "exclude": "#tablet.mode.ui.deviceGate.exclude"
+    }
+  ]
+}

@@ -1,0 +1,2260 @@
+{
+ "hostVersion": "8.0.48",
+ "hostVersionCode": 2588,
+ "hostClientVersion": "0x28003043",
+ "guard.chat.mvvm.loadDataConfig.repairerConfigChatLoadDataUseMvvm": "RepairerConfigChatLoadDataUseMvvm",
+ "guard.chat.mvvm.listConfig.repairerConfigChatListUseMvvm": "RepairerConfigChatListUseMvvm",
+ "guard.wallet.walletClasses.walletBaseUIClass": "com.tencent.mm.wallet_core.ui.WalletBaseUI",
+ "guard.wallet.walletClasses.remittanceDetailUIClass": "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI",
+ "guard.wallet.walletClasses.remittanceUIClass": "com.tencent.mm.plugin.remittance.ui.RemittanceUI",
+ "guard.wallet.walletClasses.remittanceResultUIClass": "com.tencent.mm.plugin.remittance.ui.RemittanceResultUI",
+ "guard.wallet.walletClasses.luckyMoneyReceiveUIClass": "com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyReceiveUI",
+ "guard.wallet.walletClasses.luckyMoneyNewReceiveUIClass": "com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyNewReceiveUI",
+ "guard.wallet.walletClasses.luckyMoneyDetailUIClass": "com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI",
+ "guard.wallet.walletClasses.luckyMoneyPrepareUIClass": "com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyPrepareUI",
+ "version.global.hostIdentity.initialize.method": "b",
+ "version.global.install.launcherUIClass": "com.tencent.mm.ui.LauncherUI",
+ "version.global.install.onResume": "onResume",
+ "version.global.install.protoIlinkStartConfigBuilderClass": "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder",
+ "version.global.install.setAppVersion": "setAppVersion",
+ "version.global.owner.mMProtocalJniClass": "com.tencent.mm.protocal.MMProtocalJni",
+ "version.global.installNative.setClientPackVersion": "setClientPackVersion",
+ "version.global.native.packetPack.method": "pack",
+ "version.global.installNative.packHybridEcdh": "packHybridEcdh",
+ "version.request.baseRequest.class": "n54.ag",
+ "version.request.installRequests.setClientVersion": "setClientVersion",
+ "version.routes.callTable.getonlineinfo": "getonlineinfo",
+ "version.routes.callTable.voipilink": "voipilink",
+ "version.routes.callTable.voipinvite": "voipinvite",
+ "version.routes.callTable.getfriendringback": "getfriendringback",
+ "version.routes.callTable.mmilinktransfer": "mmilinktransfer",
+ "version.routes.callTable.voipspeedtest": "voipspeedtest",
+ "version.routes.callTable.voipshutdown": "voipshutdown",
+ "version.routes.miniProgramTable.cgiBinMmbizBinWxaattrLaunchwxaapp": "/cgi-bin/mmbiz-bin/wxaattr/launchwxaapp",
+ "version.routes.miniProgramTable.cgiBinMmbizBinWxaattrWxajsapiinfo": "/cgi-bin/mmbiz-bin/wxaattr/wxajsapiinfo",
+ "version.routes.walletUriTable.mmpay": "mmpay",
+ "version.routes.walletUriTable.tenpay": "tenpay",
+ "version.routes.walletUriTable.wallet": "wallet",
+ "version.routes.walletUriTable.remit": "remit",
+ "version.routes.walletUriTable.transfer": "transfer",
+ "version.routes.walletUriTable.redpacket": "redpacket",
+ "version.routes.walletUriTable.lucky": "lucky",
+ "version.routes.walletUriTable.hongbao": "hongbao",
+ "version.routes.walletClassTable.wallet": "wallet",
+ "version.routes.walletClassTable.mmpay": "mmpay",
+ "version.routes.walletClassTable.tenpay": "tenpay",
+ "version.routes.walletClassTable.remit": "remit",
+ "version.routes.walletClassTable.kinda": "kinda",
+ "version.routes.walletClassTable.redpacket": "redpacket",
+ "version.routes.walletClassTable.hongbao": "hongbao",
+ "version.routes.walletClassTable.lucky": "lucky",
+ "version.routes.walletClassTable.pluginPay": "plugin.pay",
+ "version.routes.walletClassTable.pluginHb": "plugin.hb",
+ "version.routes.loginTable.manualauth": "manualauth",
+ "version.routes.loginPadTable.checkloginaspad": "checkloginaspad",
+ "version.routes.loginPadTable.getloginqrcode": "getloginqrcode",
+ "version.routes.loginPadTable.checkloginqrcode": "checkloginqrcode",
+ "version.routes.loginPadTable.autoauth": "autoauth",
+ "version.global.runtime.activityThread.activityThreadClass": "android.app.ActivityThread",
+ "version.global.runtime.current.currentApplication": "currentApplication",
+ "call.mp.deviceInfo.provider.class": "sj4.d3",
+ "call.mp.deviceInfo.read.method": "getDeviceInfo",
+ "call.mp.deviceInfo.class": "com.tencent.mm.plugin.voip_mp.platform.VoIPMPPlatformProto$DeviceInfo",
+ "call.mp.ownerVersion.format": "0x[0-9a-fA-F]{8}",
+ "call.mp.byteString.class": "com.google.protobuf.y",
+ "call.mp.rudp.builder.class": "com.tencent.mm.plugin.voip_mp.proto.VoipMPClientProto$ILinkVoIPRUDPCmd$Builder",
+ "call.mp.rudp.buffer.write.method": "setCmdBuffer",
+ "call.packet.native.protocol.class": "com.tencent.mm.protocal.MMProtocalJni",
+ "call.packet.native.output.class": "com.tencent.mm.pointers.PByteArray",
+ "call.packet.native.pack.method": "pack",
+ "call.packet.request.binding.class": "com.tencent.mm.modelbase.k2",
+ "call.packet.request.binding.serialize.method": "i1",
+ "call.packet.request.wrapper.class": "com.tencent.mm.modelbase.k",
+ "call.packet.request.serialize.method": "toProtoBuf",
+ "call.packet.encryption.bridge.class": "com.tencent.mm.jni.utils.UtilsJni",
+ "call.packet.encryption.seal.method": "AesGcmEncryptWithCompress",
+ "call.sdk.helper.primary.class": "h34.d0",
+ "call.sdk.helper.alternate.class": "wj4.f0",
+ "call.sdk.response.class": "f64.z06",
+ "call.sdk.wrapper.class": "com.tencent.mm.modelbase.l",
+ "call.sdk.response.parse.method": "fromProtoBuf",
+ "call.sdk.helper.cacheLoad.method": "x8",
+ "call.media.type.v2protocalClass": "com.tencent.mm.plugin.voip.model.v2protocal",
+ "call.media.method.setAppCmd": "setAppCmd",
+ "mini.library.cleanup.cache.namespace": "com.tencent.mm.plugin.appbrand.appcache.",
+ "mini.library.cleanup.query.uri": "/cgi-bin/mmbiz-bin/wxaapp/getpubliclibinfo",
+ "mini.library.cleanup.thread.wextoolMiniCleanup": "wextool-mini-cleanup",
+ "mini.library.cleanup.miniProgramLibraryCleanup.wextoolMiniLibraryCleanup": "wextool_mini_library_cleanup",
+ "mini.library.cleanup.manifest.storage.class": "v8",
+ "mini.library.cleanup.manifest.cleanup.method": "i",
+ "mini.library.cleanup.manifest.enumerate.method": "t",
+ "mini.library.cleanup.manifest.lookup.method": "m",
+ "mini.library.cleanup.manifest.provider.class": "d6",
+ "mini.library.cleanup.manifest.provider.read.method": "a",
+ "mini.library.cleanup.baseRequest.filler.class": "com.tencent.mm.modelbase.i1",
+ "mini.library.cleanup.baseRequest.fill.method": "fillBaseReq",
+ "mini.library.cleanup.after.requestProofUnavailable": "request-proof-unavailable",
+ "mini.library.cleanup.query.callback.class": "p6$$b",
+ "mini.library.cleanup.query.callback.method": "call",
+ "mini.library.cleanup.before.responseUnavailable": "response-unavailable",
+ "mini.library.cleanup.query.request.class": "f64.vc6",
+ "mini.library.cleanup.captureResponse.queryRejected": "query-rejected",
+ "mini.library.cleanup.pollSafely.pendingHostUnavailable": "pending-host-unavailable",
+ "mini.library.cleanup.poll.deferredGlobal": "deferred-global",
+ "mini.library.cleanup.poll.pendingCleanupRetryExhausted": "pending-cleanup-retry-exhausted",
+ "mini.library.cleanup.poll.settingsChanged": "settings-changed",
+ "mini.library.cleanup.poll.pendingRetryExhausted": "pending-retry-exhausted",
+ "mini.library.cleanup.query.scene.class": "p6",
+ "mini.library.cleanup.manifest.command.class": "q54.fb6",
+ "mini.library.cleanup.deleted.pIntClass": "com.tencent.mm.pointers.PInt",
+ "mini.library.cleanup.commit.pendingManifestUpdateFailed": "pending-manifest-update-failed",
+ "mini.library.cleanup.manifest.provider.write.class": "d6",
+ "mini.library.cleanup.commit.pendingStateSaveFailed": "pending-state-save-failed",
+ "mini.library.cleanup.commit.pendingCleanupFailed": "pending-cleanup-failed",
+ "mini.library.cleanup.embedded.reader.class": "AssetReader",
+ "mini.library.cleanup.package.verifier.class": "s6",
+ "mini.library.cleanup.account.kernel.class": "y70.k1",
+ "mini.library.cleanup.manifest.registry.class": "com.tencent.mm.plugin.appbrand.app.c8",
+ "mini.library.cleanup.digest.sha256": "SHA-256",
+ "mini.library.cleanup.key.done": "done_",
+ "mini.library.advertise.launch.libraryRequest.class": "xx0.d",
+ "mini.environment.legacy.systemInfo.class": "qv0.a0",
+ "mini.environment.legacy.systemInfo.read.method": "x",
+ "mini.environment.legacy.deviceInfo.class": "qv0.f",
+ "mini.environment.legacy.deviceInfo.read.method": "b",
+ "mini.environment.api.systemInfo.class": "com.tencent.mm.plugin.appbrand.jsapi.w5",
+ "mini.environment.api.systemInfo.read.method": "A",
+ "mini.environment.runtime.service.class": "com.tencent.mm.plugin.appbrand.service.b",
+ "mini.environment.runtime.gameService.class": "es0.a",
+ "mini.environment.environment.builder.class": "com.tencent.mm.plugin.appbrand.jsapi.d0",
+ "mini.environment.environment.assemble.method": "Y",
+ "mini.environment.before.clientVersion": "clientVersion",
+ "mini.environment.before.host": "host",
+ "mini.environment.before.weChat": "WeChat",
+ "mini.environment.before.env": "env",
+ "mini.environment.before.version": "version",
+ "mini.environment.environment.read.method": "G",
+ "mini.environment.after.clientVersion": "clientVersion",
+ "mini.environment.nameVersion.version": "version",
+ "mini.environment.clientVersion.clientVersion": "clientVersion",
+ "mini.environment.after.version": "version",
+ "mini.versionGate.launch.actionFactory.class": "com.tencent.mm.plugin.appbrand.launching.z",
+ "mini.versionGate.launch.actionFactory.create.method": "a",
+ "mini.versionGate.privateApi.openUrl.class": "com.tencent.mm.plugin.appbrand.jsapi.oa",
+ "mini.versionGate.privateApi.openUrl.invoke.method": "z",
+ "mini.versionGate.before.url": "url",
+ "mini.versionPolicy.upgrade.waerrpage": "waerrpage",
+ "mini.versionPolicy.upgrade.upgrade": "upgrade",
+ "mini.versionPolicy.uri.amp": "&amp;",
+ "mini.versionPolicy.uri.matcher1": "&",
+ "mini.versionPolicy.https.https": "https",
+ "mini.versionPolicy.http.http": "http",
+ "mini.versionPolicy.page.mpWeixinQqCom": "mp.weixin.qq.com",
+ "mini.versionPolicy.page.mpWaerrpage": "/mp/waerrpage",
+ "mini.versionPolicy.page.officialOther": "official-other",
+ "mini.versionPolicy.page.matcher1": "&",
+ "mini.versionPolicy.pair.matcher1": "=",
+ "mini.versionPolicy.page.type": "type",
+ "mini.versionPolicy.page.waerrpage": "waerrpage",
+ "mini.versionPolicy.page.ambiguous": "ambiguous",
+ "mini.versionPolicy.page.invalid": "invalid",
+ "mini.versionPolicy.reason.upgradePage": "upgrade-page",
+ "mini.versionPolicy.reason.hostVersionAlert": "host-version-alert",
+ "mini.versionPolicy.updateUrl.https": "https",
+ "mini.versionPolicy.updateUrl.supportWeixinQqCom": "support.weixin.qq.com",
+ "mini.versionPolicy.updateUrl.szsupportWeixinQqCom": "szsupport.weixin.qq.com",
+ "mini.versionPolicy.updateUrl.update": "/update",
+ "mini.versionPolicy.updateUrl.update2": "/update/",
+ "mini.versionPolicy.hostVersionAlert.matcher1": "当前微信版本过低",
+ "mini.versionPolicy.hostVersionAlert.second": "你的微信版本过低",
+ "mini.versionPolicy.hostVersionAlert.third": "您的微信版本过低",
+ "mini.versionPolicy.hostVersionAlert.fourth": "微信版本过低",
+ "mini.versionPolicy.hostVersionAlert.fifth": "当前微信版本太低",
+ "mini.versionPolicy.hostVersionAlert.sixth": "请升级",
+ "mini.versionPolicy.hostVersionAlert.seventh": "请更新",
+ "mini.versionPolicy.hostVersionAlert.update": "update",
+ "mini.versionPolicy.hostVersionAlert.upgrade": "upgrade",
+ "host.package.hostPackage.mmClass": "com.tencent.mm",
+ "host.package.manager.applicationPackageManagerClass": "android.app.ApplicationPackageManager",
+ "host.package.install.getPackageInfo": "getPackageInfo",
+ "tablet.account.kernel.class": "y70.k1",
+ "tablet.account.storage.key.class": "com.tencent.mm.storage.c4",
+ "tablet.account.deviceFlag.storageKey": "USERINFO_AUTH_DEVICE_FLAG_INT_SYNC",
+ "tablet.account.storage.class": "com.tencent.mm.storage.v3",
+ "tablet.account.deviceFlag.read.method": "r",
+ "tablet.mode.loginScreen.loginAsExDeviceUI": "LoginAsExDeviceUI",
+ "tablet.mode.loginHistory.loginHistoryUI": "LoginHistoryUI",
+ "tablet.mode.loginPackage.uiClass": "com.tencent.mm.plugin.account.ui",
+ "tablet.mode.login.compose.class": "fp0.x",
+ "tablet.mode.chatPackage.chatClass": "com.tencent.mm.pluginsdk.ui.chat",
+ "tablet.mode.chatFooter.chatFooter": "ChatFooter",
+ "tablet.mode.finderLive.finderLiveFindPageUI": "FinderLiveFindPageUI",
+ "tablet.mode.deviceIdentity.class": "com.tencent.mm.app.a7",
+ "tablet.mode.deviceIdentity.initialize.method": "b",
+ "tablet.mode.shouldSpoofPadRequest.secautoauth": "/secautoauth",
+ "tablet.mode.shouldSpoofPadRequest.autoauth": "/autoauth",
+ "tablet.mode.prepareAutoAuth.cgiBinMicromsgBinSecautoauth": "/cgi-bin/micromsg-bin/secautoauth",
+ "tablet.mode.inExplicitPadLogin.separatorClass": "com.tencent.mm.plugin.login_exdevice.ui.",
+ "diagnostic.auth.autoAuth.responseWrapper.class": "c64.nf",
+ "diagnostic.auth.manualAuth.responseWrapper.class": "c64.tf",
+ "diagnostic.auth.parser.fromProtoBuf": "fromProtoBuf",
+ "diagnostic.call.mode.helper.primary.class": "h34.d0",
+ "diagnostic.call.mode.install.getEnable": "getEnable",
+ "diagnostic.call.mode.install.officialEnable": "official-enable",
+ "diagnostic.call.mode.helper.enable.read.method": "Q6",
+ "diagnostic.call.mode.install.mpEngineSelection": "mp-engine-selection",
+ "diagnostic.call.mode.helper.cache.read.method": "V6",
+ "diagnostic.call.mode.install.validCache": "valid-cache",
+ "diagnostic.call.mode.helper.primary.select.method": "S6",
+ "diagnostic.call.mode.helper.alternate.class": "wj4.f0",
+ "diagnostic.call.mode.coroutine.primary.class": "nt3.q",
+ "diagnostic.call.mode.install.invokeSuspend": "invokeSuspend",
+ "diagnostic.call.mode.install.dialEntry": "dial-entry",
+ "diagnostic.call.mode.coroutine.alternate.class": "nt3.o",
+ "diagnostic.call.mode.observeSelector.sdkSelection": "sdk-selection",
+ "diagnostic.call.mode.before.dialEntry": "dial-entry",
+ "diagnostic.call.mode.after.dialEntry": "dial-entry",
+ "diagnostic.call.mode.after.validCache": "valid-cache",
+ "diagnostic.call.mode.after.miss": "miss",
+ "diagnostic.call.invite.callback.class": "tt3.p",
+ "diagnostic.call.install.onSceneEnd": "onSceneEnd",
+ "diagnostic.call.install.legacyInviteResult": "legacy-invite-result",
+ "diagnostic.call.manager.class": "com.tencent.mm.plugin.voip.model.z",
+ "diagnostic.call.call.end.method": "G",
+ "diagnostic.call.install.newMgrError": "new-mgr-error",
+ "diagnostic.call.smallView.class": "com.tencent.mm.plugin.voip.widget.k",
+ "diagnostic.call.call.ui.error.method": "m5",
+ "diagnostic.call.install.smallViewError": "small-view-error",
+ "diagnostic.call.invite.request.class": "com.tencent.mm.modelbase.m",
+ "diagnostic.call.bindInvite.cgiBinMicromsgBinVoipilinkinvite": "/cgi-bin/micromsg-bin/voipilinkinvite",
+ "diagnostic.call.bindInvite.voipilinkinvite": "voipilinkinvite",
+ "diagnostic.call.owner.mMProtocalJniClass": "com.tencent.mm.protocal.MMProtocalJni",
+ "diagnostic.call.output.pByteArrayClass": "com.tencent.mm.pointers.PByteArray",
+ "diagnostic.call.native.pack.method": "pack",
+ "diagnostic.call.header.wirePackFailed": "wire=pack-failed",
+ "diagnostic.call.method.mMProtocalJniClass": "com.tencent.mm.protocal.MMProtocalJni",
+ "diagnostic.call.method.packHybridEcdh": "packHybridEcdh",
+ "diagnostic.call.method.protoIlinkStartConfigBuilderClass": "com.tencent.ilink.network.Proto$IlinkStartConfig$Builder",
+ "diagnostic.call.method.setAppVersion": "setAppVersion",
+ "diagnostic.call.aff.versionProvider.class": "com.tencent.mm.plugin.aff_biz.ur.AffClientUtilsJavaStatic",
+ "diagnostic.call.method.getClientVersion": "getClientVersion",
+ "diagnostic.call.packetHeader.wireUnparsedShort": "wire=unparsed-short",
+ "diagnostic.call.packetHeader.wireUnparsedHeaderSize": "wire=unparsed-header-size",
+ "diagnostic.call.packetHeader.wireUnparsedCgi": "wire=unparsed-cgi",
+ "diagnostic.call.packetHeader.wireUnparsedDeviceType": "wire=unparsed-device-type",
+ "diagnostic.call.packetHeader.wireUnparsedBodySize": "wire=unparsed-body-size",
+ "diagnostic.call.packetHeader.wireUnparsedVarint": "wire=unparsed-varint",
+ "diagnostic.cgi.scene.class": "com.tencent.mm.modelbase.k1",
+ "diagnostic.cgi.method.dispatch": "dispatch",
+ "diagnostic.cgi.dispatch.class": "com.tencent.mm.modelbase.h",
+ "diagnostic.cgi.dispatch.send.method": "h",
+ "diagnostic.cgi.request.wrapper.class": "com.tencent.mm.modelbase.k",
+ "diagnostic.cgi.install.toProtoBuf": "toProtoBuf",
+ "diagnostic.cgi.identity.padAndroid": "pad-android-",
+ "diagnostic.cgi.identity.pad": "pad",
+ "diagnostic.cgi.identity.android": "android-",
+ "diagnostic.cgi.identity.phone": "phone",
+ "diagnostic.cgi.method.onGYNetEnd": "onGYNetEnd",
+ "diagnostic.cgi.before.sceneResult": "scene-result",
+ "diagnostic.cgi.cgi.callback.method": "f",
+ "diagnostic.cgi.before.cgiResult": "cgi-result",
+ "diagnostic.cgi.response.flutterOpaque.class": "oo0.t8",
+ "diagnostic.cgi.response.mpOpaque.class": "zp0.e",
+ "diagnostic.cgi.result.unavailable": "unavailable",
+ "diagnostic.cgi.result.cgiBinMicromsgBinVoipilinkinvite": "/cgi-bin/micromsg-bin/voipilinkinvite",
+ "diagnostic.cgi.response.sdkMode.class": "f64.z06",
+ "diagnostic.cgi.sdkMode.unavailable": "unavailable",
+ "diagnostic.cgi.callPath.cgiBinMicromsgBinVoip": "/cgi-bin/micromsg-bin/voip",
+ "diagnostic.cgi.callPath.cgiBinMicromsgBinGetonlineinfo": "/cgi-bin/micromsg-bin/getonlineinfo",
+ "diagnostic.cgi.callPath.cgiBinMicromsgBinGetfriendringback": "/cgi-bin/micromsg-bin/getfriendringback",
+ "diagnostic.cgi.uri.cgiBinAZaZ09": "/cgi-bin/[A-Za-z0-9_./-]+",
+ "diagnostic.cgi.opaque.baseRet.absent": "absent",
+ "diagnostic.cgi.opaque.baseRet.unparsed": "unparsed",
+ "diagnostic.mini.launch.launch.request.class": "xx0.d",
+ "diagnostic.mini.launch.launch.response.callback.method": "f",
+ "diagnostic.mini.launch.launch.response.class": "f64.ic3",
+ "diagnostic.mini.library.cache.namespace": "com.tencent.mm.plugin.appbrand.appcache.",
+ "diagnostic.mini.library.request.cgiBinMmbizBinWxaappGetpubliclibinfo": "/cgi-bin/mmbiz-bin/wxaapp/getpubliclibinfo",
+ "diagnostic.mini.library.query.callback.class": "p6$$b",
+ "diagnostic.mini.library.query.callback.method": "call",
+ "diagnostic.mini.library.query.scene.class": "p6",
+ "diagnostic.mini.library.download.schedule.method": "b",
+ "diagnostic.mini.library.integrity.checker.class": "WxaPkgIntegrityChecker",
+ "diagnostic.mini.library.integrity.check.method": "a",
+ "diagnostic.mini.library.package.prepare.class": "z8",
+ "diagnostic.mini.library.package.prepare.method": "X6",
+ "diagnostic.mini.library.library.appId": "@LibraryAppId",
+ "diagnostic.mini.library.download.dispatch.class": "f4",
+ "diagnostic.mini.library.download.dispatch.method": "c",
+ "diagnostic.mini.library.download.callback.class": "m6",
+ "diagnostic.mini.library.reader.class": "com.tencent.mm.plugin.appbrand.appstorage.ICommLibReader",
+ "diagnostic.mini.library.urlKind.http": "http",
+ "diagnostic.mini.library.urlKind.https": "https",
+ "diagnostic.mini.library.urlKind.invalid": "invalid",
+ "diagnostic.mini.library.urlKind.qqCom": ".qq.com",
+ "diagnostic.mini.library.urlKind.weixinQqCom": ".weixin.qq.com",
+ "diagnostic.mini.library.urlKind.tencentHttp": "tencent-http",
+ "diagnostic.mini.library.urlKind.otherHttp": "other-http",
+ "diagnostic.mini.runtime.runtime.namespace": "com.tencent.mm.plugin.appbrand.",
+ "diagnostic.mini.runtime.component.class": "com.tencent.luggage.sdk.jsapi.component.q",
+ "diagnostic.mini.runtime.launch.actionFactory.class": "launching.z",
+ "diagnostic.mini.runtime.launch.sharedCallback.method": "a",
+ "diagnostic.mini.runtime.launch.prepare.class": "launching.t2",
+ "diagnostic.mini.runtime.service.attach.class": "o8",
+ "diagnostic.mini.runtime.service.attach.method": "y0",
+ "diagnostic.mini.runtime.service.script.class": "service.u",
+ "diagnostic.mini.runtime.service.script.result.method": "I0",
+ "diagnostic.mini.runtime.install.serviceScriptResult": "service-script-result",
+ "diagnostic.mini.runtime.page.loader.class": "page.a",
+ "diagnostic.mini.runtime.page.script.submit.method": "P",
+ "diagnostic.mini.runtime.page.load.result.method": "j",
+ "diagnostic.mini.runtime.page.script.class": "page.v6",
+ "diagnostic.mini.runtime.page.script.result.method": "Y",
+ "diagnostic.mini.runtime.install.pageScriptResult": "page-script-result",
+ "diagnostic.mini.runtime.page.readyCallback.class": "page.f3",
+ "diagnostic.mini.runtime.install.onReady": "onReady",
+ "diagnostic.mini.runtime.runtime.class": "i6",
+ "diagnostic.mini.runtime.runtime.ready.method": "H0",
+ "diagnostic.mini.runtime.exception.serviceMain.class": "cd.o",
+ "diagnostic.mini.runtime.install.serviceMain": "service-main",
+ "diagnostic.mini.runtime.exception.serviceSub.class": "cd.g",
+ "diagnostic.mini.runtime.install.serviceSubcontext": "service-subcontext",
+ "diagnostic.mini.runtime.exception.snapshot.class": "cd.f$$a",
+ "diagnostic.mini.runtime.install.serviceSnapshotContext": "service-snapshot-context",
+ "diagnostic.mini.runtime.exception.game.class": "jc.b",
+ "diagnostic.mini.runtime.install.gameMain": "game-main",
+ "diagnostic.mini.runtime.api.dispatch.class": "jsapi.r",
+ "diagnostic.mini.runtime.api.dispatch.method": "O",
+ "diagnostic.mini.runtime.install.notSupported": "not-supported",
+ "diagnostic.mini.runtime.install.failure": "failure",
+ "diagnostic.mini.runtime.api.dispatchWithResult.method": "E",
+ "diagnostic.mini.runtime.api.pageCallback.class": "page.i5",
+ "diagnostic.mini.runtime.api.serviceCallback.method": "e1",
+ "diagnostic.mini.runtime.web.console.class": "page.x8",
+ "diagnostic.mini.runtime.install.onConsoleMessage": "onConsoleMessage",
+ "diagnostic.mini.runtime.install.error": "ERROR",
+ "diagnostic.mini.runtime.install.warning": "WARNING",
+ "diagnostic.mini.runtime.web.callbacks.class": "page.v8",
+ "diagnostic.mini.runtime.install.onReceivedError": "onReceivedError",
+ "diagnostic.mini.runtime.install.onReceivedHttpError": "onReceivedHttpError",
+ "diagnostic.mini.runtime.install.onPageFinished": "onPageFinished",
+ "diagnostic.mini.runtime.exception.report.method": "a",
+ "diagnostic.mini.runtime.apiCallback.failure": "failure",
+ "diagnostic.mini.runtime.apiCallback.notSupported": "not-supported",
+ "diagnostic.mini.runtime.apiCallback.cancelled": "cancelled",
+ "diagnostic.mini.runtime.callbackError.matcher1": "{",
+ "diagnostic.mini.runtime.error.errMsg": "errMsg",
+ "diagnostic.mini.runtime.callbackStatus.notSupported": "not-supported",
+ "diagnostic.mini.runtime.callbackStatus.fail": "fail ",
+ "diagnostic.mini.runtime.callbackStatus.fail2": "fail:",
+ "diagnostic.mini.runtime.callbackStatus.failure": "failure",
+ "diagnostic.mini.runtime.callbackStatus.cancel": "cancel ",
+ "diagnostic.mini.runtime.callbackStatus.cancelled": "cancelled",
+ "diagnostic.mini.runtime.consoleKind.firstRenderState": "first-render-state",
+ "diagnostic.mini.runtime.consoleKind.typeError": "TypeError",
+ "diagnostic.mini.runtime.consoleKind.referenceError": "ReferenceError",
+ "diagnostic.mini.runtime.consoleKind.syntaxError": "SyntaxError",
+ "diagnostic.mini.runtime.consoleKind.rangeError": "RangeError",
+ "diagnostic.mini.runtime.consoleKind.uRIError": "URIError",
+ "diagnostic.mini.runtime.consoleKind.evalError": "EvalError",
+ "diagnostic.mini.runtime.consoleKind.matcher1": ":",
+ "diagnostic.mini.runtime.runtimeOf.appBrandRuntime": "AppBrandRuntime",
+ "diagnostic.mini.runtime.key.matcher1": ":",
+ "diagnostic.mini.runtime.scriptKind.serviceLibrary": "service-library",
+ "diagnostic.mini.runtime.scriptKind.pageLibrary": "page-library",
+ "diagnostic.mini.runtime.scriptKind.businessService": "business-service",
+ "diagnostic.mini.runtime.scriptKind.businessPageFrame": "business-page-frame",
+ "diagnostic.mini.runtime.exceptionKind.typeError": "TypeError",
+ "diagnostic.mini.runtime.exceptionKind.referenceError": "ReferenceError",
+ "diagnostic.mini.runtime.exceptionKind.syntaxError": "SyntaxError",
+ "diagnostic.mini.runtime.exceptionKind.rangeError": "RangeError",
+ "diagnostic.mini.runtime.exceptionKind.uRIError": "URIError",
+ "diagnostic.mini.runtime.exceptionKind.evalError": "EvalError",
+ "diagnostic.mini.runtime.exceptionKind.matcher1": ":",
+ "diagnostic.mini.runtime.apiStatus.notSupported": "not-supported",
+ "diagnostic.mini.runtime.apiStatus.fail": "fail:",
+ "diagnostic.mini.runtime.apiStatus.failure": "failure",
+ "diagnostic.mini.runtime.apiKind.environmentQuery": "environment-query",
+ "diagnostic.mini.runtime.apiKind.network": "network",
+ "diagnostic.mini.runtime.apiKind.canvas": "canvas",
+ "diagnostic.mini.runtime.apiKind.renderNotification": "render-notification",
+ "diagnostic.mini.runtime.apiToken.aZaZAZaZ09": "[A-Za-z][A-Za-z0-9_]*",
+ "diagnostic.mini.runtime.digest.sha256": "SHA-256",
+ "mini.versionPolicy.labels": "upgrade,overseas,tips,banned",
+ "mini.versionPolicy.hostVersionAlert.yourWechatVersionIsTooLow": "your wechat version is too low",
+ "mini.versionPolicy.hostVersionAlert.yourWechatVersionIsOutOfDate": "your wechat version is out-of-date",
+ "diagnostic.mini.runtime.callbackStatus.failNotSupported": "fail not supported",
+ "diagnostic.mini.runtime.consoleKind.expectedUpdatedDataButGetFirstRenderingData": "Expected updated data but get first rendering data",
+ "diagnostic.mini.runtime.apiStatus.failNotSupported": "fail:not supported",
+ "mini.library.cleanup.account.emptyId": "0",
+ "mini.library.cleanup.account.digestByteFormat": "%02x",
+ "version.global.clientVersion.class": "n54.we",
+ "version.request.baseRequest.filler.class": "com.tencent.mm.modelbase.i1",
+ "version.request.baseRequest.fill.method": "fillBaseReq",
+ "guard.chat.mvvm.config.class": "ml1.d",
+ "guard.chat.mvvm.config.read.method": "b",
+ "tablet.mode.ui.tabletEntry.owner": "com.tencent.mm.ui.uh",
+ "tablet.mode.ui.tabletEntry.method": "A",
+ "tablet.mode.ui.phoneEntry.owner": "com.tencent.mm.ui.uh",
+ "tablet.mode.ui.phoneEntry.method": "Q",
+ "tablet.mode.ui.deviceGate.owner": "com.tencent.mm.ui.uh",
+ "tablet.mode.ui.deviceGate.method": "B",
+ "tablet.mode.ui.deviceGate.exclude": "com.tencent.mm.plugin.finder.viewmodel.component.jx.c2",
+ "call.mp.rudp.buffer.arg": 0,
+ "call.mp.rudp.versionCommand": 8,
+ "call.mp.rudp.versionOffset": 0,
+ "call.packet.hostClientVersion": 671100995,
+ "call.packet.routes.sdkMode.command": 9120,
+ "call.packet.routes.mpInvite.command": 10342,
+ "call.packet.after.seventh": 7,
+ "call.packet.after.first": 1,
+ "call.packet.after.zero": 0,
+ "call.packet.original.first": 1,
+ "call.packet.sealed.aesGcmEncryption": 13,
+ "call.packet.sealed.third": 3,
+ "call.packet.plain.compressedEncryption": 14,
+ "call.packet.plain.third": 3,
+ "call.packet.after.aesGcmEncryption": 13,
+ "call.packet.after.fifth": 5,
+ "call.packet.after.framePrefixBytes": 24,
+ "call.packet.after.gcmTagBytes": 16,
+ "call.packet.after.second": 2,
+ "call.packet.after.eighth": 8,
+ "call.packet.after.third": 3,
+ "call.packet.func.zero": 0,
+ "call.packet.prefix.second": 2,
+ "call.packet.headerEncryption.byteMask": 255,
+ "call.packet.headerEncryption.first": 1,
+ "call.packet.headerEncryption.eighth": 8,
+ "call.packet.headerEncryption.hybridEncryption": 12,
+ "call.packet.versionOffset.first": 1,
+ "call.packet.versionOffset.nibbleMask": 15,
+ "call.packet.prefix.zero": 0,
+ "call.packet.prefix.byteMask": 255,
+ "call.packet.prefix.packetMarker": 191,
+ "call.packet.prefix.first": 1,
+ "call.packet.flags.byteMask": 255,
+ "call.packet.flags.first": 1,
+ "call.packet.flags.eighth": 8,
+ "call.packet.end.second": 2,
+ "call.packet.end.headerSizeMask": 63,
+ "call.packet.cookie.eighth": 8,
+ "call.packet.cookie.nibbleMask": 15,
+ "call.packet.encryption.hybridEncryption": 12,
+ "call.packet.versionOffset.fifth": 5,
+ "call.packet.versionOffset.aesGcmEncryption": 13,
+ "call.packet.versionOffset.compressedEncryption": 14,
+ "call.packet.versionOffset.zero": 0,
+ "call.packet.versionOffset.extendedEncryption": 46,
+ "call.packet.cursor.tagBytes": 10,
+ "call.packet.versionOffset.maximumCommand": 65535,
+ "call.packet.versionOffset.second": 2,
+ "call.packet.bodyHasVersion.second": 2,
+ "call.packet.bodyHasVersion.zero": 0,
+ "call.packet.outer.zero": 0,
+ "call.packet.bodyHasVersion.tagBytes": 10,
+ "call.packet.size.maximumMessageBytes": 512,
+ "call.packet.fields.zero": 0,
+ "call.packet.bodyHasVersion.maximumFields": 32,
+ "call.packet.bodyHasVersion.third": 3,
+ "call.packet.wire.seventh": 7,
+ "call.packet.bodyHasVersion.fourth": 4,
+ "call.packet.bodyHasVersion.first": 1,
+ "call.packet.bodyHasVersion.eighth": 8,
+ "call.packet.bodyHasVersion.maximumMessageBytes": 512,
+ "call.packet.bodyHasVersion.fifth": 5,
+ "call.packet.result.zero": 0,
+ "call.packet.version.byteIndex.initial": 0,
+ "call.packet.value.byteMask": 255,
+ "call.sdk.mode.legacy": 1,
+ "call.sdk.mode.modern": 2,
+ "call.sdk.helper.cacheLoad.helperArg": 0,
+ "call.media.before.setVersionCommand": 505,
+ "call.media.before.zero": 0,
+ "call.media.before.second": 2,
+ "call.media.before.first": 1,
+ "mini.library.cleanup.query.fill.sceneArg": 1,
+ "mini.library.cleanup.query.fill.wrapperArg": 0,
+ "mini.library.cleanup.query.clientVersion.zero": 0,
+ "mini.library.cleanup.query.callback.resultArg": 0,
+ "mini.library.advertise.request.advertisedBuild": 9999,
+ "mini.library.advertise.constructor.buildArg": 6,
+ "mini.library.advertise.constructor.spoofBuildArg": 6,
+ "mini.environment.environment.valuesArg": 1,
+ "mini.environment.environment.keyArg": 2,
+ "mini.environment.deviceInfo.contextArg": 0,
+ "mini.versionGate.launch.actionFactory.recordArg": 2,
+ "mini.versionGate.privateApi.openUrl.jsonArg": 1,
+ "host.package.codeBase.versionCodeBase": 1620,
+ "host.package.codeStep.versionCodeStep": 20,
+ "host.package.name.zero": 0,
+ "tablet.account.deviceFlag.padMask": 1,
+ "tablet.account.deviceFlag.default": 0,
+ "tablet.mode.deviceIdentity.deviceTypeArg": 0,
+ "diagnostic.call.mode.selection.peerArg": 0,
+ "diagnostic.call.value.seventh": 7,
+ "diagnostic.call.after.onlineInfoCommand": 170,
+ "diagnostic.call.after.sdkModeCommand": 9120,
+ "diagnostic.call.after.inviteCommand": 526,
+ "diagnostic.call.packet.first": 1,
+ "diagnostic.call.after.zero": 0,
+ "diagnostic.call.after.fourth": 4,
+ "diagnostic.call.packet.zero": 0,
+ "diagnostic.call.codes.zero": 0,
+ "diagnostic.call.codes.first": 1,
+ "diagnostic.cgi.before.second": 2,
+ "diagnostic.cgi.before.first": 1,
+ "diagnostic.cgi.before.zero": 0,
+ "diagnostic.cgi.request.zero": 0,
+ "diagnostic.cgi.path.first": 1,
+ "diagnostic.cgi.requestAfter.first": 1,
+ "diagnostic.cgi.scene.callback.requestArg": 4,
+ "diagnostic.cgi.before.third": 3,
+ "diagnostic.mini.launch.after.third": 3,
+ "diagnostic.mini.launch.response.third": 3,
+ "diagnostic.mini.launch.after.zero": 0,
+ "diagnostic.mini.launch.after.first": 1,
+ "diagnostic.mini.library.request.first": 1,
+ "diagnostic.mini.library.request.zero": 0,
+ "diagnostic.mini.library.result.zero": 0,
+ "diagnostic.mini.library.response.first": 1,
+ "diagnostic.mini.library.install.second": 2,
+ "diagnostic.mini.library.install.zero": 0,
+ "diagnostic.mini.library.install.first": 1,
+ "diagnostic.mini.library.install.fourth": 4,
+ "diagnostic.mini.runtime.record.second": 2,
+ "diagnostic.mini.runtime.install.zero": 0,
+ "diagnostic.mini.runtime.install.first": 1,
+ "diagnostic.mini.runtime.message.zero": 0,
+ "diagnostic.mini.runtime.install.third": 3,
+ "diagnostic.mini.runtime.install.second": 2,
+ "diagnostic.mini.runtime.exception.zero": 0,
+ "diagnostic.mini.runtime.exception.first": 1,
+ "diagnostic.mini.runtime.injection.zero": 0,
+ "diagnostic.mini.runtime.injection.first": 1,
+ "diagnostic.mini.runtime.injection.second": 2,
+ "diagnostic.mini.runtime.injection.third": 3,
+ "diagnostic.mini.runtime.error.first": 1,
+ "guard.chat.mvvm.config.zero": 0,
+ "version.global.previous.zero": 0,
+ "version.global.before.zero": 0,
+ "version.global.after.zero": 0,
+ "version.request.uri.first": 1,
+ "version.request.before.zero": 0,
+ "version.request.request.zero": 0,
+ "version.request.scene.first": 1,
+ "guard.chat.mvvm.install.first": 1,
+ "mini.versionPolicy.reason.third": 3,
+ "mini.versionPolicy.reason.second": 2,
+ "guard.wallet.install.onCreate.signature": {
+  "parameters": [
+   "android.os.Bundle"
+  ]
+ },
+ "guard.wallet.install.onDestroy.signature": {
+  "parameters": []
+ },
+ "version.global.hostIdentity.initialize.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "version.global.install.onResume.signature": {
+  "parameters": []
+ },
+ "version.global.install.setAppVersion.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "version.global.installNative.setClientPackVersion.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "version.global.native.packetPack.signature": {
+  "parameters": [
+   "byte[]",
+   "com.tencent.mm.pointers.PByteArray",
+   "byte[]",
+   "int",
+   "byte[]",
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "byte[]",
+   "byte[]",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int"
+  ]
+ },
+ "version.global.installNative.packHybridEcdh.signature": {
+  "parameters": [
+   "com.tencent.mm.pointers.PByteArray",
+   "byte[]",
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "byte[]",
+   "int",
+   "int",
+   "int",
+   "int"
+  ]
+ },
+ "version.request.baseRequest.fill.signature": {
+  "parameters": [
+   "n54.ag",
+   "com.tencent.mm.modelbase.i1"
+  ]
+ },
+ "version.request.installRequests.setClientVersion.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "version.global.runtime.isHostReady.currentApplication.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "call.mp.deviceInfo.read.signature": {
+  "parameters": []
+ },
+ "call.mp.rudp.buffer.write.signature": {
+  "parameters": [
+   "com.google.protobuf.y"
+  ]
+ },
+ "call.packet.install.pack.signature": {
+  "parameters": [
+   "byte[]",
+   "com.tencent.mm.pointers.PByteArray",
+   "byte[]",
+   "int",
+   "byte[]",
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "byte[]",
+   "byte[]",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int"
+  ]
+ },
+ "call.packet.request.binding.serialize.signature": {
+  "parameters": [
+   "int",
+   "byte[]",
+   "int",
+   "byte[]",
+   "byte[]",
+   "int",
+   "boolean"
+  ]
+ },
+ "call.packet.request.serialize.signature": {
+  "parameters": []
+ },
+ "call.packet.encryption.seal.signature": {
+  "parameters": [
+   "byte[]",
+   "byte[]"
+  ]
+ },
+ "call.sdk.install.fromProtoBuf.signature": {
+  "parameters": [
+   "byte[]"
+  ]
+ },
+ "call.sdk.helper.cacheLoad.signature": {
+  "parameters": [
+   "@owner",
+   "java.lang.String",
+   "kotlin.coroutines.Continuation"
+  ]
+ },
+ "call.media.install.setAppCmd.signature": {
+  "parameters": [
+   "int",
+   "byte[]",
+   "int"
+  ]
+ },
+ "mini.library.cleanup.manifest.cleanup.signature": {
+  "parameters": [
+   "q54.fb6",
+   "com.tencent.mm.pointers.PInt"
+  ]
+ },
+ "mini.library.cleanup.manifest.enumerate.signature": {
+  "parameters": [
+   "java.lang.String",
+   "int"
+  ]
+ },
+ "mini.library.cleanup.manifest.lookup.signature": {
+  "parameters": [
+   "java.lang.String",
+   "int",
+   "int",
+   "java.lang.String[]"
+  ]
+ },
+ "mini.library.cleanup.manifest.provider.read.signature": {
+  "parameters": []
+ },
+ "mini.library.cleanup.baseRequest.fill.signature": {
+  "parameters": [
+   "n54.ag",
+   "com.tencent.mm.modelbase.i1"
+  ]
+ },
+ "mini.library.cleanup.query.callback.signature": {
+  "parameters": [
+   "java.lang.Object"
+  ]
+ },
+ "mini.library.cleanup.commit.constructor.signature": {
+  "parameters": []
+ },
+ "mini.library.advertise.install.constructor.signature": {
+  "parameters": [
+   "java.lang.String",
+   "boolean",
+   "q54.ab6",
+   "q54.re6",
+   "q54.ad6",
+   "java.lang.String",
+   "int",
+   "com.tencent.mm.plugin.appbrand.report.quality.QualitySession",
+   "java.lang.String",
+   "com.tencent.mm.plugin.appbrand.config.AppBrandLaunchFromNotifyReferrer",
+   "java.lang.String",
+   "q54.u10",
+   "int",
+   "boolean",
+   "java.lang.String",
+   "boolean",
+   "boolean"
+  ]
+ },
+ "mini.environment.legacy.systemInfo.read.signature": {
+  "parameters": [
+   "com.tencent.mm.plugin.appbrand.v"
+  ]
+ },
+ "mini.environment.legacy.deviceInfo.read.signature": {
+  "parameters": [
+   "java.lang.String",
+   "com.tencent.mm.plugin.appbrand.v"
+  ]
+ },
+ "mini.environment.api.systemInfo.read.signature": {
+  "parameters": [
+   "com.tencent.mm.plugin.appbrand.v"
+  ]
+ },
+ "mini.environment.environment.assemble.signature": {
+  "parameters": [
+   "org.json.JSONObject",
+   "java.lang.String",
+   "java.lang.Object"
+  ]
+ },
+ "mini.environment.environment.read.signature": {
+  "parameters": [
+   "org.json.JSONObject"
+  ]
+ },
+ "mini.versionGate.launch.actionFactory.create.signature": {
+  "parameters": [
+   "java.lang.String",
+   "int",
+   "com.tencent.mm.plugin.appbrand.launching.a9"
+  ]
+ },
+ "mini.versionGate.privateApi.openUrl.invoke.signature": {
+  "parameters": [
+   "com.tencent.mm.plugin.appbrand.jsapi.l",
+   "org.json.JSONObject",
+   "int"
+  ]
+ },
+ "tablet.account.deviceFlag.read.signature": {
+  "parameters": [
+   "com.tencent.mm.storage.c4",
+   "int"
+  ]
+ },
+ "tablet.mode.deviceIdentity.initialize.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "diagnostic.auth.install.fromProtoBuf.signature": {
+  "parameters": [
+   "byte[]"
+  ]
+ },
+ "diagnostic.call.mode.install.getEnable.signature": {
+  "parameters": []
+ },
+ "diagnostic.call.mode.helper.enable.read.signature": {
+  "parameters": []
+ },
+ "diagnostic.call.mode.helper.cache.read.signature": {
+  "parameters": [
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.call.mode.install.invokeSuspend.signature": {
+  "parameters": [
+   "java.lang.Object"
+  ]
+ },
+ "diagnostic.call.mode.helper.selection.signature": {
+  "parameters": [
+   "java.lang.String",
+   "kotlin.coroutines.Continuation"
+  ]
+ },
+ "diagnostic.call.observeNativePack.pack.signature": {
+  "parameters": [
+   "byte[]",
+   "com.tencent.mm.pointers.PByteArray",
+   "byte[]",
+   "int",
+   "byte[]",
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "byte[]",
+   "byte[]",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int",
+   "int"
+  ]
+ },
+ "diagnostic.call.observeHybridPack.packHybridEcdh.signature": {
+  "parameters": [
+   "com.tencent.mm.pointers.PByteArray",
+   "byte[]",
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "byte[]",
+   "int",
+   "int",
+   "int",
+   "int"
+  ]
+ },
+ "diagnostic.call.observeIlinkConfig.setAppVersion.signature": {
+  "parameters": [
+   "int"
+  ]
+ },
+ "diagnostic.call.observeAffVersion.getClientVersion.signature": {
+  "parameters": []
+ },
+ "diagnostic.cgi.install.dispatch.signature": {
+  "parameters": [
+   "com.tencent.mm.network.q",
+   "com.tencent.mm.network.t0",
+   "com.tencent.mm.network.j0"
+  ]
+ },
+ "diagnostic.cgi.dispatch.send.signature": {
+  "parameters": [
+   "com.tencent.mm.modelbase.m"
+  ]
+ },
+ "diagnostic.cgi.install.toProtoBuf.signature": {
+  "parameters": []
+ },
+ "diagnostic.cgi.callback.onGYNetEnd.signature": {
+  "parameters": [
+   "int",
+   "int",
+   "int",
+   "java.lang.String",
+   "com.tencent.mm.network.t0",
+   "byte[]"
+  ]
+ },
+ "diagnostic.cgi.cgi.callback.signature": {
+  "parameters": [
+   "int",
+   "int",
+   "java.lang.String",
+   "f64.bx4",
+   "com.tencent.mm.modelbase.k1"
+  ]
+ },
+ "diagnostic.mini.launch.launch.response.callback.signature": {
+  "parameters": [
+   "int",
+   "int",
+   "java.lang.String",
+   "f64.bx4",
+   "com.tencent.mm.modelbase.k1"
+  ]
+ },
+ "diagnostic.mini.library.query.callback.signature": {
+  "parameters": [
+   "java.lang.Object"
+  ]
+ },
+ "diagnostic.mini.library.download.schedule.signature": {
+  "parameters": [
+   "int",
+   "q54.fb6",
+   "com.tencent.mm.plugin.appbrand.appcache.r6",
+   "java.lang.Runnable"
+  ]
+ },
+ "diagnostic.mini.library.integrity.check.signature": {
+  "parameters": [
+   "boolean",
+   "boolean"
+  ]
+ },
+ "diagnostic.mini.library.package.prepare.signature": {
+  "parameters": [
+   "java.lang.String",
+   "int",
+   "int",
+   "int",
+   "java.lang.String",
+   "q54.u10",
+   "com.tencent.mm.plugin.appbrand.appcache.a9"
+  ]
+ },
+ "diagnostic.mini.library.download.dispatch.signature": {
+  "parameters": [
+   "java.lang.String",
+   "rq0.c",
+   "java.lang.Object"
+  ]
+ },
+ "diagnostic.mini.library.download.dispatch.signatureAlternate": {
+  "parameters": [
+   "com.tencent.mm.ipcinvoker.type.IPCVoid"
+  ]
+ },
+ "diagnostic.mini.runtime.launch.sharedCallback.signature": {
+  "parameters": [
+   "java.lang.String",
+   "int",
+   "com.tencent.mm.plugin.appbrand.launching.a9"
+  ]
+ },
+ "diagnostic.mini.runtime.launch.sharedCallback.signatureAlternate": {
+  "parameters": []
+ },
+ "diagnostic.mini.runtime.service.attach.signature": {
+  "parameters": [
+   "com.tencent.mm.plugin.appbrand.AppBrandRuntime"
+  ]
+ },
+ "diagnostic.mini.runtime.service.script.result.signature": {
+  "parameters": [
+   "com.tencent.luggage.sdk.jsapi.component.q",
+   "boolean",
+   "long",
+   "long",
+   "java.lang.Object"
+  ]
+ },
+ "diagnostic.mini.runtime.page.script.submit.signature": {
+  "parameters": [
+   "java.lang.String",
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.mini.runtime.page.load.result.signature": {
+  "parameters": [
+   "java.lang.String",
+   "com.tencent.mm.plugin.appbrand.page.zc"
+  ]
+ },
+ "diagnostic.mini.runtime.page.script.result.signature": {
+  "parameters": [
+   "com.tencent.luggage.sdk.jsapi.component.q",
+   "boolean",
+   "long",
+   "long",
+   "java.lang.Object"
+  ]
+ },
+ "diagnostic.mini.runtime.install.onReady.signature": {
+  "parameters": []
+ },
+ "diagnostic.mini.runtime.runtime.ready.signature": {
+  "parameters": []
+ },
+ "diagnostic.mini.runtime.api.dispatch.signature": {
+  "parameters": [
+   "java.lang.String",
+   "java.lang.String",
+   "java.lang.String",
+   "int",
+   "boolean",
+   "com.tencent.mm.plugin.appbrand.jsruntime.c0"
+  ]
+ },
+ "diagnostic.mini.runtime.api.dispatchWithResult.signature": {
+  "parameters": [
+   "int",
+   "java.lang.String",
+   "com.tencent.mm.plugin.appbrand.jsruntime.c0"
+  ]
+ },
+ "diagnostic.mini.runtime.launch.sharedCallback.signaturePageCallback": {
+  "parameters": [
+   "int",
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.mini.runtime.api.serviceCallback.signature": {
+  "parameters": [
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.mini.runtime.install.onConsoleMessage.signature": {
+  "parameters": [
+   "android.webkit.ConsoleMessage"
+  ]
+ },
+ "diagnostic.mini.runtime.install.onReceivedError.signature": {
+  "parameters": [
+   "com.tencent.xweb.WebView",
+   "int",
+   "java.lang.String",
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.mini.runtime.install.onReceivedHttpError.signature": {
+  "parameters": [
+   "com.tencent.xweb.WebView",
+   "com.tencent.xweb.WebResourceRequest",
+   "com.tencent.xweb.WebResourceResponse"
+  ]
+ },
+ "diagnostic.mini.runtime.install.onPageFinished.signature": {
+  "parameters": [
+   "com.tencent.xweb.WebView",
+   "java.lang.String"
+  ]
+ },
+ "diagnostic.mini.runtime.exception.report.signature": {
+  "parameters": [
+   "java.lang.String",
+   "java.lang.String"
+  ]
+ },
+ "tablet.mode.ui.tabletEntry.signature": {
+  "parameters": []
+ },
+ "tablet.mode.ui.phoneEntry.signature": {
+  "parameters": []
+ },
+ "tablet.mode.ui.deviceGate.signature": {
+  "parameters": [
+   "dh4.u"
+  ]
+ },
+ "diagnostic.call.invite.result.signature": {
+  "parameters": [
+   "int",
+   "int",
+   "java.lang.String",
+   "com.tencent.mm.modelbase.k1"
+  ]
+ },
+ "diagnostic.call.manager.error.signature": {
+  "parameters": [
+   "int",
+   "java.lang.String",
+   "int"
+  ]
+ },
+ "diagnostic.call.smallView.error.signature": {
+  "parameters": [
+   "int",
+   "java.lang.String"
+  ]
+ },
+ "version.request.scene.uri.read": {
+  "name": "getUri",
+  "static": false,
+  "arguments": []
+ },
+ "call.sdk.response.baseResponse.read": {
+  "name": "getBaseResponse",
+  "static": false,
+  "arguments": []
+ },
+ "mini.library.cleanup.scene.uri.read": {
+  "name": "getUri",
+  "static": false,
+  "arguments": []
+ },
+ "mini.library.cleanup.response.baseResponse.read": {
+  "name": "getBaseResponse",
+  "static": false,
+  "arguments": []
+ },
+ "mini.library.cleanup.manifest.enumerate": {
+  "name": "t",
+  "static": false,
+  "arguments": [
+   {
+    "input": 0
+   },
+   {
+    "input": 1
+   }
+  ]
+ },
+ "mini.library.cleanup.query.submit": {
+  "name": "a",
+  "static": true,
+  "arguments": [
+   {
+    "input": 0
+   },
+   {
+    "input": 1
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.cleanup": {
+  "name": "i",
+  "static": false,
+  "arguments": [
+   {
+    "input": 0
+   },
+   {
+    "input": 1
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.provider.read": {
+  "name": "a",
+  "static": true,
+  "arguments": []
+ },
+ "mini.library.cleanup.embedded.version.read": {
+  "name": "p",
+  "static": false,
+  "arguments": []
+ },
+ "mini.library.cleanup.manifest.record.read": {
+  "name": "m",
+  "static": false,
+  "arguments": [
+   {
+    "input": 0
+   },
+   {
+    "input": 1
+   },
+   {
+    "input": 2
+   },
+   {
+    "input": 3
+   }
+  ]
+ },
+ "mini.library.cleanup.package.verify": {
+  "name": "a",
+  "static": false,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ]
+ },
+ "mini.library.cleanup.account.initialize": {
+  "name": "a",
+  "static": true,
+  "arguments": []
+ },
+ "mini.library.cleanup.account.read": {
+  "name": "b",
+  "static": true,
+  "arguments": []
+ },
+ "mini.library.cleanup.account.id.read": {
+  "name": "i",
+  "static": false,
+  "arguments": []
+ },
+ "mini.library.cleanup.manifest.registry.read": {
+  "name": "T6",
+  "static": true,
+  "arguments": []
+ },
+ "tablet.account.kernel.account.read": {
+  "name": "u",
+  "static": true,
+  "arguments": []
+ },
+ "tablet.account.account.storage.read": {
+  "name": "i",
+  "static": false,
+  "arguments": []
+ },
+ "tablet.account.storage.key.resolve": {
+  "name": "valueOf",
+  "static": true,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ]
+ },
+ "tablet.mode.deviceIdentity.initialize": {
+  "name": "b",
+  "static": true,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ]
+ },
+ "diagnostic.call.scene.uri.read": {
+  "name": "getUri",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.call.scene.command.read": {
+  "name": "getType",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.cgi.scene.response.read": {
+  "name": "getRespObj",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.cgi.response.baseResponse.read": {
+  "name": "getBaseResponse",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.cgi.scene.uri.read": {
+  "name": "getUri",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.launch.response.baseResponse.read": {
+  "name": "getBaseResponse",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.library.scene.uri.read": {
+  "name": "getUri",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.library.reader.version.read": {
+  "name": "p",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.library.response.baseResponse.read": {
+  "name": "getBaseResponse",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.runtime.console.level.read": {
+  "name": "messageLevel",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.runtime.console.message.read": {
+  "name": "message",
+  "static": false,
+  "arguments": []
+ },
+ "diagnostic.mini.runtime.web.httpStatus.read": {
+  "name": "getStatusCode",
+  "static": false,
+  "arguments": []
+ },
+ "version.request.baseRequest.clientVersion.write": {
+  "name": "setClientVersion",
+  "static": false,
+  "parameters": [
+   "int"
+  ],
+  "arguments": [
+   {
+    "input": 0
+   }
+  ]
+ },
+ "call.mp.ownerVersion.read": {
+  "name": "getOwnerVersion",
+  "static": false,
+  "arguments": [],
+  "parameters": [],
+  "returns": "java.lang.String"
+ },
+ "call.mp.deviceInfo.copyBuilder": {
+  "name": "newBuilder",
+  "static": true,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ],
+  "parameters": [
+   "@owner"
+  ]
+ },
+ "call.mp.ownerVersion.write": {
+  "name": "setOwnerVersion",
+  "static": false,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ],
+  "parameters": [
+   "java.lang.String"
+  ]
+ },
+ "call.mp.deviceInfo.build": {
+  "name": "build",
+  "static": false,
+  "arguments": [],
+  "parameters": []
+ },
+ "call.mp.rudp.command.read": {
+  "name": "getCmdType",
+  "static": false,
+  "arguments": [],
+  "parameters": [],
+  "returns": "int"
+ },
+ "call.mp.byteString.size": {
+  "name": "size",
+  "static": false,
+  "arguments": [],
+  "parameters": [],
+  "returns": "int"
+ },
+ "call.mp.byteString.bytes": {
+  "name": "s",
+  "static": false,
+  "arguments": [],
+  "parameters": [],
+  "returns": "byte[]"
+ },
+ "call.mp.byteString.fromBytes": {
+  "name": "h",
+  "static": true,
+  "arguments": [
+   {
+    "input": 0
+   }
+  ],
+  "parameters": [
+   "byte[]"
+  ],
+  "returns": "@owner"
+ },
+ "call.sdk.wrapper.payload": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "call.sdk.baseResponse.ret": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "call.sdk.response.cacheSeconds": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "call.sdk.helper.decisionCache": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.callback.request": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.wrapper.payload": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.request.clientVersion": {
+  "path": [
+   {
+    "field": "iClientVersion",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.query.callback.proofRequest": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.result.payload": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.baseResponse.ret": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.query.response.libraryVersion": {
+  "path": [
+   {
+    "field": "f",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.query.result.errorType": {
+  "path": [
+   {
+    "field": "a",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.query.result.errorCode": {
+  "path": [
+   {
+    "field": "b",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.query.response.downloadUrl": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.query.response.digest": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.command.downloadUrl": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "java.lang.String"
+   }
+  ],
+  "valueType": "java.lang.String"
+ },
+ "mini.library.cleanup.manifest.command.digest": {
+  "path": [
+   {
+    "field": "e",
+    "static": false,
+    "type": "java.lang.String"
+   }
+  ],
+  "valueType": "java.lang.String"
+ },
+ "mini.library.cleanup.manifest.command.libraryVersion": {
+  "path": [
+   {
+    "field": "f",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.manifest.command.action": {
+  "path": [
+   {
+    "field": "h",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.manifest.cleanup.removedCount": {
+  "path": [
+   {
+    "field": "value",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "mini.library.cleanup.embedded.reader.instance": {
+  "path": [
+   {
+    "field": "j",
+    "static": true
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.row.appId": {
+  "path": [
+   {
+    "field": "field_appId",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.row.debugType": {
+  "path": [
+   {
+    "field": "field_debugType",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.manifest.row.version": {
+  "path": [
+   {
+    "field": "field_version",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.package.verifier.instance": {
+  "path": [
+   {
+    "field": "a",
+    "static": true
+   }
+  ]
+ },
+ "mini.library.cleanup.cleanup.row.appId": {
+  "path": [
+   {
+    "field": "field_appId",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.cleanup.row.debugType": {
+  "path": [
+   {
+    "field": "field_debugType",
+    "static": false
+   }
+  ]
+ },
+ "mini.library.cleanup.cleanup.row.version": {
+  "path": [
+   {
+    "field": "field_version",
+    "static": false
+   }
+  ]
+ },
+ "mini.versionGate.launch.record.action": {
+  "path": [
+   {
+    "field": "field_launchAction",
+    "static": false
+   }
+  ]
+ },
+ "mini.versionGate.launch.action.code": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "mini.versionGate.launch.action.page": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "mini.versionGate.launch.action.message": {
+  "path": [
+   {
+    "field": "g",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.call.mode.coroutine.stage": {
+  "path": [
+   {
+    "field": "f",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.call.mode.cache.mode": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.call.mode.helper.syntheticFlag": {
+  "path": [
+   {
+    "field": "g",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.call.packet.matcher1": {
+  "path": [
+   {
+    "field": "value",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.request.proto.baseRequest": {
+  "path": [
+   {
+    "field": "BaseRequest",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.request.wrapper.payload": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.native.clientVersion": {
+  "path": [
+   {
+    "field": "g",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.cgi.baseRequest.deviceType": {
+  "path": [
+   {
+    "field": "iDeviceType",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.baseRequest.clientVersion": {
+  "path": [
+   {
+    "field": "iClientVersion",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.cgi.cgi.callback.result": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.cgi.result.errorMessage": {
+  "path": [
+   {
+    "field": "f",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.baseResponse.ret": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.cgi.response.flutterOpaque.parseFlag": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.response.sdkMode.mode": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.response.sdkMode.cacheSeconds": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.launch.response.action.code": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.launch.response.action.libraryVersion": {
+  "path": [
+   {
+    "field": "g",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.launch.response.action.page": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.launch.response.baseResponse.ret": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.launch.request.appId": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.launch.request.libraryVersion": {
+  "path": [
+   {
+    "field": "g",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.launch.response.action": {
+  "path": [
+   {
+    "field": "j",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.request.clientVersion": {
+  "path": [
+   {
+    "field": "iClientVersion",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.library.query.result.errorMessage": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.wrapper.payload": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.result.payload": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.response.downloadUrl": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.response.libraryVersion": {
+  "path": [
+   {
+    "field": "f",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.library.response.needDownload": {
+  "path": [
+   {
+    "field": "i",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.response.action": {
+  "path": [
+   {
+    "field": "h",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.response.digest": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.integrity.result.accepted": {
+  "path": [
+   {
+    "field": "second",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.integrity.result.status": {
+  "path": [
+   {
+    "field": "first",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.install.pkgVersion": {
+  "path": [
+   {
+    "field": "pkgVersion",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.install.pkgPath": {
+  "path": [
+   {
+    "field": "pkgPath",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.response.baseResponse.ret": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.runtime.launch.record.action": {
+  "path": [
+   {
+    "field": "field_launchAction",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.action.code": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.action.page": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.action.message": {
+  "path": [
+   {
+    "field": "g",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.record.jsapiInfo": {
+  "path": [
+   {
+    "field": "field_jsapiInfo",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.prepare.record": {
+  "path": [
+   {
+    "field": "Y",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.prepare.values": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.config.package": {
+  "path": [
+   {
+    "field": "r",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.page.readyCallback.container": {
+  "path": [
+   {
+    "field": "f",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.page.container.runtime": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.web.console.page": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.script.name": {
+  "path": [
+   {
+    "field": "i",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.component.owner": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "call.sdk.response.mode": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "version.request.baseRequest.clientVersion": {
+  "path": [
+   {
+    "field": "iClientVersion",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "call.packet.native.output.bytes": {
+  "path": [
+   {
+    "field": "value",
+    "static": false,
+    "type": "byte[]"
+   }
+  ],
+  "valueType": "byte[]"
+ },
+ "call.packet.request.binding.payload": {
+  "path": [
+   {
+    "field": "g",
+    "static": false
+   }
+  ]
+ },
+ "call.packet.request.binding.command": {
+  "path": [
+   {
+    "field": "h",
+    "static": false,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "version.global.clientVersion": {
+  "path": [
+   {
+    "field": "g",
+    "static": true,
+    "type": "int"
+   }
+  ],
+  "valueType": "int"
+ },
+ "diagnostic.mini.runtime.runtime.primary": {
+  "path": [
+   {
+    "field": "A",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.runtime.alternate": {
+  "path": [
+   {
+    "field": "z",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.runtime.page": {
+  "path": [
+   {
+    "field": "e",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.exception.snapshot.component": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.exception.game.component": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.exception.service.component": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.web.callback.page": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.runtime.launch.jsapiInfo.buffer": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.cgi.response.mpOpaque.bytes": {
+  "path": [
+   {
+    "field": "d",
+    "static": false,
+    "type": "byte[]"
+   }
+  ]
+ },
+ "diagnostic.cgi.response.flutterOpaque.bytes": {
+  "path": [
+   {
+    "field": "e",
+    "static": false,
+    "type": "byte[]"
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.result.errorType": {
+  "path": [
+   {
+    "field": "a",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.result.errorCode": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.callback.request": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.download.result.libraryVersion": {
+  "path": [
+   {
+    "field": "b",
+    "static": false
+   }
+  ]
+ },
+ "diagnostic.mini.library.query.request.libraryVersion": {
+  "path": [
+   {
+    "field": "d",
+    "static": false
+   }
+  ]
+ }
+}

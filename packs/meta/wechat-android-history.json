@@ -1,0 +1,2108 @@
+{
+  "schema_version": 2,
+  "source": {
+    "readme_url": "https://github.com/zuogl/WeChat-Android-History-Versions/blob/main/README.md",
+    "readme_sha256": "bc65e7605f8d1f2960527a346228f24a816a1c067fea7bb494291781cbdece63",
+    "declared_counts": {
+      "version_count": 135,
+      "package_count": 176
+    },
+    "version_code_source": "apk_filename",
+    "verification": "未下载 APK 或核验 Manifest",
+    "download_bases": [
+      "https://dldir1v6.qq.com/weixin/android/",
+      "https://dldir1.qq.com/weixin/android/"
+    ]
+  },
+  "summary": {
+    "version_count": 135,
+    "package_count": 176,
+    "version_build_count": 142,
+    "packages_without_version_code": 0
+  },
+  "versions": [
+    {
+      "version_name": "8.0.80",
+      "packages": [
+        {
+          "release_date": "2026-10-28",
+          "version_code": 3220,
+          "client_version_hex": "0x28005032",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8080android3220_0x28005032_arm64.apk"
+        },
+        {
+          "release_date": "2026-10-28",
+          "version_code": 3220,
+          "client_version_hex": "0x28005030",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8080android3220_0x28005030_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.79",
+      "packages": [
+        {
+          "release_date": "2026-09-30",
+          "version_code": 3200,
+          "client_version_hex": "0x28004f30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8079android3200_0x28004f30_arm64.apk"
+        },
+        {
+          "release_date": "2026-09-30",
+          "version_code": 3200,
+          "client_version_hex": "0x28004f30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8079android3200_0x28004f30_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.78",
+      "packages": [
+        {
+          "release_date": "2026-09-09",
+          "version_code": 3180,
+          "client_version_hex": "0x28004e32",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8078android3180_0x28004e32_arm64.apk"
+        },
+        {
+          "release_date": "2026-09-09",
+          "version_code": 3180,
+          "client_version_hex": "0x28004e30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8078android3180_0x28004e30_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.77",
+      "packages": [
+        {
+          "release_date": "2026-08-21",
+          "version_code": 3160,
+          "client_version_hex": "0x28004d30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8077android3160_0x28004d30_arm64.apk"
+        },
+        {
+          "release_date": "2026-08-21",
+          "version_code": 3160,
+          "client_version_hex": "0x28004d30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8077android3160_0x28004d30_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.76",
+      "packages": [
+        {
+          "release_date": "2026-07-08",
+          "version_code": 3141,
+          "client_version_hex": "0x28004c31",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8076android3141_0x28004c31_arm64.apk"
+        },
+        {
+          "release_date": "2026-07-08",
+          "version_code": 3140,
+          "client_version_hex": "0x28004c30",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8076android3140_0x28004c30_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.74",
+      "packages": [
+        {
+          "release_date": "2026-06-08",
+          "version_code": 3120,
+          "client_version_hex": "0x28004a36",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8074android3120_0x28004a36_arm64.apk"
+        },
+        {
+          "release_date": "2026-06-08",
+          "version_code": 3120,
+          "client_version_hex": "0x28004a34",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8074android3120_0x28004a34_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.72",
+      "packages": [
+        {
+          "release_date": "2026-05-15",
+          "version_code": 3100,
+          "client_version_hex": "0x28004835",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8072android3100_0x28004835_arm64.apk"
+        },
+        {
+          "release_date": "2026-05-15",
+          "version_code": 3100,
+          "client_version_hex": "0x28004834",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8072android3100_0x28004834_arm64.apk"
+        },
+        {
+          "release_date": "2026-05-15",
+          "version_code": 3100,
+          "client_version_hex": "0x28004833",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8072android3100_0x28004833_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.71",
+      "packages": [
+        {
+          "release_date": "2026-04-21",
+          "version_code": 3080,
+          "client_version_hex": "0x28004734",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8071android3080_0x28004734_arm64.apk"
+        },
+        {
+          "release_date": "2026-04-21",
+          "version_code": 3080,
+          "client_version_hex": "0x28004733",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8071android3080_0x28004733_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.70",
+      "packages": [
+        {
+          "release_date": "2026-03-30",
+          "version_code": 3060,
+          "client_version_hex": "0x28004634",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8070android3060_0x28004634_arm64_1.apk"
+        },
+        {
+          "release_date": "2026-03-30",
+          "version_code": 3060,
+          "client_version_hex": "0x28004633",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8070android3060_0x28004633_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.69",
+      "packages": [
+        {
+          "release_date": "2026-02-09",
+          "version_code": 3040,
+          "client_version_hex": "0x2800455a",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8069android3040_0x2800455a_arm64.apk"
+        },
+        {
+          "release_date": "2026-02-09",
+          "version_code": 3040,
+          "client_version_hex": "0x28004530",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8069android3040_0x28004530_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.68",
+      "packages": [
+        {
+          "release_date": "2026-01-20",
+          "version_code": 3020,
+          "client_version_hex": "0x28004434",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8068android3020_0x28004434_arm64.apk"
+        },
+        {
+          "release_date": "2026-01-20",
+          "version_code": 3020,
+          "client_version_hex": "0x28004433",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8068android3020_0x28004433_arm64.apk"
+        },
+        {
+          "release_date": "2026-01-20",
+          "version_code": 3020,
+          "client_version_hex": "0x28004432",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8068android3020_0x28004432_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.67",
+      "packages": [
+        {
+          "release_date": "2025-12-30",
+          "version_code": 3000,
+          "client_version_hex": "0x28004333",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8067android3000_0x28004333_arm64.apk"
+        },
+        {
+          "release_date": "2025-12-30",
+          "version_code": 3000,
+          "client_version_hex": "0x28004332",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8067android3000_0x28004332_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.66",
+      "packages": [
+        {
+          "release_date": "2025-12-02",
+          "version_code": 2980,
+          "client_version_hex": "0x28004234",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8066android2980_0x28004234_arm64.apk"
+        },
+        {
+          "release_date": "2025-12-02",
+          "version_code": 2980,
+          "client_version_hex": "0x28004233",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8066android2980_0x28004233_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.65",
+      "packages": [
+        {
+          "release_date": "2025-11-07",
+          "version_code": 2960,
+          "client_version_hex": "0x28004137",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8065android2960_0x28004137_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.64",
+      "packages": [
+        {
+          "release_date": "2025-09-29",
+          "version_code": 2940,
+          "client_version_hex": "0x28004033",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8064android2940_0x28004033_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.63",
+      "packages": [
+        {
+          "release_date": "2025-09-09",
+          "version_code": 2920,
+          "client_version_hex": "0x28003f33",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8063android2920_0x28003f33_arm64.apk"
+        },
+        {
+          "release_date": "2025-09-09",
+          "version_code": 2920,
+          "client_version_hex": "0x28003f32",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8063android2920_0x28003f32_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.62",
+      "packages": [
+        {
+          "release_date": "2025-08-11",
+          "version_code": 2900,
+          "client_version_hex": "0x28003e39",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8062android2900_0x28003e39_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.61",
+      "packages": [
+        {
+          "release_date": "2025-07-02",
+          "version_code": 2880,
+          "client_version_hex": "0x28003d34",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8061android2880_0x28003d34_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.60",
+      "packages": [
+        {
+          "release_date": "2025-06-06",
+          "version_code": 2860,
+          "client_version_hex": "0x28003c39",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8060android2860_0x28003c39_arm64.apk"
+        },
+        {
+          "release_date": "2025-06-06",
+          "version_code": 2860,
+          "client_version_hex": "0x28003c38",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8060android2860_0x28003c38_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.58",
+      "packages": [
+        {
+          "release_date": "2025-04-22",
+          "version_code": 2841,
+          "client_version_hex": "0x28003a3f",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8058android2841_0x28003a3f_arm64.apk"
+        },
+        {
+          "release_date": "2025-04-22",
+          "version_code": 2841,
+          "client_version_hex": "0x28003a35",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8058android2841_0x28003a35_arm64.apk"
+        },
+        {
+          "release_date": "2025-04-22",
+          "version_code": 2840,
+          "client_version_hex": "0x28003a34",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8058android2840_0x28003a34_arm64.apk"
+        },
+        {
+          "release_date": "2025-04-22",
+          "version_code": 2840,
+          "client_version_hex": "0x28003a33",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8058android2840_0x28003a33_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.57",
+      "packages": [
+        {
+          "release_date": "2025-03-18",
+          "version_code": 2820,
+          "client_version_hex": "0x28003933",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8057android2820_0x28003933_arm64.apk"
+        },
+        {
+          "release_date": "2025-03-18",
+          "version_code": 2820,
+          "client_version_hex": "0x28003932",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8057android2820_0x28003932_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.56",
+      "packages": [
+        {
+          "release_date": "2025-01-07",
+          "version_code": 2800,
+          "client_version_hex": "0x280038f8",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8056android2800_0x280038f8_arm64_2.apk"
+        },
+        {
+          "release_date": "2025-01-07",
+          "version_code": 2800,
+          "client_version_hex": "0x280038f8",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8056android2800_0x280038f8_arm64_1.apk"
+        },
+        {
+          "release_date": "2025-01-07",
+          "version_code": 2800,
+          "client_version_hex": "0x2800383c",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8056android2800_0x2800383c_arm64.apk"
+        },
+        {
+          "release_date": "2025-01-07",
+          "version_code": 2800,
+          "client_version_hex": "0x28003832",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8056android2800_0x28003832_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.55",
+      "packages": [
+        {
+          "release_date": "2024-12-16",
+          "version_code": 2780,
+          "client_version_hex": "0x28003734",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8055android2780_0x28003734_arm64.apk"
+        },
+        {
+          "release_date": "2024-12-16",
+          "version_code": 2780,
+          "client_version_hex": "0x28003733",
+          "abi": "arm64-v8a",
+          "download_base": 0,
+          "download": "weixin8055android2780_0x28003733_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.54",
+      "packages": [
+        {
+          "release_date": "2024-11-18",
+          "version_code": 2760,
+          "client_version_hex": "0x28003636",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8054android2760_0x28003636_arm64.apk"
+        },
+        {
+          "release_date": "2024-11-18",
+          "version_code": 2760,
+          "client_version_hex": "0x28003634",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8054android2760_0x28003634_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.53",
+      "packages": [
+        {
+          "release_date": "2024-10-12",
+          "version_code": 2740,
+          "client_version_hex": "0x28003533",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8053android2740_0x28003533_arm64.apk"
+        },
+        {
+          "release_date": "2024-10-12",
+          "version_code": 2740,
+          "client_version_hex": "0x28003532",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8053android2740_0x28003532_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.51",
+      "packages": [
+        {
+          "release_date": "2024-09-14",
+          "version_code": 2720,
+          "client_version_hex": "0x28003334",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8051android2720_0x28003334_arm64.apk"
+        },
+        {
+          "release_date": "2024-09-14",
+          "version_code": 2720,
+          "client_version_hex": "0x28003333",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8051android2720_0x28003333_arm64_1.apk"
+        },
+        {
+          "release_date": "2024-09-14",
+          "version_code": 2720,
+          "client_version_hex": "0x28003332",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8051android2720_0x28003332_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.50",
+      "packages": [
+        {
+          "release_date": "2024-07-02",
+          "version_code": 2701,
+          "client_version_hex": "0x28003294",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8050android2701_0x28003294_arm64.apk"
+        },
+        {
+          "release_date": "2024-07-02",
+          "version_code": 2701,
+          "client_version_hex": "0x2800323e",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8050android2701_0x2800323e_arm64.apk"
+        },
+        {
+          "release_date": "2024-07-02",
+          "version_code": 2701,
+          "client_version_hex": "0x2800323c",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8050android2701_0x2800323c_arm64.apk"
+        },
+        {
+          "release_date": "2024-07-02",
+          "version_code": 2700,
+          "client_version_hex": "0x2800323c",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8050android2700_0x2800323c_arm64.apk"
+        },
+        {
+          "release_date": "2024-07-02",
+          "version_code": 2620,
+          "client_version_hex": "0x2800323c",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8050android2620_0x2800323c_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.49",
+      "packages": [
+        {
+          "release_date": "2024-04-22",
+          "version_code": 2600,
+          "client_version_hex": "0x2800313d",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8049android2600_0x2800313d_arm64.apk"
+        },
+        {
+          "release_date": "2024-04-22",
+          "version_code": 2600,
+          "client_version_hex": "0x28003133",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8049android2600_0x28003133_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.48",
+      "packages": [
+        {
+          "release_date": "2024-03-18",
+          "version_code": 2580,
+          "client_version_hex": "0x28003036",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8048android2580_0x28003036_arm64.apk"
+        },
+        {
+          "release_date": "2024-03-18",
+          "version_code": 2580,
+          "client_version_hex": "0x28003035",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8048android2580_0x28003035_arm64.apk"
+        },
+        {
+          "release_date": "2024-03-18",
+          "version_code": 2580,
+          "client_version_hex": "0x28003033",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8048android2580_0x28003033_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.47",
+      "packages": [
+        {
+          "release_date": "2024-02-01",
+          "version_code": 2560,
+          "client_version_hex": "0x28002f36",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8047android2560_0x28002f36_arm64.apk"
+        },
+        {
+          "release_date": "2024-02-01",
+          "version_code": 2560,
+          "client_version_hex": "0x28002f30",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8047android2560_0x28002f30_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.46",
+      "packages": [
+        {
+          "release_date": "2024-01-23",
+          "version_code": 2540,
+          "client_version_hex": "0x28002e34",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8046android2540_0x28002e34_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.45",
+      "packages": [
+        {
+          "release_date": "2024-01-02",
+          "version_code": 2521,
+          "client_version_hex": "0x28002d34",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8045android2521_0x28002d34_arm64_1.apk"
+        },
+        {
+          "release_date": "2024-01-02",
+          "version_code": 2520,
+          "client_version_hex": "0x28002d33",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8045android2520_0x28002d33_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.44",
+      "packages": [
+        {
+          "release_date": "2023-12-04",
+          "version_code": 2502,
+          "client_version_hex": "0x28002c3f",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8044android2502_0x28002c3f_arm64.apk"
+        },
+        {
+          "release_date": "2023-12-04",
+          "version_code": 2502,
+          "client_version_hex": "0x28002c36",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8044android2502_0x28002c36_arm64.apk"
+        },
+        {
+          "release_date": "2023-12-04",
+          "version_code": 2501,
+          "client_version_hex": "0x28002c35",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8044android2501_0x28002c35_arm64.apk"
+        },
+        {
+          "release_date": "2023-12-04",
+          "version_code": 2500,
+          "client_version_hex": "0x28002c34",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8044android2500_0x28002c34_arm64.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.43",
+      "packages": [
+        {
+          "release_date": "2023-11-06",
+          "version_code": 2480,
+          "client_version_hex": "0x28002b38",
+          "abi": "arm64-v8a",
+          "download_base": 1,
+          "download": "weixin8043android2480_0x28002b38_arm64_1.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.42",
+      "packages": [
+        {
+          "release_date": "2023-09-22",
+          "version_code": 2460,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8042android2460.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.41",
+      "packages": [
+        {
+          "release_date": "2023-09-06",
+          "version_code": 2440,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8041android2440.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.40",
+      "packages": [
+        {
+          "release_date": "2023-07-20",
+          "version_code": 2420,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8040android2420.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.38",
+      "packages": [
+        {
+          "release_date": "2023-06-21",
+          "version_code": 2400,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8038android2400.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.37",
+      "packages": [
+        {
+          "release_date": "2023-05-25",
+          "version_code": 2380,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8037android2380.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.35",
+      "packages": [
+        {
+          "release_date": "2023-04-20",
+          "version_code": 2360,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8035android2360.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.34",
+      "packages": [
+        {
+          "release_date": "2023-03-23",
+          "version_code": 2340,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8034android2340.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.33",
+      "packages": [
+        {
+          "release_date": "2023-02-23",
+          "version_code": 2320,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8033android2320.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.32",
+      "packages": [
+        {
+          "release_date": "2023-01-06",
+          "version_code": 2300,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8032android2300.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.31",
+      "packages": [
+        {
+          "release_date": "2022-12-08",
+          "version_code": 2280,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8031android2280.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.30",
+      "packages": [
+        {
+          "release_date": "2022-11-10",
+          "version_code": 2260,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8030android2260.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.28",
+      "packages": [
+        {
+          "release_date": "2022-09-16",
+          "version_code": 2240,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8028android2240.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.27",
+      "packages": [
+        {
+          "release_date": "2022-08-18",
+          "version_code": 2220,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8027android2220.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.25",
+      "packages": [
+        {
+          "release_date": "2022-07-21",
+          "version_code": 2200,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8025android2200.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.24",
+      "packages": [
+        {
+          "release_date": "2022-06-27",
+          "version_code": 2180,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8024android2180.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.23",
+      "packages": [
+        {
+          "release_date": "2022-05-26",
+          "version_code": 2160,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8023android2160.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.22",
+      "packages": [
+        {
+          "release_date": "2022-04-29",
+          "version_code": 2140,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8022android2140.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.21",
+      "packages": [
+        {
+          "release_date": "2022-04-01",
+          "version_code": 2120,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8021android2120.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.20",
+      "packages": [
+        {
+          "release_date": "2022-03-03",
+          "version_code": 2100,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8020android2100.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.19",
+      "packages": [
+        {
+          "release_date": "2022-01-25",
+          "version_code": 2080,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8019android2080.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.18",
+      "packages": [
+        {
+          "release_date": "2022-01-13",
+          "version_code": 2060,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8018android2060.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.16",
+      "packages": [
+        {
+          "release_date": "2021-10-29",
+          "version_code": 2040,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8016android2040.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.15",
+      "packages": [
+        {
+          "release_date": "2021-09-29",
+          "version_code": 2020,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8015android2020.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.14",
+      "packages": [
+        {
+          "release_date": "2021-09-24",
+          "version_code": 2000,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8014android2000.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.11",
+      "packages": [
+        {
+          "release_date": "2021-08-26",
+          "version_code": 1980,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8011android1980.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.10",
+      "packages": [
+        {
+          "release_date": "2021-08-16",
+          "version_code": 1960,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin8010android1960.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.9",
+      "packages": [
+        {
+          "release_date": "2021-07-29",
+          "version_code": 1940,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin809android1940.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.7",
+      "packages": [
+        {
+          "release_date": "2021-07-02",
+          "version_code": 1920,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin807android1920.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.6",
+      "packages": [
+        {
+          "release_date": "2021-05-27",
+          "version_code": 1900,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin806android1900.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.3",
+      "packages": [
+        {
+          "release_date": "2021-04-22",
+          "version_code": 1880,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin803android1880.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.2",
+      "packages": [
+        {
+          "release_date": "2021-03-25",
+          "version_code": 1860,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin802android1860.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.1",
+      "packages": [
+        {
+          "release_date": "2021-02-05",
+          "version_code": 1840,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin801android1840.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "8.0.0",
+      "packages": [
+        {
+          "release_date": "2021-01-25",
+          "version_code": 1840,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin800android1840.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.22",
+      "packages": [
+        {
+          "release_date": "2020-12-25",
+          "version_code": 1820,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7022android1820.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.21",
+      "packages": [
+        {
+          "release_date": "2020-11-26",
+          "version_code": 1800,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7021android1800.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.20",
+      "packages": [
+        {
+          "release_date": "2020-10-29",
+          "version_code": 1780,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7020android1780.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.19",
+      "packages": [
+        {
+          "release_date": "2020-09-17",
+          "version_code": 1760,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7019android1760.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.18",
+      "packages": [
+        {
+          "release_date": "2020-08-20",
+          "version_code": 1740,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7018android1740.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.17",
+      "packages": [
+        {
+          "release_date": "2020-07-23",
+          "version_code": 1720,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7017android1720.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.16",
+      "packages": [
+        {
+          "release_date": "2020-06-28",
+          "version_code": 1700,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7016android1700.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.15",
+      "packages": [
+        {
+          "release_date": "2020-05-28",
+          "version_code": 1680,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7015android1680.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.14",
+      "packages": [
+        {
+          "release_date": "2020-04-30",
+          "version_code": 1660,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7014android1660.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.13",
+      "packages": [
+        {
+          "release_date": "2020-04-02",
+          "version_code": 1640,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7013android1640.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.12",
+      "packages": [
+        {
+          "release_date": "2020-03-05",
+          "version_code": 1620,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7012android1620.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.11",
+      "packages": [
+        {
+          "release_date": "2020-02-23",
+          "version_code": 1600,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7011android1600.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.10",
+      "packages": [
+        {
+          "release_date": "2019-12-26",
+          "version_code": 1580,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin7010android1580.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.9",
+      "packages": [
+        {
+          "release_date": "2019-11-28",
+          "version_code": 1560,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin709android1560.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.8",
+      "packages": [
+        {
+          "release_date": "2019-10-31",
+          "version_code": 1540,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin708android1540.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.7",
+      "packages": [
+        {
+          "release_date": "2019-09-25",
+          "version_code": 1520,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin707android1520.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.6",
+      "packages": [
+        {
+          "release_date": "2019-07-26",
+          "version_code": 1460,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin706android1460.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.5",
+      "packages": [
+        {
+          "release_date": "2019-07-04",
+          "version_code": 1440,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin705android1440.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.4",
+      "packages": [
+        {
+          "release_date": "2019-04-16",
+          "version_code": 1420,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin704android1420.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.3",
+      "packages": [
+        {
+          "release_date": "2019-01-30",
+          "version_code": 1400,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin703android1400.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "7.0.0",
+      "packages": [
+        {
+          "release_date": "2018-12-30",
+          "version_code": 1380,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin700android1380.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.7.3",
+      "packages": [
+        {
+          "release_date": "2018-09-29",
+          "version_code": 1360,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin673android1360.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.7.2",
+      "packages": [
+        {
+          "release_date": "2018-08-17",
+          "version_code": 1340,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin672android1340.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.7",
+      "packages": [
+        {
+          "release_date": "2018-05-30",
+          "version_code": 1320,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin667android1320.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.6",
+      "packages": [
+        {
+          "release_date": "2018-04-10",
+          "version_code": 1300,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin666android1300.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.5",
+      "packages": [
+        {
+          "release_date": "2018-03-05",
+          "version_code": 1280,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin665android1280.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.3",
+      "packages": [
+        {
+          "release_date": "2018-02-09",
+          "version_code": 1260,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin663android1260.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.2",
+      "packages": [
+        {
+          "release_date": "2018-02-01",
+          "version_code": 1240,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin662android1240.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6.1",
+      "packages": [
+        {
+          "release_date": "2017-12-29",
+          "version_code": 1220,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin661android1220.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.6",
+      "packages": [
+        {
+          "release_date": "2017-12-22",
+          "version_code": 1200,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin660android1200.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.23",
+      "packages": [
+        {
+          "release_date": "2017-12-11",
+          "version_code": 1180,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6523android1180.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.22",
+      "packages": [
+        {
+          "release_date": "2017-11-20",
+          "version_code": 1160,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6522android1160.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.19",
+      "packages": [
+        {
+          "release_date": "2017-11-09",
+          "version_code": 1140,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6519android1140.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.16",
+      "packages": [
+        {
+          "release_date": "2017-09-29",
+          "version_code": 1120,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6516android1120.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.14",
+      "packages": [
+        {
+          "release_date": "2017-09-04",
+          "version_code": 1100,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6514android1100.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.13",
+      "packages": [
+        {
+          "release_date": "2017-08-21",
+          "version_code": 1080,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6513android1080.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.10",
+      "packages": [
+        {
+          "release_date": "2017-07-05",
+          "version_code": 1080,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6510android1080.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.8",
+      "packages": [
+        {
+          "release_date": "2017-05-22",
+          "version_code": 1060,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin658android1060.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.7",
+      "packages": [
+        {
+          "release_date": "2017-03-30",
+          "version_code": 1040,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin657android1040.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.6",
+      "packages": [
+        {
+          "release_date": "2017-03-16",
+          "version_code": 1020,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin656android1020.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.4",
+      "packages": [
+        {
+          "release_date": "2017-01-19",
+          "version_code": 1000,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin654android1000.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.5.3",
+      "packages": [
+        {
+          "release_date": "2016-12-30",
+          "version_code": 980,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin653android980.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.32",
+      "packages": [
+        {
+          "release_date": "2016-12-15",
+          "version_code": 960,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6332android960.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.31",
+      "packages": [
+        {
+          "release_date": "2016-11-21",
+          "version_code": 940,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6331android940.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.30",
+      "packages": [
+        {
+          "release_date": "2016-11-09",
+          "version_code": 920,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6330android920.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.28",
+      "packages": [
+        {
+          "release_date": "2016-10-27",
+          "version_code": 900,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6328android900.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.27",
+      "packages": [
+        {
+          "release_date": "2016-09-27",
+          "version_code": 880,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6327android880.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.25",
+      "packages": [
+        {
+          "release_date": "2016-08-24",
+          "version_code": 840,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6325android840.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.23",
+      "packages": [
+        {
+          "release_date": "2016-08-10",
+          "version_code": 840,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6323android840.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.22",
+      "packages": [
+        {
+          "release_date": "2016-06-29",
+          "version_code": 820,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6322android820.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.18",
+      "packages": [
+        {
+          "release_date": "2016-05-25",
+          "version_code": 800,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6318android800.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.16",
+      "packages": [
+        {
+          "release_date": "2016-04-19",
+          "version_code": 780,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6316android780.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.15",
+      "packages": [
+        {
+          "release_date": "2016-03-15",
+          "version_code": 760,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6315android760.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.13",
+      "packages": [
+        {
+          "release_date": "2016-02-01",
+          "version_code": 740,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6313android740.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.11",
+      "packages": [
+        {
+          "release_date": "2016-01-26",
+          "version_code": 720,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin6311android720.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.9",
+      "packages": [
+        {
+          "release_date": "2016-01-12",
+          "version_code": 700,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin639android700.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.8",
+      "packages": [
+        {
+          "release_date": "2015-12-08",
+          "version_code": 680,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin638android680.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.7",
+      "packages": [
+        {
+          "release_date": "2015-11-09",
+          "version_code": 660,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin637android660.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.3.5",
+      "packages": [
+        {
+          "release_date": "2015-10-19",
+          "version_code": 640,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin635android640.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.2.5",
+      "packages": [
+        {
+          "release_date": "2015-08-28",
+          "version_code": 620,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin625android620.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.2.4",
+      "packages": [
+        {
+          "release_date": "2015-07-29",
+          "version_code": 600,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin624android600.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.2.2",
+      "packages": [
+        {
+          "release_date": "2015-06-26",
+          "version_code": 580,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin622android580.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.2",
+      "packages": [
+        {
+          "release_date": "2015-05-26",
+          "version_code": 560,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin620android560.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.1",
+      "packages": [
+        {
+          "release_date": "2015-01-20",
+          "version_code": 540,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin610android540.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.0.2",
+      "packages": [
+        {
+          "release_date": "2014-12-24",
+          "version_code": 520,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin602android520.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "6.0",
+      "packages": [
+        {
+          "release_date": "2014-10-24",
+          "version_code": 501,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin600android501.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "5.4",
+      "packages": [
+        {
+          "release_date": "2014-08-28",
+          "version_code": 480,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin540android480.apk"
+        }
+      ]
+    },
+    {
+      "version_name": "5.3.1",
+      "packages": [
+        {
+          "release_date": "2014-06-27",
+          "version_code": 460,
+          "client_version_hex": null,
+          "abi": null,
+          "download_base": 1,
+          "download": "weixin531android460.apk"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "guard.wallet.create.onCreate": "onCreate",
+  "guard.wallet.destroy.onDestroy": "onDestroy"
+}
