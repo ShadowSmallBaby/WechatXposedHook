@@ -1,14 +1,14 @@
 package io.github.shadowbaby.wechatxposed.hook.framework;
 
+import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
+import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
+import io.github.shadowbaby.wechatxposed.shared.hook.HookParam;
 import android.util.Log;
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookParam;
 
 public final class ModernFramework implements HookFramework {
 
@@ -108,7 +108,9 @@ public final class ModernFramework implements HookFramework {
             return param.replacement;
         }
         try {
-            Object result = chain.proceed();
+            Object result = param.changedArgs == null
+                    ? chain.proceed()
+                    : chain.proceed(param.changedArgs);
             param.result = result;
         } catch (Throwable error) {
             param.throwable = error;
@@ -122,7 +124,9 @@ public final class ModernFramework implements HookFramework {
     private static final class Param implements HookParam {
 
         private final XposedInterface.Chain chain;
-        private final Object[] arguments;
+        private final java.util.List<Object> arguments;
+
+        private Object[] changedArgs;
 
         private boolean replaced;
         private Object replacement;
@@ -131,17 +135,25 @@ public final class ModernFramework implements HookFramework {
 
         Param(XposedInterface.Chain chain) {
             this.chain = chain;
-            this.arguments = chain.getArgs().toArray();
+            this.arguments = chain.getArgs();
         }
 
         @Override
         public Object[] args() {
-            return arguments;
+            return changedArgs != null ? changedArgs.clone() : arguments.toArray();
         }
 
         @Override
         public Object arg(int index) {
-            return arguments[index];
+            return changedArgs != null ? changedArgs[index] : arguments.get(index);
+        }
+
+        @Override
+        public void setArg(int index, Object value) {
+            if (changedArgs == null) {
+                changedArgs = arguments.toArray();
+            }
+            changedArgs[index] = value;
         }
 
         @Override

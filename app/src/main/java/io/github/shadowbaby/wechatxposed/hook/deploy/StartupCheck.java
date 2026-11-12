@@ -1,12 +1,12 @@
 package io.github.shadowbaby.wechatxposed.hook.deploy;
 
+import io.github.shadowbaby.wechatxposed.hook.license.Activation;
 import io.github.shadowbaby.wechatxposed.hook.license.LicenseDatabase;
 import io.github.shadowbaby.wechatxposed.hook.license.LicenseInstaller;
-import io.github.shadowbaby.wechatxposed.hook.loader.Secret;
-import io.github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
+import io.github.shadowbaby.wechatxposed.hook.license.Wxid;
+import io.github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -16,23 +16,25 @@ public abstract class StartupCheck {
 
     private static final String DATABASE_PATH = "databases/" + LicenseDatabase.DB_FILE_NAME;
 
-    private static final String PREFS_PATH = Secret.of(SecretConstants.PREFS_PATH);
+    private static final int BUFFER_SIZE = 256;
 
-    private static final String ACCOUNT_KEY = Secret.of(SecretConstants.ACCOUNT_KEY);
+    private static final long SCAN_TTL_MS = 2000;
 
-    private static final String WXID_PREFIX = "wxid_";
+    private static volatile long lastScanAt = -SCAN_TTL_MS;
 
-    private static final int BUFFER_SIZE = 8 * 1024;
+    private static volatile String lastScanResult;
 
     private static volatile File weChatData;
 
     public static void run(File dataDir, String account) {
         weChatData = dataDir;
         long start = android.os.SystemClock.elapsedRealtime();
-        FeaturePackRestorer.ensureOnce(new File(dataDir, FILES_DIR));
+        FeaturePackRestorer.ensureOnce(new File(dataDir, FILES_DIR), false);
         long packs = android.os.SystemClock.elapsedRealtime();
         ensureLicense(account);
         long license = android.os.SystemClock.elapsedRealtime();
+        ModuleLogger.debug(
+                "perf: packs=" + (packs - start) + "ms, license=" + (license - packs) + "ms");
     }
 
     public static void ensureLicense(String account) {
@@ -44,38 +46,55 @@ public abstract class StartupCheck {
     }
 
     public static String readLoginAccount(File dataDir) {
-        try {
-            String xml = readText(new File(dataDir, PREFS_PATH));
-            if (xml == null) {
-                return null;
-            }
-            String marker = "name=\"" + ACCOUNT_KEY + "\"";
-            int key = xml.indexOf(marker);
-            int start = key < 0 ? -1 : xml.indexOf('>', key + marker.length());
-            int end = start < 0 ? -1 : xml.indexOf('<', start);
-            if (end <= start + 1) {
-                return null;
-            }
-            String account = xml.substring(start + 1, end).trim();
-            return account.startsWith(WXID_PREFIX) ? account : null;
-        } catch (Throwable ignored) {
-            return null;
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastScanAt < SCAN_TTL_MS) {
+            return lastScanResult;
         }
+        String account = Activation.probeWeChat();
+        if (account == null) {
+            account = Activation.probeShell();
+        }
+        if (account == null) {
+            account = Activation.runtimeWxid();
+        }
+        if (account == null) {
+            account = readManualAccount(dataDir);
+        }
+        ModuleLogger.log("login account=" + Wxid.mask(account));
+        lastScanAt = android.os.SystemClock.elapsedRealtime();
+        lastScanResult = account;
+        return account;
     }
 
-    private static String readText(File file) throws IOException {
-        if (!file.isFile()) {
+    public static void invalidate() {
+        lastScanAt = -SCAN_TTL_MS;
+        lastScanResult = null;
+    }
+
+    private static String readManualAccount(File dataDir) {
+        if (!Activation.isManualAccountEnabled()) {
             return null;
         }
-        try (InputStream input = new FileInputStream(file)) {
-            StringBuilder text = new StringBuilder();
+        try (InputStream input = new FileInputStream(
+                new File(dataDir, "files/" + Activation.ACCOUNT_CACHE))) {
             byte[] buffer = new byte[BUFFER_SIZE];
-            int read;
-            while ((read = input.read(buffer)) > 0) {
-                text.append(new String(buffer, 0, read, StandardCharsets.UTF_8));
+            int read = input.read(buffer);
+            if (read <= 0) {
+                return null;
             }
-            return text.toString();
+            String value = new String(buffer, 0, read, StandardCharsets.UTF_8).trim();
+            if (Wxid.isReal(value)) {
+                ModuleLogger.log("login manual account");
+                return value;
+            }
+        } catch (Throwable ignored) {
+
         }
+        return null;
     }
 
+    public static String diagnose(File dataDir) {
+        return "shell=" + (Activation.runtimeWxid() != null)
+                + " manual=" + new File(dataDir, "files/" + Activation.ACCOUNT_CACHE).isFile();
+    }
 }

@@ -16,3 +16,12 @@
 
 -dontwarn de.robv.android.xposed.**
 -dontwarn io.github.libxposed.**
+
+-keep class de.robv.android.xposed.** { *; }
+
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-dontwarn x.**
+-dontwarn kotlin.reflect.**
+-keep class io.github.shadowbaby.wechatxposed.hook.framework.Wx244Hooks { *; }
+-keep class io.github.shadowbaby.wechatxposed.hook.framework.Wx30Hooks { *; }
+-keepclasseswithmembernames class * { native <methods>; }

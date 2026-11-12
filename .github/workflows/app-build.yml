@@ -42,12 +42,17 @@ jobs:
 
       - name: Collect release assets
         run: |
-          test -f app/src/wx244/assets/wx6_2.44.zip
-          test -f app/src/wx30/assets/x7_3.0.zip
-          test "$(unzip -Z1 app/src/wx244/assets/wx6_2.44.zip | wc -l)" -eq 27
-          test "$(unzip -Z1 app/src/wx30/assets/x7_3.0.zip | wc -l)" -eq 27
-          unzip -Z1 app/build/outputs/apk/modernWx244/release/*.apk | grep -qx 'assets/wx6_2.44.zip'
-          unzip -Z1 app/build/outputs/apk/modernWx30/release/*.apk | grep -qx 'assets/x7_3.0.zip'
+          test -f app/src/wx244/pack/wx6_2.44.zip
+          test -f app/src/wx30/pack/x7_3.0.zip
+          test -f app/src/wx30/assets/8af2692bdcb8661da163b4204b5f5d5e
+          test -f app/src/wx30/assets/shell.apk
+          test "$(unzip -Z1 app/src/wx244/pack/wx6_2.44.zip | wc -l)" -eq 15
+          test "$(unzip -Z1 app/src/wx30/pack/x7_3.0.zip | wc -l)" -eq 15
+          unzip -Z1 app/build/outputs/apk/modernWx244/release/*.apk | grep -qx 'assets/14e777717682cce8a53cfcb34a22d65'
+          unzip -Z1 app/build/outputs/apk/modernWx30/release/*.apk | grep -qx 'assets/14e777717682cce8a53cfcb34a22d65'
+          unzip -Z1 app/build/outputs/apk/modernWx30/release/*.apk | grep -qx 'assets/8af2692bdcb8661da163b4204b5f5d5e'
+          unzip -Z1 app/build/outputs/apk/modernWx30/release/*.apk | grep -qx 'assets/shell.apk'
+          test "$(unzip -Z1 app/build/outputs/apk/modernWx30/release/*.apk | grep -c '^assets/')" -eq 17
           mkdir -p dist
           for apk in app/build/outputs/apk/*/release/WeXposedHook-*.apk; do
             cp "$apk" dist/

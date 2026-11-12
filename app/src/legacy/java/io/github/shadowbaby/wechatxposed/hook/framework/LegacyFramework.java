@@ -1,13 +1,13 @@
 package io.github.shadowbaby.wechatxposed.hook.framework;
 
+import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
+import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
+import io.github.shadowbaby.wechatxposed.shared.hook.HookParam;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
-import io.github.shadowbaby.wechatxposed.shared.hook.HookParam;
 
 public final class LegacyFramework implements HookFramework {
 
@@ -88,6 +88,11 @@ public final class LegacyFramework implements HookFramework {
         @Override
         public Object arg(int index) {
             return param.args[index];
+        }
+
+        @Override
+        public void setArg(int index, Object value) {
+            param.args[index] = value;
         }
 
         @Override

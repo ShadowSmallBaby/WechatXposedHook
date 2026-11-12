@@ -94,7 +94,6 @@ public final class LicenseDatabase {
         boolean created = !databaseFile.exists();
         if (!created && completeReadOnly(databaseFile, account, rows, structure)) {
 
-
             return new Result(false, 0, 0, rows.size());
         }
         if (!created) {
@@ -161,7 +160,6 @@ public final class LicenseDatabase {
                 ? LicenseData.isUsableLicense(stored, account)
                 : LicenseData.isUsableVerifier6(stored, account);
     }
-
 
     private static boolean completeReadOnly(File databaseFile, String account,
                                             List<LicenseData.Row> rows, Structure structure) {

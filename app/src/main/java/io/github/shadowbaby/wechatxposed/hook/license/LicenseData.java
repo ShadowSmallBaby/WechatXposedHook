@@ -2,7 +2,7 @@ package io.github.shadowbaby.wechatxposed.hook.license;
 
 import java.util.ArrayList;
 import java.util.List;
-import io.github.shadowbaby.wechatxposed.hook.loader.Secret;
+import io.github.shadowbaby.wechatxposed.hook.loader.util.Secret;
 import io.github.shadowbaby.wechatxposed.hook.loader.SecretConstants;
 
 public final class LicenseData {

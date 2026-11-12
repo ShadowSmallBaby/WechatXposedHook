@@ -1,3 +1,6 @@
+import java.security.KeyStore
+import java.util.zip.ZipFile
+
 plugins {
     id 'com.android.application'
 }
@@ -9,6 +12,48 @@ def signingKeyAlias = envValue('WXH_KEY_ALIAS')
 def signingKeyPassword = envValue('WXH_KEY_PASSWORD')
 def hasSigning = ksBase64 && signingStorePassword && signingKeyAlias && signingKeyPassword
 
+def moduleCertB64 = { ->
+    try {
+        byte[] material
+        String storePassword
+        String alias
+        if (hasSigning) {
+            material = Base64.getDecoder().decode(ksBase64.replaceAll('\s', ''))
+            storePassword = signingStorePassword
+            alias = signingKeyAlias
+        } else {
+            File store = new File(System.getProperty('user.home'), '.android/debug.keystore')
+            if (!store.isFile()) {
+                return ''
+            }
+            material = store.bytes
+            storePassword = 'android'
+            alias = 'androiddebugkey'
+        }
+        KeyStore keyStore = null
+        for (String type : ['JKS', 'PKCS12']) {
+            try {
+                def candidate = KeyStore.getInstance(type)
+                candidate.load(new ByteArrayInputStream(material),
+                        storePassword.toCharArray())
+                keyStore = candidate
+                break
+            } catch (Throwable ignored) {
+            }
+        }
+        if (keyStore == null) {
+            return ''
+        }
+        def certificate = keyStore.getCertificate(alias)
+        if (certificate == null) {
+            return ''
+        }
+        return Base64.getEncoder().encodeToString(certificate.encoded)
+    } catch (Throwable error) {
+        return ''
+    }
+}
+
 android {
     namespace 'io.github.shadowbaby.wechatxposed.hook'
     compileSdk 37
@@ -17,8 +62,10 @@ android {
         applicationId 'io.github.shadowbaby.wechatxposed.hook'
         minSdk 26
         targetSdk 37
-        versionCode 8
-        versionName '1.3.9'
+        versionCode 15
+        versionName '2.0'
+
+        buildConfigField 'String', 'MODULE_CERT_B64', '"' + moduleCertB64() + '"'
 
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
@@ -28,15 +75,7 @@ android {
     signingConfigs {
         release {
             if (hasSigning) {
-                def keystore = layout.buildDirectory.file('keystore/release.jks').get().asFile
-                keystore.parentFile.mkdirs()
-                try {
-                    keystore.bytes = Base64.getDecoder().decode(ksBase64.replaceAll('\\s', ''))
-                } catch (IllegalArgumentException error) {
-                    throw new GradleException('WXH_KEYSTORE_BASE64 不是合法 Base64: '
-                            + error.message)
-                }
-                storeFile keystore
+                storeFile layout.buildDirectory.file('keystore/release.jks').get().asFile
                 storePassword signingStorePassword
                 keyAlias signingKeyAlias
                 keyPassword signingKeyPassword
@@ -45,11 +84,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            debuggable false
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'true'
+            signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+        }
         release {
             minifyEnabled true
-            shrinkResources true
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+            buildConfigField 'boolean', 'VERBOSE_LOG', 'false'
         }
     }
 
@@ -77,6 +122,89 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+abstract class UnpackWxAssetsTask extends DefaultTask {
+
+    @Optional
+    @InputDirectory
+    abstract DirectoryProperty getPackDir()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    void unpack() {
+        def output = getOutputDir().get().asFile
+        getProject().delete(output)
+        output.mkdirs()
+        if (!getPackDir().isPresent()) {
+            return
+        }
+        File directory = getPackDir().get().asFile
+        if (!directory.isDirectory()) {
+            return
+        }
+        directory.listFiles({ File file ->
+            file.isFile() && file.name.endsWith('.zip')
+        } as FileFilter)?.each { File archive ->
+            new java.util.zip.ZipFile(archive).withCloseable { zip ->
+                zip.entries().each { entry ->
+                    if (entry.isDirectory()) {
+                        return
+                    }
+                    File target = new File(output, entry.name)
+                    target.parentFile.mkdirs()
+                    target.withOutputStream { stream ->
+                        stream << zip.getInputStream(entry)
+                    }
+                }
+            }
+        }
+    }
+}
+
+def unpackAssets = ['wx244', 'wx30'].collectEntries { flavor ->
+    [(flavor): tasks.register("unpack${flavor.capitalize()}Assets", UnpackWxAssetsTask) {
+        packDir.set(layout.projectDirectory.dir("src/${flavor}/pack"))
+        outputDir.set(layout.buildDirectory.dir("generated/${flavor}-assets"))
+    }]
+}
+
+def prepareKeystore = tasks.register('prepareKeystore') {
+    def target = layout.buildDirectory.file('keystore/release.jks')
+    outputs.file(target)
+    onlyIf { hasSigning }
+    doLast {
+        File file = target.get().asFile
+        file.parentFile.mkdirs()
+        try {
+            file.bytes = Base64.getDecoder().decode(ksBase64.replaceAll('\s', ''))
+        } catch (IllegalArgumentException error) {
+            throw new GradleException('WXH_KEYSTORE_BASE64 不是合法 Base64: '
+                    + error.message)
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (hasSigning
+            && (task.name.startsWith('package') || task.name.startsWith('validateSigning'))) {
+        task.dependsOn(prepareKeystore)
+    }
 }
 
 androidComponents {
@@ -85,6 +213,8 @@ androidComponents {
         def framework = flavors['framework']
         def wx = flavors['wx'] == 'wx244' ? '2.44' : '3.0'
         def appVersion = android.defaultConfig.versionName
+        variant.sources.assets?.addGeneratedSourceDirectory(
+                unpackAssets[flavors['wx']], { task -> task.outputDir })
         variant.outputs.each { output ->
             output.outputFileName.set(
                     "WeXposedHook-${framework}-wx${wx}-v${appVersion}.apk")
@@ -96,4 +226,5 @@ dependencies {
     implementation project(':shared')
     compileOnly 'de.robv.android.xposed:api:82'
     compileOnly 'io.github.libxposed:api:102.0.0'
+    modernImplementation 'io.github.libxposed:service:102.0.0'
 }

@@ -1,14 +1,14 @@
 package io.github.shadowbaby.wechatxposed.hook.license;
 
 import java.io.File;
-import io.github.shadowbaby.wechatxposed.hook.loader.ModuleLogger;
+import io.github.shadowbaby.wechatxposed.hook.loader.util.ModuleLogger;
 
 public final class LicenseInstaller {
 
     private static final String LABEL_CREATED = "created";
     private static final String LABEL_EXISTING = "existing";
     private static final String LOG_PREFIX = "license db: ";
-    private static final String LOG_SUFFIX = ", restart microX to apply";
+    private static final String LOG_SUFFIX = ", restart X 3.0 to apply";
 
     private static final String LOG_READY = " ready";
 
@@ -24,6 +24,7 @@ public final class LicenseInstaller {
         try {
             LicenseDatabase.Result result = LicenseDatabase.ensure(database, account);
             installedAccount = account;
+            ModuleLogger.debug(describe(account, database, result));
         } catch (Throwable error) {
             ModuleLogger.log(error);
         }
