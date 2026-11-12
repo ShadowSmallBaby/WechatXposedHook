@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.miniprogram;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import io.github.shadowbaby.wechatxposed.tool.config.MiniLibraryResetPolicy;
@@ -20,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class MiniProgramLibraryCleanup {

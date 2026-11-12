@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.miniprogram;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
@@ -11,6 +9,7 @@ import io.github.shadowbaby.wechatxposed.tool.hook.framework.ToolLogger;
 import java.lang.reflect.Constructor;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class MiniProgramLibrarySpoof {

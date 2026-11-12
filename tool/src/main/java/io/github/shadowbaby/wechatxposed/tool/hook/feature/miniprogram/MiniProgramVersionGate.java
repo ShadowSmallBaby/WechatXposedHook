@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.miniprogram;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
@@ -13,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONObject;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class MiniProgramVersionGate {
@@ -38,7 +37,6 @@ public final class MiniProgramVersionGate {
                                 fpRead(action, "mini.versionGate.launch.action.page"), fpRead(action, "mini.versionGate.launch.action.message"));
                         if (reason == null) return;
 
-
                         param.setResult(null);
                         if (settings.log) ToolLogger.log("mini version gate #" + SEQUENCE.incrementAndGet()
                                 + " mode=" + settings.miniProgramMode + " blocked=" + reason);
@@ -62,7 +60,6 @@ public final class MiniProgramVersionGate {
                                 || param.hasThrowable() || !(param.arg(fpInt("mini.versionGate.privateApi.openUrl.jsonArg")) instanceof JSONObject data)
                                 || !MiniProgramVersionPolicy.updateUrl(data.optString(fp("mini.versionGate.before.url")))) return;
                         try {
-
 
                             JSONObject copy = new JSONObject();
                             var keys = data.keys();

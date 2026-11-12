@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.call;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
@@ -15,6 +13,7 @@ import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class CallMpVersionSpoof {
@@ -62,7 +61,6 @@ public final class CallMpVersionSpoof {
                             var settings = RuntimeSettings.get();
                             if (!active(settings) || param.hasThrowable() || param.arg(fpInt("call.mp.rudp.buffer.arg")) == null) return;
                             try {
-
 
                                 if (!Integer.valueOf(fpInt("call.mp.rudp.versionCommand")).equals(fpCall(framework, param.thisObject(), "call.mp.rudp.command.read"))) return;
                                 Object buffer = param.arg(fpInt("call.mp.rudp.versionOffset"));

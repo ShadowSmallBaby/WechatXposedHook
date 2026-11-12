@@ -18,7 +18,6 @@ public final class RuntimeSettings {
         }
     }
 
-
     public static synchronized boolean runIfCurrent(ToolSettings expected, Runnable action) {
         if (current != expected) return false;
         action.run();

@@ -40,7 +40,6 @@ public record VersionSelection(int code, String name, boolean custom, CustomVers
         return new CustomVersion((Integer) code, (String) name);
     }
 
-
     public static Map<String, Object> migration(Map<String, ?> values) {
         if (values.containsKey(SAVED_CODE) || values.containsKey(SAVED_NAME)) return Map.of();
         VersionSelection current = read(values);
@@ -49,7 +48,6 @@ public record VersionSelection(int code, String name, boolean custom, CustomVers
         return savedWrites(new CustomVersion(current.code, name));
     }
 
-
     public static Map<String, Object> saveCustom(Map<String, ?> values, String name, int code,
             boolean selectAfterSave) {
         CustomVersion saved = new CustomVersion(code, name);
@@ -57,7 +55,6 @@ public record VersionSelection(int code, String name, boolean custom, CustomVers
         if (selectAfterSave || read(values).custom) writes.putAll(activeWrites(saved, true));
         return writes;
     }
-
 
     public static Map<String, Object> selectCustom(Map<String, ?> values) {
         CustomVersion saved = saved(values);

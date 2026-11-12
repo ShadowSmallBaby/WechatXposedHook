@@ -22,7 +22,6 @@ public final class SpoofCodec {
     private static final byte[] DOMAIN = "WXH-SPF-AES-GCM-v1\0".getBytes(StandardCharsets.UTF_8);
     private SpoofCodec() {}
 
-
     public static byte[] stripHash(byte[] raw) {
         if (raw == null || raw.length <= 32) return raw;
         try {
@@ -34,7 +33,6 @@ public final class SpoofCodec {
             return raw;
         }
     }
-
 
     public static String text(byte[] raw) {
         return new String(stripHash(raw), StandardCharsets.US_ASCII).trim();

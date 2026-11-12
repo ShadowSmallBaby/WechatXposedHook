@@ -1,23 +1,20 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.miniprogram;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookParam;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.framework.ToolLogger;
-
 import android.content.pm.PackageInfo;
 import android.os.Parcel;
 import java.lang.reflect.Method;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class PackageVersionSpoof {
 
     private static final String HOST_PACKAGE = fp("host.package.hostPackage.mmClass");
-
 
     private static final int CODE_BASE = fpInt("host.package.codeBase.versionCodeBase");
     private static final int CODE_STEP = fpInt("host.package.codeStep.versionCodeStep");
@@ -58,7 +55,6 @@ public final class PackageVersionSpoof {
             ToolLogger.log(error);
         }
     }
-
 
     private static int targetMinor(ToolSettings settings) {
         if (!settings.enabled || settings.miniProgramMode != ToolSettings.MINI_JSAPI) {

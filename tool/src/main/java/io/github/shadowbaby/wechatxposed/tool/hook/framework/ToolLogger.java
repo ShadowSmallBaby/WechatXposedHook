@@ -11,7 +11,6 @@ public abstract class ToolLogger {
 
     private static volatile HookFramework framework;
 
-
     private static volatile boolean verbose = BuildConfig.VERBOSE_LOG;
 
     public static void attach(HookFramework target) {

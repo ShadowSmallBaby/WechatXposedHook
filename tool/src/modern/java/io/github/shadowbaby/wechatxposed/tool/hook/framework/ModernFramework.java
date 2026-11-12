@@ -108,7 +108,6 @@ public final class ModernFramework implements HookFramework {
         private final XposedInterface.Chain chain;
         private final java.util.List<Object> arguments;
 
-
         private Object[] changedArgs;
 
         private boolean replaced;

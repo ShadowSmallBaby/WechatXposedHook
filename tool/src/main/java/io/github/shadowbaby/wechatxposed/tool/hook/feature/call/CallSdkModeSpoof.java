@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.call;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
@@ -14,6 +12,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class CallSdkModeSpoof {
@@ -44,11 +43,9 @@ public final class CallSdkModeSpoof {
                         if (response == null || response.getClass() != responseType) return;
                         try {
 
-
                             Object base = fpCall(framework, response, "call.sdk.response.baseResponse.read");
                             if (!Integer.valueOf(0).equals(fpRead(base, "call.sdk.baseResponse.ret"))) return;
                             int serverMode = (Integer) fpRequire(response, "call.sdk.response.mode");
-
 
                             if (serverMode == fpInt("call.sdk.mode.legacy")) fpWrite(response, "call.sdk.response.mode", fpInt("call.sdk.mode.modern"));
                             ToolLogger.debug("call sdk mode #" + SEQUENCE.incrementAndGet()
@@ -81,7 +78,6 @@ public final class CallSdkModeSpoof {
             } catch (Throwable error) { HOOKED.remove(loaderMethod); throw error; }
         } catch (Throwable error) { ToolLogger.debug("call sdk mode: cache tracker unavailable " + name); }
     }
-
 
     public static synchronized void onSettingsChanged(ToolSettings settings) {
         boolean gate = settings.enabled && settings.call;

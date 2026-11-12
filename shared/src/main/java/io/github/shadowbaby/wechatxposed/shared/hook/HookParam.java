@@ -6,7 +6,6 @@ public interface HookParam {
 
     Object arg(int index);
 
-
     default void setArg(int index, Object value) {
         throw new UnsupportedOperationException("setArg");
     }
@@ -14,7 +13,6 @@ public interface HookParam {
     Object thisObject();
 
     void setResult(Object result);
-
 
     Object result();
 

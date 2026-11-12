@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.miniprogram;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.tool.hook.config.ToolSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
@@ -14,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import org.json.JSONObject;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class MiniProgramSpoof {
@@ -39,7 +38,6 @@ public final class MiniProgramSpoof {
     private static boolean jsApiEnabled(ToolSettings settings) {
         return settings.enabled && settings.miniProgramMode == ToolSettings.MINI_JSAPI;
     }
-
 
     private static void hookEnvironment(HookFramework framework, ClassLoader loader) {
         try {
@@ -70,7 +68,6 @@ public final class MiniProgramSpoof {
         } catch (Throwable error) { ToolLogger.debug("mini JSAPI: environment writer unavailable"); }
     }
 
-
     private static void hookDirectEnvironment(HookFramework framework, ClassLoader loader, String owner) {
         try {
             Class<?> type = framework.findClassIfExists(owner, loader);
@@ -87,7 +84,6 @@ public final class MiniProgramSpoof {
             });
         } catch (Throwable error) { ToolLogger.debug("mini JSAPI: adapter unavailable " + owner); }
     }
-
 
     private static void hookJsApi(HookFramework framework, ClassLoader loader,
             String owner, String name, String signatureKey) {

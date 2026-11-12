@@ -12,7 +12,6 @@ public final class VersionTables {
     public static final int LOGIN = 7;
     public static final int LOGIN_PAD = 8;
 
-
     public static final int TARGET_VERSION = 0x28004F30;
 
     private static final String[] CALL_TABLE = {
@@ -21,7 +20,6 @@ public final class VersionTables {
             fp("version.routes.callTable.voipilink"), fp("version.routes.callTable.voipinvite"), fp("version.routes.callTable.getfriendringback"),
             fp("version.routes.callTable.mmilinktransfer"), fp("version.routes.callTable.voipspeedtest"), fp("version.routes.callTable.voipshutdown"),
     };
-
 
     private static final String[] MINI_PROGRAM_TABLE = {
             fp("version.routes.miniProgramTable.cgiBinMmbizBinWxaattrLaunchwxaapp"),
@@ -42,7 +40,6 @@ public final class VersionTables {
     private static final String[] LOGIN_TABLE = {
             fp("version.routes.loginTable.manualauth"),
     };
-
 
     private static final String[] LOGIN_PAD_TABLE = {
             fp("version.routes.loginPadTable.checkloginaspad"),

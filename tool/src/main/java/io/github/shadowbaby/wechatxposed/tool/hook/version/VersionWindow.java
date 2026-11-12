@@ -25,7 +25,6 @@ public final class VersionWindow {
     private VersionWindow() {
     }
 
-
     public static synchronized void configure(int configuredTarget) {
         if ((configuredTarget & 0xFFFFFF00) == 0 || configuredTarget == targetVersion) {
             return;
@@ -43,7 +42,6 @@ public final class VersionWindow {
         }
     }
 
-
     public static void install(HookFramework framework, ClassLoader classLoader) {
         frameworkRef = framework;
         loaderRef = classLoader;
@@ -60,7 +58,6 @@ public final class VersionWindow {
     public static boolean ensure(HookFramework framework, ClassLoader classLoader) {
         return ensureVersions(framework, classLoader);
     }
-
 
     public static synchronized void openGlobal(HookFramework framework, ClassLoader loader) {
         GlobalVersionSpoof.install(framework, loader);
@@ -117,7 +114,6 @@ public final class VersionWindow {
         WALLET_DEPTH.set(0);
         if (globalPinned) applyCurrent(framework, classLoader);
     }
-
 
     public static synchronized void close(HookFramework framework, ClassLoader loader,
                                           String reason) {

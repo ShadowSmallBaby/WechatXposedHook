@@ -71,7 +71,6 @@ public final class SpoofProfile {
         for (MemberRule candidate : rule.alternatives) validateBindings(candidate);
     }
 
-
     public static SpoofProfile parse(String encoded, String versionName) {
         try {
             return parse(SpoofRulePair.decode(encoded).normalized, versionName);
@@ -108,7 +107,6 @@ public final class SpoofProfile {
                 && fingerprintCalls.keySet().containsAll(builtIn.fingerprintCalls.keySet())
                 && fingerprintProperties.keySet().containsAll(builtIn.fingerprintProperties.keySet());
     }
-
 
     static SpoofProfile contractTemplate(String encoded) {
         if (encoded == null || encoded.isEmpty()) return null;

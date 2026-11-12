@@ -88,7 +88,6 @@ final class GlobalVersionSpoof {
                     lastNativeVersion = (Integer) param.arg(fpInt("version.global.after.zero"));
                     nativeOwned = forced && lastNativeVersion != VersionWindow.real();
 
-
                     if (forced) applyNative(active() && !VersionWindow.isWalletActive()
                             ? VersionWindow.spoofed() : VersionWindow.real());
                 } finally {
@@ -103,7 +102,6 @@ final class GlobalVersionSpoof {
                 if (active()) {
                     VersionWindow.openGlobal(framework, loader);
                     int effective = VersionWindow.isWalletActive() ? VersionWindow.real() : VersionWindow.spoofed();
-
 
                     applyNative(effective, true);
                 } else if (nativeOwned) applyNative(VersionWindow.real());

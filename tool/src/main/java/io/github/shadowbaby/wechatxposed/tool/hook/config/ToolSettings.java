@@ -10,7 +10,6 @@ public final class ToolSettings {
     public static final int MINI_CGI = 2;
     public static final int MINI_JSAPI = 3;
 
-
     public static final int DEFAULT_TARGET_VERSION = 0x28004F30;
 
     public final boolean enabled;

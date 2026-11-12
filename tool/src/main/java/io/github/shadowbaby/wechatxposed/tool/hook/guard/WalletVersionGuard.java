@@ -27,7 +27,6 @@ public final class WalletVersionGuard {
             fp("guard.wallet.walletClasses.luckyMoneyPrepareUIClass"),
     };
 
-
     private static final Set<String> DONE = ConcurrentHashMap.newKeySet();
 
     private WalletVersionGuard() {

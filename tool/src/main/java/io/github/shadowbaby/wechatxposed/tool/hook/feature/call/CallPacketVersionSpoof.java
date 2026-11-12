@@ -1,7 +1,5 @@
 package io.github.shadowbaby.wechatxposed.tool.hook.feature.call;
 
-import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
-
 import io.github.shadowbaby.wechatxposed.tool.hook.config.RuntimeSettings;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookCallback;
 import io.github.shadowbaby.wechatxposed.shared.hook.HookFramework;
@@ -14,6 +12,7 @@ import java.util.Deque;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import static io.github.shadowbaby.wechatxposed.tool.hook.spoof.HostFingerprint.*;
 
 
 public final class CallPacketVersionSpoof {
@@ -50,7 +49,6 @@ public final class CallPacketVersionSpoof {
                             RequestScope scope = currentScope();
                             boolean sealed = Integer.valueOf(fpInt("call.packet.sealed.aesGcmEncryption")).equals(param.arg(fpInt("call.packet.sealed.third")));
 
-
                             boolean bound = sealed && scope != null && scope.func == func
                                     && scope.target == settings.targetVersion
                                     && scope.sealed == body;
@@ -77,9 +75,6 @@ public final class CallPacketVersionSpoof {
                                 return;
                             }
 
-
-
-
                             byte[] copy = original.clone();
                             int target = settings.targetVersion;
                             copy[offset] = (byte) (target >>> fpInt("call.packet.after.framePrefixBytes"));
@@ -102,7 +97,6 @@ public final class CallPacketVersionSpoof {
         } catch (Throwable error) { ToolLogger.debug("call packet: ordinary pack contract unavailable"); }
     }
 
-
     private static String bindingState(RequestScope scope, int func, int target, byte[] body) {
         if (scope == null) return " scope=none";
         return " scope=present commandMatch=" + (scope.func == func)
@@ -118,7 +112,6 @@ public final class CallPacketVersionSpoof {
     private static String versionState(Integer version) {
         return version == null ? "unobserved" : "0x" + Integer.toHexString(version);
     }
-
 
     private static void installRequestBinding(HookFramework framework, ClassLoader loader) {
         try {
@@ -235,7 +228,6 @@ public final class CallPacketVersionSpoof {
         ToolLogger.debug("call packet #" + SEQUENCE.incrementAndGet() + " func=" + func + " " + message);
     }
 
-
     static int versionOffset(byte[] packet, int expectedFunc) {
         if (!supportedCgi(expectedFunc)) return -fpInt("call.packet.versionOffset.first");
         if (packet == null || packet.length < fpInt("call.packet.versionOffset.nibbleMask")) return -fpInt("call.packet.versionOffset.first");
@@ -243,7 +235,6 @@ public final class CallPacketVersionSpoof {
         int flags = (packet[prefix] & fpInt("call.packet.flags.byteMask")) | (packet[prefix + fpInt("call.packet.flags.first")] & fpInt("call.packet.flags.byteMask")) << fpInt("call.packet.flags.eighth");
         int end = flags >>> fpInt("call.packet.end.second") & fpInt("call.packet.end.headerSizeMask"), cookie = flags >>> fpInt("call.packet.cookie.eighth") & fpInt("call.packet.cookie.nibbleMask");
         int encryption = flags >>> fpInt("call.packet.encryption.hybridEncryption");
-
 
         if ((encryption != fpInt("call.packet.versionOffset.first") && encryption != fpInt("call.packet.versionOffset.fifth") && encryption != fpInt("call.packet.versionOffset.aesGcmEncryption") && encryption != fpInt("call.packet.versionOffset.compressedEncryption"))
                 || end < prefix + fpInt("call.packet.versionOffset.nibbleMask") + cookie || end >= packet.length || (prefix == fpInt("call.packet.versionOffset.zero") && end > fpInt("call.packet.versionOffset.extendedEncryption"))) return -fpInt("call.packet.versionOffset.first");

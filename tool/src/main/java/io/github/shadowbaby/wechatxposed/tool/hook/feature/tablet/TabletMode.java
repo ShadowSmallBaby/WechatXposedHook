@@ -86,7 +86,6 @@ public final class TabletMode {
         ToolLogger.log("tablet mode: " + hooked + " target(s)");
     }
 
-
     private static void hookDeviceInitialization(HookFramework framework, ClassLoader loader) {
         try {
             Class<?> owner = framework.findClassIfExists(fp("tablet.mode.deviceIdentity.class"), loader);
@@ -123,12 +122,10 @@ public final class TabletMode {
         }
     }
 
-
     private static boolean padSpoofEnabled() {
         var settings = RuntimeSettings.get();
         return settings.enabled && settings.login;
     }
-
 
     private static boolean padIdentityEnabled() {
         return padSpoofEnabled() && RuntimeSettings.get().tablet;
@@ -138,13 +135,11 @@ public final class TabletMode {
         return padIdentityEnabled() && (inExplicitPadLogin() || TabletAuthState.isPad(framework, loader));
     }
 
-
     public static boolean shouldSpoofPadRequest(HookFramework framework, ClassLoader loader, String uri) {
         if (!padSpoofEnabled() || !VersionTables.match(VersionTables.LOGIN_PAD, uri)) return false;
         return (!uri.endsWith(fp("tablet.mode.shouldSpoofPadRequest.secautoauth")) && !uri.endsWith(fp("tablet.mode.shouldSpoofPadRequest.autoauth")))
                 || padIdentityRequired(framework, loader);
     }
-
 
     public static void prepareAutoAuth(HookFramework framework, ClassLoader loader, String uri) {
         if (!deviceInitHooked || !fp("tablet.mode.prepareAutoAuth.cgiBinMicromsgBinSecautoauth").equals(uri)) return;
@@ -158,7 +153,6 @@ public final class TabletMode {
                 + " requiredPad=" + required + " wasForcedPad=" + wasForced
                 + " nowForcedPad=" + identityForced + " reinit=" + reinitialize);
     }
-
 
     public static void refreshAuthIdentity(HookFramework framework, ClassLoader loader) {
         if (deviceInitHooked && identityForced != padIdentityRequired(framework, loader)) {
@@ -174,7 +168,6 @@ public final class TabletMode {
             ToolLogger.log("tablet auth identity: original initialization failed");
         }
     }
-
 
     private static boolean inLoginFlow(HookFramework framework, ClassLoader loader) {
         Integer depth = DEVICE_INIT_DEPTH.get();

@@ -18,7 +18,6 @@ public final class SpoofProfiles {
         return configure(overridePair, versionName, versionCode, moduleApkPath, 1);
     }
 
-
     public static boolean configureWithRetry(String overridePair, String versionName, int versionCode, String moduleApkPath) {
         return configure(overridePair, versionName, versionCode, moduleApkPath, 3);
     }
@@ -77,7 +76,6 @@ public final class SpoofProfiles {
         if (!pair.matches(name, code) || profile == null || !profile.covers(contract)) throw new IllegalArgumentException("Incomplete/wrong-host H/S pair");
         return pair;
     }
-
 
     public static String profileAsset(String versionName) {
         return "8.0.48".equals(versionName) ? PLAY_PROFILE_ASSETS : PROFILE_ASSETS;

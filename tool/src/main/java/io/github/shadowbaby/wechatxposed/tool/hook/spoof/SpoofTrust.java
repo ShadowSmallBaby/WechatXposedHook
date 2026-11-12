@@ -9,7 +9,6 @@ public final class SpoofTrust {
     public static final int MAX_CERT_BYTES = 16 * 1024;
     private static volatile byte[] publicDer;
 
-
     public static final class LoadFailure extends IllegalArgumentException {
         public final String reason;
         public final boolean retryable;
